@@ -642,6 +642,10 @@ def convert_reservation_to_order(
         from .models import ServiceItem
         if booking_info is None:
             return 404, '预约不存在', None
+        # Refunds can hold the buyer wallet while checking provider funds.
+        # Serialize first, before locking the service, providers, or wallet.
+        from .financial_lock import lock_order_money
+        lock_order_money()
         ServiceItem.objects.select_for_update().get(pk=booking_info['service_id'])
         # Decisions bind the invitation's original membership cycle. Take the
         # same account-before-profile order as confirmation before spending.

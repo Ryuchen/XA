@@ -1656,13 +1656,6 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 lock_transfer_lifecycle(lifecycle)
                 lifecycle_cycles = ({account.pk: account.business_cycle for account in lifecycle[0]}
                                     if lifecycle is not None else None)
-                incoming_ids = {cmd['new_provider_account'].pk for cmd in parsed}
-                incoming_cycles = (lifecycle_cycles if lifecycle_cycles is not None else dict(
-                    ClubAccount.objects.select_for_update().filter(pk__in=incoming_ids,
-                        account_type=ClubAccount.AccountType.PROVIDER).order_by('pk')
-                    .values_list('pk', 'business_cycle')))
-                if any(type(incoming_cycles.get(pk)) is not int or incoming_cycles[pk] <= 0 for pk in incoming_ids):
-                    raise IllegalTransitionError('转入陪玩业务周期待核对')
                 locked_order = Order.objects.select_for_update().get(pk=order.pk)
                 if locked_order.status != Order.Status.IN_SERVICE:
                     raise IllegalTransitionError('订单状态已变更，无法转单')
@@ -1670,6 +1663,13 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 # before using it to authorize any part of this transfer.
                 from orders.financial_lock import lock_order_money
                 lock_order_money()
+                incoming_ids = {cmd['new_provider_account'].pk for cmd in parsed}
+                incoming_cycles = (lifecycle_cycles if lifecycle_cycles is not None else dict(
+                    ClubAccount.objects.select_for_update().filter(pk__in=incoming_ids,
+                        account_type=ClubAccount.AccountType.PROVIDER).order_by('pk')
+                    .values_list('pk', 'business_cycle')))
+                if any(type(incoming_cycles.get(pk)) is not int or incoming_cycles[pk] <= 0 for pk in incoming_ids):
+                    raise IllegalTransitionError('转入陪玩业务周期待核对')
                 from orders.points_addon_receipt_usage import prelock as prelock_order_receipts
                 prelock_order_receipts(locked_order)
                 in_flight_principal = enabled_for_order(locked_order)

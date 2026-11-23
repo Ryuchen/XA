@@ -155,7 +155,11 @@ def _create_locked(request, order, *, staff, lifecycle=None):
         selection = _clean(request.data, staff=staff)
         fingerprint = _hash({'actor_id': request.account.pk, 'staff': staff, 'body': request.data})
         with transaction.atomic():
-            order = Order.objects.select_for_update().select_related('service', 'customer_account').get(pk=order.pk)
+            order_id = Order.objects.select_for_update().values_list('pk', flat=True).get(pk=order.pk)
+            # The payment availability in the response can read under this mutex.
+            from .financial_lock import lock_order_money
+            lock_order_money()
+            order = Order.objects.select_for_update().select_related('service', 'customer_account').get(pk=order_id)
             from .addon_payment import payment_table_exists, verify_order_debit_links
             available = payment_table_exists()
             verify_order_debit_links(order, table_exists=available, lock=True)
