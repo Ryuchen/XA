@@ -1080,17 +1080,30 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                                  [('ORDER', required_funding - 10), ('ORDER', 10)])
             run = refund.funding_release_run
             runs = OrderAddonFundingReleaseRun.objects.filter(pk=run.pk)
-            runs.update(points_addon_hash='0' * 64)
-            try:
-                review = self.finance_client.get(funding_url)
-                self.assertEqual((review.status_code, review.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
-                self.assertEqual(staff.post(execute_url, {}, format='json').status_code, 400)
-                with self.assertLogs('engagement.tasks', level='ERROR') as blocked:
-                    self.assertEqual(confirm_due_consumption.run(), 0)
-                self.assertIn('积分加购退款补资快照异常', '\n'.join(blocked.output))
-                self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
-            finally:
-                runs.update(points_addon_hash=run.points_addon_hash)
+            allocation_error = '转回段加购退款的补资分配时序或范围异常'
+            if self.defer_funding:
+                payload, result = funding_receipts[0]
+                amount = payload['amount']
+                wrong_allocations = {'allocated_before': amount,
+                                     'allocation_snapshot': [[result['allocation_id'], amount, 0, []]]}
+                late = order.points_redemption.funding_allocations.filter(pk=result['allocation_id'])
+                actual_time = late.values_list('created_at', flat=True).get()
+                late.update(created_at=refund.created_at)
+                try:
+                    self.assert_returned_refund_blocks_settlement(order, staff, execute_url, funding_url, allocation_error)
+                finally:
+                    late.update(created_at=actual_time)
+            else:
+                wrong_allocations = {'allocated_before': 0, 'allocation_snapshot': []}
+            for updates, reason in (
+                (wrong_allocations, allocation_error),
+                ({'points_addon_hash': '0' * 64}, '积分加购退款补资快照异常'),
+            ):
+                runs.update(**updates)
+                try:
+                    self.assert_returned_refund_blocks_settlement(order, staff, execute_url, funding_url, reason)
+                finally:
+                    runs.update(**{field: getattr(run, field) for field in updates})
             self.assertEqual(confirm_due_consumption.run(), 1)
             self.assertEqual(confirm_due_consumption.run(), 0)
         order.refresh_from_db()
@@ -1128,6 +1141,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
               f'handovers={[first.pk, second.pk]} segments={shares} case={opened["id"]} proposal={proposal["id"]} '
               f'refund={refund.pk} buyer_transaction={refund.buyer_transaction_id} '
               f'funding={order.settlement_store_funding} consumption={consumption.pk} order_waits={waits}', flush=True)
+
+    def assert_returned_refund_blocks_settlement(self, order, staff, execute_url, funding_url, reason):
+        review = self.finance_client.get(funding_url)
+        self.assertEqual(review.status_code, 409, review.data)
+        self.assertEqual(review.data['errorCode'], 'POINTS_FUNDING_REVIEW')
+        self.assertEqual(staff.post(execute_url, {}, format='json').status_code, 400)
+        with self.assertLogs('engagement.tasks', level='ERROR') as blocked:
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        self.assertIn(reason, '\n'.join(blocked.output))
+        self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
 
     def allocate_funding_after_returned_addon_refund(self, order, funding_url, refund_at, required):
         first = {**self.funding_payload, 'amount': required - 10}

@@ -1,9 +1,10 @@
 """Refund the returned segment of a paid add-on after two same-seat transfers."""
 from django.conf import settings
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 
 from .models import (OrderAddonPayment, OrderAddonFundingReleaseRun, OrderOriginalShareTransfer,
-                     OrderSegmentSettlementManifest)
+                     OrderPointsFundingAllocation, OrderSegmentSettlementManifest)
 
 
 def returned_handover(order, *, payment_id=None, transfers=None):
@@ -56,6 +57,18 @@ def require_opening(case, handover, *, request_id, opened_at):
     if (len(openings) != 1 or normalize_scope(openings[0].get('affected_segment_ids')) != [handover.target_segment_id]
             or normalize_scope(openings[0].get('affected_provider_account_ids')) != [handover.target_segment.provider_account_id]):
         raise ValidationError('转回段加购退款缺少原售后范围')
+
+
+def verify_allocation_history(refund, allocation_ids):
+    """Check the complete split as of posting with the caller's existing read locks."""
+    if not returned_handover(refund.order, payment_id=refund.payment_id):
+        return
+    allocations = list(OrderPointsFundingAllocation.objects.filter(
+        Q(redemption__order_id=refund.order_id) | Q(service_order_id=refund.order_id),
+        created_at__lte=refund.created_at).order_by('pk').values_list('pk', 'created_at'))
+    if (any(created_at == refund.created_at for _, created_at in allocations)
+            or [pk for pk, _ in allocations] != allocation_ids):
+        raise ValidationError('转回段加购退款的补资分配时序或范围异常')
 
 
 def verify_funding(order, handover):
