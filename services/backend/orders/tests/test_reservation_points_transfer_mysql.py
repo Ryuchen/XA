@@ -10,16 +10,19 @@ from uuid import uuid4
 from django.db import connection, connections, transaction
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from chat.models import ChatMessage, ChatSession
 from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
 from console import test_payroll_late_activity as payroll_fixture
+from console.models import AdminAuditLog
 from console.payroll_models import PayrollEventBarrier, PayrollRun
 from console.points_redemption_config import save_points_terms
 from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, RetirementAudit
 from engagement.tasks import confirm_due_consumption
+from orders.addon_funding_release import record_addon_funding_release
 from orders.models import (AfterSale, GameCategory, Order, OrderAddonPayment, OrderFinancialLock, OrderPointsRedemption,
                            OrderPointsTransferFundingRevision, OrderSegmentReportSubmission, OrderSegmentSettlementManifest,
                            ServiceAddonConfiguration, ServiceAddonPriceOption)
@@ -346,6 +349,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def exercise_paid_addon_consultation(self):
         PayrollEventBarrier.objects.get_or_create(pk=1)
         self.transfer_and_join()
+        transfer = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id).last_transfer
+        self.ok(self.api(self.original).post(f'/api/orders/orders/{self.order_id}/participation-evidence/',
+            {'segment_id': transfer.previous_segment_id, 'completion_image': release_fixture.screenshot(),
+             'client_request_id': 'consultation-addon-original-evidence'}, format='multipart'))
         payment = self.pay_addon_after_transfer()
         self.assertEqual((payment.principal, payment.provider_income, payment.commission_fee,
                           payment.buyer_transaction.amount), (1000, 700, 300, -1000))
@@ -357,7 +364,6 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         path = '/api/admin/aftersales/open-negotiation/'
         payload = {**self.consultation_payload(message), 'addon_payment_id': payment.pk,
                    'affected_segment_ids': [payment.intent.segment_id]}
-        transfer = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id).last_transfer
         wrong_segment = {**payload, 'affected_segment_ids': [transfer.previous_segment_id]}
         rejected = staff.post(path, wrong_segment, format='json')
         self.assertEqual(rejected.status_code, 400, rejected.data)
@@ -409,9 +415,138 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(list(Order.objects.get(pk=self.order_id).transactions.values_list('pk', 'tx_type', 'amount')),
                          self.funding_before)
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        refund, refund_waits = self.execute_consultation_addon_refund(staff, row, payment, proposal, events_before)
+        paid_addon = self.settle_consultation_addon_refund(staff, transfer, refund)
         print(f'{self.store.slug} order={self.order_id} addon_payment={payment.pk} addon_segment={payment.intent.segment_id} '
-              f'chat_message={message.pk} aftersale={row.pk} proposal={proposal["id"]} '
-              f'payroll_wait={payroll_waited} funding_wait={funding_waited}', flush=True)
+              f'chat_message={message.pk} aftersale={row.pk} proposal={proposal["id"]} refund={refund.pk} '
+              f'buyer_refund_transaction={refund.buyer_transaction_id} payroll_wait={payroll_waited} '
+              f'funding_wait={funding_waited} refund_waits={refund_waits} '
+              f'addon_income_transaction={paid_addon.income_transaction_id}:{paid_addon.amount}', flush=True)
+
+    def execute_consultation_addon_refund(self, staff, case, payment, proposal, events_before):
+        proposal_id = proposal['id']
+        path = f'/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/{proposal_id}/'
+        execute_path = '/api/admin' + path + 'execute/'
+        decision_path = '/api/orders' + path
+        buyer = self.api(self.buyer)
+        replacement = self.api(self.replacement)
+        self.assertEqual(staff.post(execute_path, {}, format='json').status_code, 400)
+        self.assertEqual(self.api(self.original).post(decision_path, {'accepted': True}, format='json').status_code, 404)
+        self.assertEqual(self.ok(buyer.post(decision_path, {'accepted': True}, format='json'))['status'], 'PENDING')
+        self.assertEqual(staff.post(execute_path, {}, format='json').status_code, 400)
+        accepted = self.ok(replacement.post(decision_path, {'accepted': True}, format='json'))
+        self.assertEqual(accepted['status'], 'ACCEPTED')
+        decisions = list(payment.refund_proposals.get(pk=proposal_id).decisions.order_by('account_id').values_list(
+            'account_id', 'role', 'accepted', 'decided_at'))
+        self.assertEqual({(account, role, approved) for account, role, approved, _ in decisions},
+                         {(self.buyer.pk, 'BOSS', True), (self.replacement.pk, 'PROVIDER', True)})
+
+        source = payment.allocations.select_related('lot').get()
+        self.assertEqual((source.kind, source.amount, source.refunded_amount), ('PREPAID', 1000, 0))
+        lot_before = source.lot.remaining
+        refund_transactions = Transaction.objects.filter(wallet__account=self.buyer, tx_type=Transaction.TxType.REFUND)
+        self.assertFalse(refund_transactions.exists())
+
+        def fail_funding(order, refund):
+            self.assertEqual(refund.buyer_transaction.amount, 500)
+            self.assertEqual(payment.allocations.get().refunded_amount, 500)
+            run = record_addon_funding_release(order, refund)
+            self.assertEqual((run.required_amount, run.released_amount), (1100, 0))
+            raise ValidationError('隔离测试补资核验失败')
+
+        with patch('orders.addon_funding_release.record_addon_funding_release', side_effect=fail_funding) as failed:
+            blocked = staff.post(execute_path, {}, format='json')
+        self.assertEqual(blocked.status_code, 400, blocked.data)
+        failed.assert_called_once()
+        self.assertFalse(payment.refund_records.exists())
+        self.assertFalse(refund_transactions.exists())
+        self.assertFalse(AdminAuditLog.objects.filter(path=execute_path, resource='addon-refund').exists())
+        source.refresh_from_db()
+        self.assertEqual((source.refunded_amount, source.lot.remaining), (0, lot_before))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+
+        table = Order._meta.db_table
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            with transaction.atomic(using=self.store.database_alias):
+                Order.objects.select_for_update().get(pk=self.order_id)
+                requests = []
+                for client in (staff, self.api(case.operator)):
+                    attempts = Queue()
+                    pending = pool.submit(self.independent_request, lambda client=client: client.post(
+                        execute_path, {}, format='json'), self.observe_lock_attempt(attempts, table, 'for update'))
+                    requests.append((pending, attempts))
+                waits = [self.wait_for_lock(pending, attempts, table=table) for pending, attempts in requests]
+            posted = [self.ok(pending.result(timeout=15)) for pending, _ in requests]
+        self.assertEqual(posted[0], posted[1])
+        self.assertEqual((posted[0]['id'], posted[0]['refund_executed'], posted[0]['provider_income_raw']),
+                         (proposal_id, True, 200))
+        resolve_path = f'/api/admin/aftersales/{case.pk}/resolve/'
+        resolution = {'resolution': '已按双方确认的加购方案退款'}
+        self.assertEqual(staff.post(resolve_path, resolution, format='json').status_code, 403)
+        resolved = self.ok(self.api(self.staff).post(resolve_path, resolution, format='json'))
+        self.assertEqual(resolved['status'], 'RESOLVED')
+        self.assertEqual(self.ok(staff.post(execute_path, {}, format='json')), posted[0])
+
+        refund = payment.refund_records.select_related('buyer_transaction', 'funding_release_run').get()
+        self.assertEqual((refund.proposal_id, refund.amount, refund.addon_pending_deduction,
+                          refund.main_pending_deduction, refund.wallet_deduction, refund.deposit_deduction,
+                          refund.rounding_surplus), (proposal_id, 500, 500, 0, 0, 0, 0))
+        self.assertEqual(list(refund.earning_deductions.values_list('payment_id', 'segment_id', 'amount')),
+                         [(payment.pk, payment.intent.segment_id, 500)])
+        self.assertEqual(list(refund_transactions.values_list('pk', 'amount', 'balance_before', 'balance_after')),
+                         [(refund.buyer_transaction_id, 500, self.balance_before - 1000, self.balance_before - 500)])
+        source.refresh_from_db()
+        self.assertEqual((source.refunded_amount, source.lot.remaining), (500, lot_before + 500))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 500)
+        run = refund.funding_release_run
+        self.assertEqual((run.required_amount, run.allocated_before, run.released_amount), (1100, 1100, 0))
+        self.assertFalse(run.releases.exists())
+        self.assertEqual(list(PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt)
+                              .order_by('version').values_list('kind', 'amount')), events_before)
+        order = Order.objects.get(pk=self.order_id)
+        self.assertFalse(order.refund_records.exists())
+        self.assertEqual(list(order.transactions.values_list('pk', 'tx_type', 'amount')), self.funding_before)
+        self.assertEqual(list(PointLedger.objects.filter(order=order).values_list('amount', flat=True)), [-10000])
+        self.assertEqual(payment.buyer_transaction.amount, -1000)
+        audit = AdminAuditLog.objects.get(path=execute_path, resource='addon-refund', status_code=200)
+        self.assertEqual((audit.object_id, audit.operator_account_id), (str(refund.pk), case.operator_id))
+        return refund, waits
+
+    def settle_consultation_addon_refund(self, staff, transfer, refund):
+        first_report = self.approve_report(self.original, transfer.previous_segment_id)
+        with patch('django.utils.timezone.now', return_value=first_report.submitted_at + timedelta(minutes=15)):
+            second_report = self.approve_report(self.replacement, transfer.next_segment_id)
+        order = Order.objects.get(pk=self.order_id)
+        freeze = timedelta(hours=order.service_freeze_hours)
+        income = order.transactions.filter(tx_type=Transaction.TxType.INCOME).order_by('pk')
+        with patch('django.utils.timezone.now', return_value=first_report.submitted_at + freeze):
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        self.assertEqual(list(income.values_list('wallet__account_id', 'amount')), [(self.original.pk, 3200)])
+        self.assertFalse(refund.payment.segment_settlements.exists())
+        with patch('django.utils.timezone.now', return_value=second_report.submitted_at + freeze):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        order.refresh_from_db()
+        self.assertEqual((order.provider_income, order.settlement_store_funding, order.settlement_addon_contribution),
+                         (7400, 1100, 300))
+        paid_addon = refund.payment.segment_settlements.select_related('income_transaction').get()
+        self.assertEqual((paid_addon.segment_id, paid_addon.amount, paid_addon.income_transaction.wallet.account_id),
+                         (transfer.next_segment_id, 200, self.replacement.pk))
+        ledger = list(income.values_list('wallet__account_id', 'amount'))
+        self.assertCountEqual(ledger, [(self.original.pk, 3200), (self.replacement.pk, 4200), (self.replacement.pk, 200)])
+        self.assertEqual(sum(amount for _, amount in ledger), 6000 + 1000 - 500 + 1100)
+        self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 6000)
+        consumption = refund.payment.consumption
+        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, 500))
+        path = f'/api/admin/orders/{order.pk}/addons/payments/{refund.payment_id}/refund-proposals/{refund.proposal_id}/execute/'
+        replayed = self.ok(staff.post(path, {}, format='json'))
+        self.assertEqual((replayed['id'], replayed['refund_executed'], replayed['provider_income_raw']),
+                         (refund.proposal_id, True, 200))
+        self.assertEqual(list(income.values_list('wallet__account_id', 'amount')), ledger)
+        self.assertEqual(list(refund.payment.refund_records.values_list('pk', flat=True)), [refund.pk])
+        self.assertEqual(AdminAuditLog.objects.filter(path=path, resource='addon-refund', status_code=200).count(), 1)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 500)
+        return paid_addon
 
     @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True)
     def exercise_consultation_aftersale(self):
