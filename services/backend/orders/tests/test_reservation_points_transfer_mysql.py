@@ -1,5 +1,6 @@
 """Verify formal points funding and the lifecycle lock order on a paid reservation."""
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import timedelta
 import os
 from pathlib import Path
@@ -21,6 +22,7 @@ from rest_framework.test import APIClient
 from chat.models import ChatMessage, ChatSession
 from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
+from common.mysql_test_support import mysql_locking_sessions
 from console import test_payroll_late_activity as payroll_fixture
 from console.models import AdminAuditLog
 from console.payroll_models import PayrollEventBarrier, PayrollRun
@@ -276,6 +278,20 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None) and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None),
                 'Requires a registered disposable Redis broker and independent MySQL control instance')
+    def test_consultation_refund_worker_waits_for_provider_retirement(self):
+        with self.refund_notice_worker() as (publisher, _, _, _):
+            self.run_in_stores(lambda: self.exercise_provider_retirement_notice_race(
+                retirement_first=True, publisher=publisher))
+
+    @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None) and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None),
+                'Requires a registered disposable Redis broker and independent MySQL control instance')
+    def test_provider_retirement_waits_for_consultation_refund_worker(self):
+        with self.refund_notice_worker() as (publisher, _, _, _):
+            self.run_in_stores(lambda: self.exercise_provider_retirement_notice_race(
+                retirement_first=False, publisher=publisher))
+
+    @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None) and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None),
+                'Requires a registered disposable Redis broker and independent MySQL control instance')
     def test_consultation_refund_notices_recover_on_independent_beat_and_worker(self):
         import re
         import shelve
@@ -431,13 +447,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         import sys
         from functools import partial
 
-        from celery import Celery
         from club_accounts.tokens import issue_account_tokens
-        from stores.test_certificate_admission_mysql import _celery_process, _registered_redis_urls
 
-        self.assertFalse(any(os.environ.get(key) for key in ('CELERY_BROKER_URL', 'CELERY_BROKER_READ_URL',
-            'CELERY_BROKER_WRITE_URL', 'CELERY_RESULT_BACKEND')))
-        broker, backend = _registered_redis_urls()
         cases, identities = [], {}
         retirements = {}
 
@@ -477,27 +488,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.assertEqual(identities['shenglang', 'buyer'][1:3], identities['xinan', 'same_id'][1:3])
         before = self.refund_notice_worker_facts(cases)
         self.assertTrue(all(len(row['intents']) == 2 and not row['messages'] for row in before.values()))
-        directory = Path(os.environ['XA_SA14_MYSQL_REGISTRATION']).resolve().parent
-        work = Path(mkdtemp(prefix='addon-refund-socket-', dir=directory))
-        queue = f'xa_sa14_cli_{uuid4().hex}'
-        env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.certificate_celery_test_settings',
-               'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media'),
-               'XA_SA14_CELERY_REDIS_CHANNELS': '1', 'ADDON_REFUND_NOTICE_RECOVERY_ENABLED': '1',
-               'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED': '1'}
-        command = ['worker', '-P', 'solo', '-l', 'INFO', '--without-mingle', '--without-gossip', '--without-heartbeat']
-        worker_log = work / 'worker.log'
-        with (Celery(queue, broker=broker, backend=backend, set_as_current=False) as publisher,
-              _celery_process(command, env=env, log=worker_log) as worker):
-            publisher.conf.update(task_default_queue=queue, task_default_exchange=queue, task_default_routing_key=queue,
-                                 broker_transport_options={'global_keyprefix': queue + ':'},
-                                 result_backend_transport_options={'global_keyprefix': queue + ':'})
-            deadline = monotonic() + 20
-            while worker.poll() is None and monotonic() < deadline:
-                if ' ready.' in worker_log.read_text():
-                    break
-                sleep(.1)
-            else:
-                self.fail(f'退款通知 worker 未就绪，见 {worker_log}')
+        with self.refund_notice_worker(redis_channels=True) as (publisher, worker, env, work):
             with socket.socket() as listener, (work / 'asgi.log').open('wb') as output:
                 listener.bind(('127.0.0.1', 0))
                 listener.listen()
@@ -519,7 +510,6 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                         process.kill()
                         process.wait(timeout=10)
                 self.assertEqual(process.returncode, 0)
-        self.assertEqual(worker.returncode, 0)
         after = self.refund_notice_worker_facts(cases)
         for slug, case in after.items():
             self.assertEqual(case['refund'], before[slug]['refund'])
@@ -548,6 +538,41 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 detail = self.ok(client.get(f'/api/messages/{message_id}/'))
                 self.assertEqual((detail['related_order_id'], detail['cycle_relation']), (case['order'], 'CURRENT'))
             print(f'{slug} order={case["order"]} refund={case["refund"][0]} messages={case["messages"]}', flush=True)
+
+    @contextmanager
+    def refund_notice_worker(self, *, redis_channels=False):
+        from celery import Celery
+        from stores.test_certificate_admission_mysql import _celery_process, _registered_redis_urls
+
+        self.assertFalse(any(os.environ.get(key) for key in ('CELERY_BROKER_URL', 'CELERY_BROKER_READ_URL',
+            'CELERY_BROKER_WRITE_URL', 'CELERY_RESULT_BACKEND')))
+        broker, backend = _registered_redis_urls()
+        directory = Path(os.environ['XA_SA14_MYSQL_REGISTRATION']).resolve().parent
+        work = Path(mkdtemp(prefix='addon-refund-socket-' if redis_channels else 'addon-refund-race-worker-',
+                            dir=directory))
+        queue = f'xa_sa14_cli_{uuid4().hex}'
+        env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.certificate_celery_test_settings',
+               'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media'),
+               'XA_SA14_CELERY_REDIS_CHANNELS': '1' if redis_channels else '0',
+               'ADDON_REFUND_NOTICE_RECOVERY_ENABLED': '1', 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED': '1'}
+        command = ['worker', '-P', 'solo', '-l', 'INFO', '--without-mingle', '--without-gossip', '--without-heartbeat']
+        worker_log = work / 'worker.log'
+        with (Celery(queue, broker=broker, backend=backend, set_as_current=False) as publisher,
+              _celery_process(command, env=env, log=worker_log) as worker):
+            publisher.conf.update(task_default_queue=queue, task_default_exchange=queue, task_default_routing_key=queue,
+                                 broker_transport_options={'global_keyprefix': queue + ':'},
+                                 result_backend_transport_options={'global_keyprefix': queue + ':'})
+            deadline = monotonic() + 20
+            while worker.poll() is None and monotonic() < deadline:
+                if ' ready.' in worker_log.read_text():
+                    break
+                sleep(.1)
+            else:
+                self.fail(f'退款通知 worker 未就绪，见 {worker_log}')
+            print(f'退款通知 worker PID={worker.pid} logs={work.name}', flush=True)
+            yield publisher, worker, env, work
+            self.assertIsNone(worker.poll(), f'退款通知 worker 提前退出，见 {worker_log}')
+        self.assertEqual(worker.returncode, 0)
 
     async def check_refund_notice_socket_events(self, port, identities, publisher, retirements):
         import asyncio
@@ -1128,7 +1153,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         return waited, [provider.message_id]
 
     @override_settings(SEGMENT_SETTLEMENT_ENABLED=True, ADDON_REFUND_NOTICE_RECOVERY_ENABLED=True)
-    def exercise_provider_retirement_notice_race(self, *, retirement_first):
+    def exercise_provider_retirement_notice_race(self, *, retirement_first, publisher=None):
         refund = self.exercise_paid_addon_consultation(leave_notices_pending=True, settle_before_recovery=True)
         settled_at = refund.payment.segment_settlements.get().settled_at
         cases = [(self.store, refund.pk)]
@@ -1151,39 +1176,11 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             buyer_notice.refresh_from_db()
             self.assertIsNotNone(buyer_notice.message_id)
 
-            table = Order._meta.db_table
-            attempts = Queue()
-            held, resume = Event(), Event()
-            if retirement_first:
-                first, second = submit, self.recover_refund_notices
-                pause_table, pause_sql, pause_pk = table, 'for update', refund.order_id
+            if publisher is None:
+                audit, waited = self.race_provider_retirement_locally(submit, provider_notice, retirement_first)
             else:
-                first, second = self.recover_refund_notices, submit
-                pause_table, pause_pk = provider_notice._meta.db_table, provider_notice.pk
-                pause_sql = f'update `{pause_table}` set '
-
-            def pause_first(execute, sql, params, many, context):
-                result = execute(sql, params, many, context)
-                normalized = sql.lower()
-                if (not held.is_set() and f'`{pause_table}`' in normalized and pause_sql in normalized
-                        and pause_pk in (params or ())):
-                    held.set()
-                    if not resume.wait(8):
-                        raise AssertionError('首个退款通知或注销事务未在时限内放行')
-                return result
-
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                holding = pool.submit(self.independent_request, first, pause_first)
-                try:
-                    self.assertTrue(held.wait(5), '未观察到首个事务持有订单锁')
-                    waiting = pool.submit(self.independent_request, second,
-                        self.observe_lock_attempt(attempts, table, 'for update', account_id=refund.order_id))
-                    waited = self.wait_for_lock(waiting, attempts, table=table)
-                finally:
-                    resume.set()
-                results = (holding.result(timeout=15), waiting.result(timeout=15))
-            audit, recovered = results if retirement_first else results[::-1]
-            self.assertEqual(recovered, 1)
+                audit, waited = self.race_provider_retirement_with_worker(submit, provider_notice, retirement_first,
+                                                                       publisher)
 
             provider.refresh_from_db()
             self.assertEqual((provider.business_cycle, provider.license_membership_active), (cycle + 1, False))
@@ -1222,7 +1219,11 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.assertEqual(after['refund'], before['refund'])
             self.assertCountEqual([row[:4] for row in after['intents']], [row[:4] for row in before['intents']])
             self.assertCountEqual([message for message, _, _ in after['messages']], expected_ids)
-            self.assertEqual(self.recover_refund_notices(), 0)
+            if publisher is None:
+                repeated = self.recover_refund_notices()
+            else:
+                repeated = self.publish_refund_recovery(publisher).get(timeout=20)
+            self.assertEqual(repeated, 0)
             deliver_addon_refund_notice(provider_notice.pk)
             self.assertEqual(self.refund_notice_worker_facts(cases)[self.store.slug], after)
             self.assertEqual(list(wallet_ledger.all()), ledger_before)
@@ -1232,6 +1233,94 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} order={refund.order_id} refund={refund.pk} adjustment={adjustment.pk} '
               f'provider_retirement={audit.pk} cycle={cycle}->{cycle + 1}->{cycle + 2} retirement_first={retirement_first} '
               f'order_wait={waited} provider_intent={provider_notice.pk} messages={expected_ids}', flush=True)
+
+    @staticmethod
+    def pause_refund_race(table, sql_fragment, row_id, held, resume):
+        def pause_first(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            normalized = sql.lower()
+            if (not held.is_set() and f'`{table}`' in normalized and sql_fragment in normalized
+                    and row_id in (params or ())):
+                held.set()
+                if not resume.wait(8):
+                    raise AssertionError('首个退款通知或注销事务未在时限内放行')
+            return result
+        return pause_first
+
+    def race_provider_retirement_locally(self, submit, notice, retirement_first):
+        table = Order._meta.db_table
+        order_id = notice.refund.order_id
+        attempts = Queue()
+        held, resume = Event(), Event()
+        if retirement_first:
+            first, second = submit, self.recover_refund_notices
+            pause = self.pause_refund_race(table, 'for update', order_id, held, resume)
+        else:
+            first, second = self.recover_refund_notices, submit
+            notice_table = notice._meta.db_table
+            pause = self.pause_refund_race(notice_table, f'update `{notice_table}` set ', notice.pk, held, resume)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            holding = pool.submit(self.independent_request, first, pause)
+            try:
+                self.assertTrue(held.wait(5), '未观察到首个事务持有订单锁')
+                waiting = pool.submit(self.independent_request, second,
+                    self.observe_lock_attempt(attempts, table, 'for update', account_id=order_id))
+                waited = self.wait_for_lock(waiting, attempts, table=table)
+            finally:
+                resume.set()
+            results = (holding.result(timeout=15), waiting.result(timeout=15))
+        audit, recovered = results if retirement_first else results[::-1]
+        self.assertEqual(recovered, 1)
+        return audit, waited
+
+    def publish_refund_recovery(self, publisher):
+        return publisher.send_task(recover_addon_refund_notices.name, headers={'store_slug': self.store.slug})
+
+    def wait_for_refund_worker_lock(self, task, table, row_id):
+        observer = connections[self.store.database_alias].copy()
+        try:
+            deadline = monotonic() + 3
+            while monotonic() < deadline and not task.ready():
+                sessions = mysql_locking_sessions(observer, table, row_id=row_id)
+                if sessions:
+                    self.assertEqual(len(sessions), 1)
+                    return sessions[0]
+                sleep(.025)
+            self.fail(f'退款恢复任务 {task.id} 未等待原行锁 {table}[{row_id}]')
+        finally:
+            observer.close()
+
+    def race_provider_retirement_with_worker(self, submit, notice, retirement_first, publisher):
+        table = Order._meta.db_table
+        order_id = notice.refund.order_id
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            if retirement_first:
+                held, resume = Event(), Event()
+                retiring = pool.submit(self.independent_request, submit,
+                    self.pause_refund_race(table, 'for update', order_id, held, resume))
+                try:
+                    self.assertTrue(held.wait(5), '未观察到注销事务持有订单锁')
+                    task = self.publish_refund_recovery(publisher)
+                    waited = worker_session = self.wait_for_refund_worker_lock(task, table, order_id)
+                finally:
+                    resume.set()
+            else:
+                attempts = Queue()
+                with transaction.atomic(using=self.store.database_alias):
+                    # Hold only the intent row while the worker locks the order.
+                    type(notice).objects.select_for_update().values_list('pk', flat=True).get(pk=notice.pk)
+                    task = self.publish_refund_recovery(publisher)
+                    worker_session = self.wait_for_refund_worker_lock(task, notice._meta.db_table, notice.pk)
+                    retiring = pool.submit(self.independent_request, submit,
+                        self.observe_lock_attempt(attempts, table, 'for update', account_id=order_id))
+                    waited = self.wait_for_lock(retiring, attempts, table=table)
+                    self.assertNotEqual(waited, worker_session)
+            audit = retiring.result(timeout=15)
+        self.assertEqual(task.get(timeout=20), 1)
+        print(f'{self.store.slug} worker_task={task.id} worker_session={worker_session} '
+              f'worker_wait={table if retirement_first else notice._meta.db_table}', flush=True)
+        return audit, waited
 
     def settle_consultation_addon_refund(self, staff, transfer, refund):
         first_report = self.approve_report(self.original, transfer.previous_segment_id)
