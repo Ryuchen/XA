@@ -1,4 +1,4 @@
-import { coinText, coinUnit, NegotiationProposalPanel, OrderJourney, OrderSource, OrderSyncBar, orderLifecycle } from "@xa/shared"
+import { coinText, coinUnit, AddonRefundProposals, NegotiationProposalPanel, OrderJourney, OrderSource, OrderSyncBar, orderLifecycle } from "@xa/shared"
 import {
   providerOrderActions,
   providerOrderPresentation,
@@ -628,6 +628,7 @@ function ProviderOrderDetail({
             )}
             {presentation.aftersaleOpen && ["IN_SERVICE", "COMPLETED"].includes(order.status) &&
               <NegotiationProposalPanel role="provider" orderId={order.id} />}
+            <AddonRefundProposals role="provider" orderId={order.id} />
             {order.cancel_reason && (
               <p className="rounded-[8px] bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
                 取消/退款原因：{order.cancel_reason}

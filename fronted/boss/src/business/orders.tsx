@@ -1,4 +1,4 @@
-import { coinText, coinUnit, useCurrentStore, PrivateAudio, NegotiationProposalPanel, OrderJourney, OrderSource, OrderSyncBar } from "@xa/shared"
+import { coinText, coinUnit, useCurrentStore, PrivateAudio, AddonRefundProposals, NegotiationProposalPanel, OrderJourney, OrderSource, OrderSyncBar } from "@xa/shared"
 import { formatProviderName, ProviderName } from "./provider-name"
 import { RoomCompletionPanel } from "./room-completion"
 import {
@@ -343,6 +343,7 @@ export function OrderPage() {
             <OrderJourney order={order} audience="boss" />
             <div className="boss-order-detail-columns">
               <div className="boss-order-detail-main">
+                <AddonRefundProposals role="boss" orderId={order.id} />
                 {order.room_required_snapshot === true && <RoomCompletionPanel key={order.id} orderId={order.id} status={order.status} onSaved={load.reload} />}
             {can("SELECT_PROVIDER") && !order.pending_deadline_expired && (
               <Panel icon={UsersRound} title="挑选接单陪玩" className="boss-order-provider-selection">

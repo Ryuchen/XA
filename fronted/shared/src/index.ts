@@ -15,6 +15,7 @@ export * from "./otp-setup";
 export * from "./theme";
 export * from "./skip-link";
 export * from "./negotiation-proposal";
+export * from "./addon-refund-proposals";
 export * from "./order-lifecycle";
 export * from "./order-journey";
 export * from "./saas";
