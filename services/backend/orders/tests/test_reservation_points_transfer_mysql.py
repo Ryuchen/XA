@@ -2461,7 +2461,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.run_in_stores(self.exercise_room_addon_refund_before_confirmation)
 
     @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
-        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
     def test_room_main_refund_after_addon_refund_keeps_original_receipts(self):
         self.room_service = self.room_addon_purchase = True
         self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
