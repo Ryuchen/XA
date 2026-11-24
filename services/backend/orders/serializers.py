@@ -870,6 +870,9 @@ class OrderSerializer(EntityNumberModelSerializer):
     def _points_fulfillment_available(self, obj, request):
         if not self._has_points_evidence(obj):
             return True
+        if (obj.status == Order.Status.IN_SERVICE and obj.payment_status == Order.PaymentStatus.PAID
+                and self._formal_paid_points_transfer(obj)):
+            return self._paid_transfer_completion_available(obj, request)
         if obj.status == Order.Status.IN_SERVICE and obj.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED:
             from .team_progress import team_progress
             progress = team_progress(obj, for_display=True)
@@ -886,6 +889,34 @@ class OrderSerializer(EntityNumberModelSerializer):
         except PointsFundingPlanError:
             return False
         return True
+
+    def _formal_paid_points_transfer(self, obj):
+        from .team_progress import formal_transfer_display_enabled
+        if not formal_transfer_display_enabled() or obj.source_order_id or obj.is_gift_snapshot:
+            return False
+        if not hasattr(obj, '_provider_has_points_transfer'):
+            from .segment_financial_capture import covered_transfers
+            obj._provider_has_points_transfer = covered_transfers(obj.pk).filter(
+                previous_segment__attribution__financial_coverage__source='WALLET_POINTS').exists()
+        return obj._provider_has_points_transfer
+
+    def _paid_transfer_completion_available(self, obj, request):
+        assignment = self._requester_assignment(obj)
+        user = request.legacy_user
+        if (not user or not assignment or assignment.released_at or assignment.provider_id != user.pk
+                or assignment.provider_account_id != request.account.pk):
+            return False
+        segments = [row for row in self._my_participation(obj) if row.released_at is None]
+        if len(segments) != 1 or segments[0].attribution.status != 'ACTIVE' or not segments[0].started_at:
+            return False
+        if obj.escort_mode == Order.EscortMode.DOUBLE and obj.requires_boss_selection:
+            if obj.room_required_snapshot is True and not getattr(settings, 'ROOM_COMPLETION_REVIEW_ENABLED', False):
+                return False
+            from .team_progress import team_progress
+            progress = team_progress(obj, for_display=True)
+            return bool(progress and any(member['id'] == request.account.pk for member in progress['members']))
+        from .ownership import owns_order_party
+        return obj.room_required_snapshot is not True and owns_order_party(obj, request, 'provider')
 
     def get_report_entry(self, obj):
         account = getattr(self.context.get('request'), 'account', None)

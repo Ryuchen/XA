@@ -10,7 +10,7 @@ from wallet.models import ProviderReport
 from .models import Order, OrderProvider
 
 
-def _formal_transfer_display_enabled():
+def formal_transfer_display_enabled():
     if not getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False):
         return False
     store = current_store()
@@ -24,7 +24,7 @@ def prepare_team_progress(orders, *, for_display=False):
                   and order.requires_boss_selection and order.status in ('GRABBED', 'IN_SERVICE')]
     if not candidates:
         return
-    formal_display = for_display and _formal_transfer_display_enabled()
+    formal_display = for_display and formal_transfer_display_enabled()
     for start in range(0, len(candidates), 200):
         chunk = candidates[start:start + 200]
         ids = [order.pk for order in chunk]
@@ -36,9 +36,16 @@ def prepare_team_progress(orders, *, for_display=False):
             'order_id', 'provider_id', 'provider_account_id', 'entry_image', 'completion_image'))
         from .points_transfer_capture import enabled as points_transfer_enabled
         segment_orders, active_segments = set(), defaultdict(list)
-        formal_orders = {order.pk for order in chunk if formal_display and order.status == Order.Status.IN_SERVICE
-                         and order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED
-                         and len(assignments[order.pk]) == 1 and not order.is_gift_snapshot and not order.source_order_id}
+        paid_orders, refunded_orders = set(), set()
+        if formal_display:
+            for order in chunk:
+                if order.status != Order.Status.IN_SERVICE or order.is_gift_snapshot or order.source_order_id:
+                    continue
+                if order.payment_status == Order.PaymentStatus.PAID and len(assignments[order.pk]) == 2:
+                    paid_orders.add(order.pk)
+                if order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED and len(assignments[order.pk]) == 1:
+                    refunded_orders.add(order.pk)
+        formal_orders = paid_orders | refunded_orders
         scoped_transfer = points_transfer_enabled()
         if scoped_transfer or formal_orders:
             from .models import OrderOriginalShareTransfer, OrderParticipationSegment
@@ -53,8 +60,9 @@ def prepare_team_progress(orders, *, for_display=False):
                                                     'started_at', 'completion_image'):
                 active_segments[(row['attribution__order_id'], row['provider_account_id'])].append(row)
         stopped = defaultdict(set)
-        scoped_orders = {order.pk for order in chunk if order.pk in segment_orders and order.pk in formal_orders
+        scoped_orders = {order.pk for order in chunk if order.pk in segment_orders and order.pk in refunded_orders
                          and order.refund_records.count() == 1}
+        formal_progress_orders = (paid_orders & segment_orders) | scoped_orders
         if scoped_orders:
             from .models import PointsNegotiationPostingShare
             # Display durable assignments and the recorded termination. The
@@ -80,7 +88,7 @@ def prepare_team_progress(orders, *, for_display=False):
                 reports.setdefault((row['order_id'], row['provider_id'], account_id), row)
         for order in chunk:
             people = assignments[order.pk]
-            use_formal_display = order.pk in scoped_orders
+            use_formal_display = order.pk in formal_progress_orders
             progress_attr = '_formal_transfer_progress' if use_formal_display else '_team_progress'
             # A verified scoped termination may leave exactly one original
             # team member completing the order; ordinary team flows need two.

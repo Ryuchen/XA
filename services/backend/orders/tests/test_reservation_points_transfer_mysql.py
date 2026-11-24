@@ -2383,6 +2383,52 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_funded_points_reservation_pays_each_provider_at_their_own_deadline(self):
         self.run_in_stores(self.exercise_settlement_after_transfer)
 
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)
+    def test_paid_team_transfer_uses_current_completion_actions(self):
+        self.team_returned_addon = True
+        self.run_in_stores(self.exercise_paid_team_transfer_completion_actions)
+
+    def exercise_paid_team_transfer_completion_actions(self):
+        self.ok(self.transfer(self.api(self.staff), share=(2000, 3000)))
+        change = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        original, continuing, replacement = (self.api(account) for account in
+                                             (self.original, self.teammate, self.replacement))
+        path = f'/api/orders/orders/{self.order_id}/'
+        listing = '/api/orders/orders/?status=in_progress&role=provider&page=1&page_size=20'
+        self.ok(original.post(path + 'participation-evidence/', {'segment_id': change.previous_segment_id,
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'paid-team-original-evidence'},
+            format='multipart'))
+
+        def read_actions(client, expected, submitted):
+            with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+                detail = self.ok(client.get(path))
+                rows = self.ok(client.get(listing))['list']
+                listed = next(row for row in rows if row['id'] == self.order_id)
+            for row in (detail, listed):
+                self.assertEqual(row['allowed_actions'], expected)
+                progress = row['team_progress']
+                self.assertEqual((progress['submitted_count'], progress['total_count']), (submitted, 2))
+                self.assertCountEqual([member['id'] for member in progress['members']],
+                                      [self.teammate.pk, self.replacement.pk])
+
+        read_actions(continuing, ['COMPLETE'], 0)
+        read_actions(replacement, ['START_PARTICIPATION'], 0)
+        self.join_replacement(replacement, change)
+        read_actions(replacement, ['COMPLETE'], 0)
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
+        self.ok(continuing.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'paid-team-continuing-completion'}, format='multipart'))
+        read_actions(continuing, [], 1)
+        read_actions(replacement, ['COMPLETE'], 1)
+        self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'paid-team-replacement-completion'}, format='multipart'))
+        self.assertEqual(Order.objects.get(pk=self.order_id).status, Order.Status.COMPLETED)
+        change.next_segment.refresh_from_db()
+        self.assertTrue(change.next_segment.completion_image)
+        print(f'{self.store.slug} order={self.order_id} PAID team: current segments showed 0/2 and 1/2, '
+              'only unfinished providers could complete, both screenshots saved', flush=True)
+
     def approve_report(self, account, segment_id, *, verify_detail=False):
         report_url = f'/api/orders/orders/{self.order_id}/segment-report/'
         provider = self.api(account)
@@ -2490,6 +2536,11 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertTrue(segment['started_at'])
         self.assertTrue(segment['entry_image_url'])
         self.assertNotIn('START_PARTICIPATION', joined['allowed_actions'])
+        self.assertIn('COMPLETE', joined['allowed_actions'])
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            listed = next(row for row in self.ok(replacement.get(listing))['list'] if row['id'] == self.order_id)
+            self.assertIn('COMPLETE', listed['allowed_actions'])
+            self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
         self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'points-transfer-complete'}, format='multipart'))
         original_report = self.approve_report(self.original, change.previous_segment_id)
