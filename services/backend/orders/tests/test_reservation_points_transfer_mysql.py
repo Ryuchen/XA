@@ -2463,6 +2463,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.run_in_stores(self.exercise_paid_room_addon_handover)
 
     @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_room_waits_for_addon_handover_before_review(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(self.exercise_paid_room_waits_for_addon_handover)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
         ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
     def test_room_addon_refund_before_confirmation_can_be_read_back_after_settlement(self):
         self.room_service = self.room_addon_purchase = True
@@ -2847,6 +2853,62 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def exercise_paid_transfer_room_confirmation(self):
         original, _, _ = self.transfer_and_enter_room()
         self.exercise_paid_points_room_confirmation(self.replacement, former=original)
+
+    def exercise_paid_room_waits_for_addon_handover(self):
+        from orders.models import OrderRoomCompletionRequest, OrderRoomConfirmation
+        from orders.room_auto_confirmation import process_one
+
+        payment = self.pay_consultation_addon(self.original, addon=self.room_addon)
+        former, replacement, _ = self.transfer_and_enter_room()
+        path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'room-handover-ready-image'}, format='multipart'))
+        submit_url = path + 'room/completion-requests/'
+        application = {'description': '已完成现履约段', 'client_request_id': 'room-handover-ready'}
+        attempts = OrderRoomCompletionRequest.objects.filter(room_id=self.room_id)
+        response = replacement.post(submit_url, application, format='json')
+        self.assertEqual((response.status_code, response.data['msg']), (409, '原陪玩已转出，请先安排加购接替'))
+        self.assertFalse(attempts.exists())
+
+        staff = self.api(self.staff)
+        proposal = self.ok(staff.post(f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/handovers/', {
+            'request_id': 'room-handover-before-review', 'target_provider_account_id': self.replacement.pk,
+            'retained_basis_raw': 400, 'completed_work': '原陪玩完成前段', 'remaining_work': '接替人负责剩余加购'},
+            format='json'))
+        response = replacement.post(submit_url, application, format='json')
+        self.assertEqual((response.status_code, response.data['msg']), (409, '加购接替正在等待三方确认'))
+        self.assertFalse(attempts.exists())
+
+        # A request left pending under the previous room rule still requires review.
+        old_request = attempts.create(room_id=self.room_id, submitted_by=self.replacement,
+            request_id='room-before-handover-gate', description=application['description'], participants=[self.replacement.pk])
+        reviewer_user = make_console_user(['order:view', 'support:edit'])
+        reviewer = get_or_create_account_for_legacy_user(reviewer_user)
+        reviewer_user.admin_membership.account = reviewer
+        reviewer_user.admin_membership.save(update_fields=['account'])
+        review_url = f'/api/admin/room-completion-requests/{old_request.pk}/review/'
+        review = {'decision': 'VERIFIED', 'note': '已核实当前履约段', 'client_request_id': 'review-room-handover-ready'}
+        response = self.api(reviewer).post(review_url, review, format='json')
+        self.assertEqual((response.status_code, response.data['msg']), (409, '加购接替正在等待三方确认'))
+        old_request.refresh_from_db()
+        self.assertEqual(old_request.status, 'PENDING')
+        self.assertFalse(OrderRoomConfirmation.objects.filter(request=old_request).exists())
+
+        decision = f'{path}addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
+        for actor in (self.api(self.buyer), former, replacement):
+            self.ok(actor.post(decision, {'accepted': True}, format='json'))
+        checked = self.ok(self.api(reviewer).post(review_url, review, format='json'))
+        self.assertEqual(checked['status'], 'VERIFIED')
+        wait = OrderRoomConfirmation.objects.get(request=old_request)
+        self.assertGreater(wait.started_at, OrderAddonHandover.objects.get(pk=proposal['id']).accepted_at)
+        self.assertEqual(wait.deadline - wait.started_at, timedelta(minutes=self.room_confirmation_minutes))
+        with patch('django.utils.timezone.now', return_value=wait.deadline):
+            self.assertEqual(process_one(wait.pk), 'confirmed')
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual((order.status, order.settled_at), (Order.Status.COMPLETED, None))
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} room={self.room_id} order={order.pk} addon={payment.pk} handover={proposal["id"]} '
+              f'wait={wait.pk} minutes={wait.config_minutes}', flush=True)
 
     def assert_room_provider_actions(self, client, status, actions, *, submitted=None):
         path = f'/api/orders/orders/{self.order_id}/'
