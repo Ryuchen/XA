@@ -59,6 +59,7 @@ import {
   type FormField,
 } from "@/components/business"
 import PrivateImage from "@/components/PrivateImage"
+import ConsultationAddonCase from "@/components/ConsultationAddonCase"
 import { request, requestId } from "@/api/request"
 import { useAdminAuth } from "@/lib/auth"
 import { formatDateTime } from "@/lib/format"
@@ -1196,6 +1197,7 @@ export function ChatPage() {
                         </p>
                       )}
                       {message.order_card && (message.order_card.available ? <Link to={`/orders?order_no_exact=${encodeURIComponent(message.order_card.order_no)}`} className="block rounded-lg border bg-card p-2 text-sm underline">订单 {message.order_card.order_no} · {message.order_card.service_name}<br />发送时：<Status value={message.order_card.status} label={message.order_card.status_display} /> · 查看订单和售后</Link> : <p className="rounded-lg border p-2 text-xs">关联订单当前不可查看</p>)}
+                      {sessionInfo?.id === sessionId && sessionInfo?.can_read === true && Number.isSafeInteger(sessionInfo.claimed_by) && sessionInfo.claimed_by > 0 && (sessionInfo.claimed_by === auth.profile?.id || auth.hasPerm("chat:supervise")) && message.is_from_support === false && message.order_card?.available === true && auth.hasPerm("order:view") && auth.hasPerm("support:edit") && <ConsultationAddonCase key={`${auth.revision}:${sessionId}:${message.id}`} sessionId={sessionId} messageId={message.id} orderId={message.order_card.id} />}
                       {message.image_url && (
                         <PrivateImage
                           label="聊天图片"
