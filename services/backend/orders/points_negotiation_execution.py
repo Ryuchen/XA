@@ -276,7 +276,6 @@ def _verify_posting_core_locked(posting):
             raise ValidationError('陪玩钱包扣款流水异常')
         deficit = row.deposit_deficit
         if row.deposit_deduction:
-            from wallet.models import get_platform_wallet
             from wallet.refund_deposit import _verify_direct_deficit
             if (not deficit or deficit.refund_id != refund.pk or deficit.account_id != row.account_id
                     or deficit.amount != row.deposit_deduction
@@ -284,8 +283,11 @@ def _verify_posting_core_locked(posting):
                     or deficit.source_store_transaction.operator_account_id != posting.operator_id
                     or deficit.source_store_transaction.operator_id != refund.operator_id):
                 raise ValidationError('陪玩退款押金凭证异常')
+            platform = Wallet.objects.select_for_update().filter(user__username=settings.PLATFORM_SYSTEM_USERNAME).first()
+            if not platform:
+                raise ValidationError('陪玩退款押金凭证异常')
             try:
-                _verify_direct_deficit(deficit, get_platform_wallet(for_update=True))
+                _verify_direct_deficit(deficit, platform)
             except ValueError as exc:
                 raise ValidationError('陪玩退款押金凭证异常') from exc
     segment_plan = assets.get('segment_pending_plan')
