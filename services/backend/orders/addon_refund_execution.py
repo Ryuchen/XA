@@ -170,15 +170,19 @@ def _first_handover_after_refund(refund):
 
 def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
     recorded = OrderAddonRefund.objects.filter(order=order, payment_id=payment_id, proposal_id=proposal_id)
-    if order.room_required_snapshot or order.prestart_handoffs.exists():
+    room_order = order.room_required_snapshot is True
+    if (room_order and not order.settled_at) or order.prestart_handoffs.exists():
         return False
     if order.refund_records.exists():
+        if room_order:
+            return False
         from .points_returned_addon_refund import before_first_main_refund
         returned = before_first_main_refund(order)
         return bool(returned and returned.payment_id == payment_id and recorded.exists())
     transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
-    refund = recorded.filter(
-            payment__handovers__status='ACCEPTED', payment__handovers__kind='STANDARD',
+    refund = None
+    if not room_order:
+        refund = recorded.filter(payment__handovers__status='ACCEPTED', payment__handovers__kind='STANDARD',
             payment__handovers__previous__isnull=True, payment__handovers__accepted_at__lt=F('created_at')).first()
     if not refund:
         if not order.settled_at or order.status != order.Status.COMPLETED:
@@ -191,7 +195,7 @@ def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
         if not prior.payment.handovers.exists():
             return transfers.filter(next_segment_id=prior.payment.intent.segment_id,
                 created_at__lt=prior.payment.buyer_transaction.created_at).exists()
-        return _first_handover_after_refund(prior) is not None
+        return not room_order and _first_handover_after_refund(prior) is not None
     payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
     if len(payments) > 1:
         from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
