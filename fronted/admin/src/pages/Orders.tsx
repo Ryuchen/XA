@@ -7,6 +7,7 @@ import { coinText, coinUnit, OrderJourney, OrderSource, OrderSyncBar, orderLifec
 import { AdminPageSkeleton } from "@/components/AdminPageSkeleton"
 import PrivateImage from "@/components/PrivateImage"
 import RoomCompletionRequests from "@/components/RoomCompletionRequests"
+import AddonFirstProposal from "@/components/AddonFirstProposal"
 import { useEffect, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router"
 import { toast } from "sonner"
@@ -979,12 +980,12 @@ function OrderDetail({
                           <div className="mt-4 flex flex-wrap gap-2">
                             {ticket.status === "OPEN" ? (
                               <>
-                                {auth.hasPerm("support:edit") && (row.status === "IN_SERVICE" ||
+                                {ticket.addon_payment == null && auth.hasPerm("support:edit") && (row.status === "IN_SERVICE" ||
                                   (row.status === "COMPLETED" && (!!ticket.completed_followup_supported ||
                                    (!!ticket.created_at && !!row.completed_at &&
                                     Date.parse(ticket.created_at) <= Date.parse(row.completed_at))))) && !!ticket.affected_provider_account_ids?.length &&
                                   <NegotiationProposalEntry ticket={ticket} open={() => onOperation("negotiation-proposal", {...row, ticket})} />}
-                                {auth.hasPerm("order:refund") && !ticket.affected_provider_account_ids?.length && (
+                                {ticket.addon_payment == null && auth.hasPerm("order:refund") && !ticket.affected_provider_account_ids?.length && (
                                   <Button
                                     size="sm"
                                     variant="destructive"
@@ -1024,7 +1025,8 @@ function OrderDetail({
                                 </Button>
                               )
                             )}
-                            {!!ticket.affected_provider_account_ids?.length && auth.hasPerm("order:refund") &&
+                            {ticket.addon_payment != null && (auth.hasPerm("order:view") || auth.hasPerm("order:refund")) && <AddonFirstProposal key={`${auth.revision}:${row.id}:${ticket.id}:${ticket.client_request_id}`} orderId={row.id} ticket={ticket} />}
+                            {ticket.addon_payment == null && !!ticket.affected_provider_account_ids?.length && auth.hasPerm("order:refund") &&
                               <NegotiationExecutionEntry ticket={ticket} open={proposal => onOperation("negotiation-execution", {...row, ticket, proposal})} />}
                           </div>
                         </article>
