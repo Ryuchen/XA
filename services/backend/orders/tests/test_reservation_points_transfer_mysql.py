@@ -2443,6 +2443,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.run_in_stores(self.exercise_paid_points_room_objections)
 
     @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_points_room_transfer_invalidates_timer_without_dismissing_open_objection(self):
+        self.room_service = self.team_returned_addon = self.defer_funding = True
+        self.run_in_stores(self.exercise_paid_points_room_transfer_during_objection)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
         ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
     def test_paid_transfer_room_keeps_addon_on_replacement_segment_after_confirmation(self):
         self.room_service = self.room_addon_purchase = True
@@ -2546,8 +2552,6 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 self.assertEqual((progress['submitted_count'], progress['total_count']), (submitted, 2))
 
     def prepare_verified_paid_points_room(self, provider, *, former=None):
-        from orders.models import OrderRoomConfirmation
-
         current = self.api(provider)
         path = f'/api/orders/orders/{self.order_id}/'
         submission = path + 'room/completion-requests/'
@@ -2580,12 +2584,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         reviewer_account = get_or_create_account_for_legacy_user(reviewer)
         reviewer.admin_membership.account = reviewer_account
         reviewer.admin_membership.save(update_fields=['account'])
-        room_request_id = requested['id']
+        return self.review_paid_room_request(reviewer_account, requested['id']), reviewer_account
+
+    def review_paid_room_request(self, reviewer_account, room_request_id):
+        from orders.models import OrderRoomConfirmation
+
         self.ok(self.api(reviewer_account).post(f'/api/admin/room-completion-requests/{room_request_id}/review/',
-            {'decision': 'VERIFIED', 'note': '已核实当前履约段', 'client_request_id': 'paid-room-review'}, format='json'))
+            {'decision': 'VERIFIED', 'note': '已核实当前履约段',
+             'client_request_id': f'paid-room-review-{room_request_id}'}, format='json'))
         wait = OrderRoomConfirmation.objects.get(request_id=room_request_id)
         self.assertEqual(wait.status, 'RUNNING')
-        return wait, reviewer_account
+        return wait
 
     def exercise_paid_points_room_confirmation(self, provider=None, *, former=None):
         from orders.room_auto_confirmation import process_one
@@ -2632,7 +2641,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(Message.objects.filter(recipient_account=reviewer, title='房间异议待处理').count(), 1)
         with patch('django.utils.timezone.now', return_value=resolved_at):
             self.assertEqual(process_one(wait.pk), 'skip')
-            self.resolve_paid_room_objection(reviewer, opened['id'])
+            self.ok(self.resolve_paid_room_objection(reviewer, opened['id'], confirmation_ready=True))
             operator = make_console_user(['dictionary:edit'])
             editor = get_or_create_account_for_legacy_user(operator)
             operator.admin_membership.account = editor
@@ -2659,7 +2668,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 self.assertEqual(competing.result(timeout=10), 'skip')
             wait.refresh_from_db()
             self.assertEqual((wait.status, wait.remaining_microseconds), ('PAUSED', 0))
-            self.resolve_paid_room_objection(reviewer, late['id'])
+            self.ok(self.resolve_paid_room_objection(reviewer, late['id'], confirmation_ready=True))
             self.assert_room_auto_confirmation_wins(path, wait.pk)
         wait.refresh_from_db()
         order = Order.objects.get(pk=self.order_id)
@@ -2669,10 +2678,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} order={order.pk} wait={wait.pk} objection={opened["id"]},{late["id"]} '
               f'paused_for=40m waiting_session={waited} configuration=60m-v1 then 15m-v2', flush=True)
 
-    def resolve_paid_room_objection(self, reviewer, objection_id):
-        self.ok(self.api(reviewer).post(f'/api/admin/room-objections/{objection_id}/resolve/',
-            {'resolution': '已核对，仍满足结单条件', 'client_request_id': f'resolve-{objection_id}', 'confirmation_ready': True},
-            format='json'))
+    def resolve_paid_room_objection(self, reviewer, objection_id, *, confirmation_ready):
+        return self.api(reviewer).post(f'/api/admin/room-objections/{objection_id}/resolve/',
+            {'resolution': '已核对履约凭证与人员', 'client_request_id': f'resolve-{objection_id}',
+             'confirmation_ready': confirmation_ready}, format='json')
 
     def assert_room_auto_confirmation_wins(self, path, wait_id):
         from orders.room_auto_confirmation import process_one
@@ -2704,8 +2713,68 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 self.assertEqual(confirming.result(timeout=10), 'confirmed')
                 result = competing.result(timeout=10)
         self.assertEqual(result.status_code, 400, result.data)
+        self.assertEqual(result.data['msg'], '订单当前不能提出房间异议')
         self.assertEqual(process_one(wait_id), 'skip')
         print(f'{self.store.slug} order={self.order_id} auto-first waiting_session={waited}', flush=True)
+
+    def exercise_paid_points_room_transfer_during_objection(self):
+        from orders.room_auto_confirmation import process_one
+
+        old_wait, reviewer = self.prepare_verified_paid_points_room(self.original)
+        path = f'/api/orders/orders/{self.order_id}/'
+        submission = path + 'room/completion-requests/'
+        boss, replacement = self.api(self.buyer), self.api(self.replacement)
+        room_id = self.ok(boss.get(path + 'room/'))['id']
+        staff = self.api(self.staff)
+        table = Order._meta.db_table
+        attempts = Queue()
+        observe = self.observe_lock_attempt(attempts, table, 'for update', account_id=self.order_id)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with transaction.atomic(using=self.store.database_alias):
+                objection = self.ok(boss.post(path + 'room/objections/',
+                    {'reason': '正在核对本次履约', 'client_request_id': 'before-room-transfer'}, format='json'))
+                competing = pool.submit(self.independent_request, lambda: self.transfer(staff, share=(2000, 3000)), observe)
+                waited = self.wait_for_lock(competing, attempts, table=table)
+            self.ok(competing.result(timeout=10))
+        order = Order.objects.get(pk=self.order_id)
+        old_wait.refresh_from_db()
+        self.assertEqual((old_wait.status, old_wait.invalidation_reason, old_wait.deadline),
+                         ('INVALIDATED', 'TRANSFER', None))
+        self.assertEqual(process_one(old_wait.pk), 'skip')
+        self.assertTrue(order.room.objections.filter(pk=objection['id'], status='OPEN').exists())
+        self.assertEqual(self.ok(boss.get(path + 'room/'))['id'], room_id)
+        original = self.api(self.original)
+        self.assertEqual(self.ok(original.get(path + 'room/'))['role'], 'FORMER_PROVIDER')
+
+        change = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        self.join_replacement(replacement, change)
+        self.assert_room_provider_actions(replacement, 'in_progress', ['COMPLETE'], submitted=1)
+        self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'after-objection-transfer-evidence'}, format='multipart'))
+        payload = {'description': '当前两人履约完毕', 'client_request_id': 'after-objection-transfer'}
+        self.assertEqual(replacement.post(submission, payload, format='json').status_code, 409)
+        self.assertEqual(self.resolve_paid_room_objection(reviewer, objection['id'],
+                         confirmation_ready=True).status_code, 409)
+        self.ok(self.resolve_paid_room_objection(reviewer, objection['id'], confirmation_ready=False))
+        requested = self.ok(replacement.post(submission, payload, format='json'))
+        self.assertCountEqual(requested['participants'], [self.replacement.pk, self.teammate.pk])
+        with patch('django.utils.timezone.now', return_value=old_wait.started_at + timedelta(minutes=25)):
+            new_wait = self.review_paid_room_request(reviewer, requested['id'])
+        old_wait.refresh_from_db()
+        self.assertEqual(old_wait.status, 'INVALIDATED')
+        self.assertEqual(new_wait.deadline - new_wait.started_at, timedelta(minutes=30))
+        self.assertGreater(new_wait.started_at, old_wait.started_at)
+        confirmation = {'client_request_id': 'after-objection-transfer-confirm'}
+        with patch('django.utils.timezone.now', return_value=new_wait.started_at + timedelta(minutes=1)):
+            self.assertEqual(boss.post(f'{submission}{old_wait.request_id}/confirm/',
+                             confirmation, format='json').status_code, 409)
+            confirmed = self.ok(boss.post(f'{submission}{new_wait.request_id}/confirm/', confirmation, format='json'))
+        self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.settled_at), (Order.Status.COMPLETED, None))
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} room={room_id} order={order.pk} objection={objection["id"]} '
+              f'invalidated_wait={old_wait.pk} new_wait={new_wait.pk} transfer_waiting_session={waited}', flush=True)
 
     def exercise_paid_team_transfer_completion_actions(self):
         self.ok(self.transfer(self.api(self.staff), share=(2000, 3000)))
