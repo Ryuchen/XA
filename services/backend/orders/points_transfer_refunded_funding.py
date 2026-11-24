@@ -1,10 +1,47 @@
 """Isolated reconciliation of a transferred points order after one refund."""
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 from django.conf import settings
+from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ValidationError
 
 from stores.db import transaction
 from .models import Order
 from .points_funding_plan import PointsFundingPlanError
+
+if TYPE_CHECKING:
+    from .models import OrderAddonFundingReleaseRun, PointsNegotiationPosting, PointsPostRefundTransferRevision
+    from .points_negotiation_preview import RefundedFunding
+
+
+@dataclass(frozen=True)
+class VerifiedTransferRefundBasis:
+    funding: 'RefundedFunding'
+    posting: 'PointsNegotiationPosting'
+    revision: 'PointsPostRefundTransferRevision | None'
+    addon_runs: tuple['OrderAddonFundingReleaseRun', ...]
+
+    @property
+    def latest_addon_run(self):
+        if self.addon_runs and (self.revision is None or self.addon_runs[-1].created_at > self.revision.created_at):
+            return self.addon_runs[-1]
+        return None
+
+    @property
+    def addon_history(self):
+        if latest := self.latest_addon_run:
+            return latest.refunded_main_snapshot.get('addon_history')
+        if self.revision:
+            return self.revision.snapshot.get('addon_history')
+        evidence = getattr(self.posting, 'funding_release_evidence', None)
+        return evidence.addon_funding_snapshot if evidence else None
+
+    @property
+    def addon_boundary(self):
+        if latest := self.latest_addon_run:
+            return parse_datetime(latest.refunded_main_snapshot.get('captured_at', ''))
+        return self.revision.transfer.created_at if self.revision else self.posting.created_at
 
 
 def plan_refunded_transfer(order_id, *, allow_finalized=False, include_basis=False):
@@ -94,7 +131,6 @@ def _plan_refunded_transfer(order_id, *, allow_finalized=False, include_basis=Fa
                 raise ValidationError('转单后的加购资金版本待核对')
             snapshot = after[-1].refunded_main_snapshot if after else latest.snapshot
             funding = RefundedFunding(**snapshot['funding'])
-            later = after
         else:
             posting, _, initial = verify_locked(order, include_release=True)
             later = later_runs(order, posting)
@@ -104,6 +140,6 @@ def _plan_refunded_transfer(order_id, *, allow_finalized=False, include_basis=Fa
                    or row.created_at <= posting.created_at for row in later):
                 raise ValidationError('主单退款后的加购资金来源待核对')
             funding = RefundedFunding(**later[-1].refunded_main_snapshot['funding']) if later else initial
-        return (funding, posting, latest, later) if include_basis else funding
+        return VerifiedTransferRefundBasis(funding, posting, latest, tuple(later)) if include_basis else funding
     except ValidationError as exc:
         raise PointsFundingPlanError('转单退款后的协商或补资凭证待核对') from exc

@@ -182,7 +182,8 @@ def _points_transfer_terms(order):
 
 def _points_transfer_terms_verified(order):
     from .points_funding_plan import PointsFundingPlanError
-    from .points_funding_evidence import (VerifiedOrderFundingWithAllocations, verify_order_funding,
+    from .points_funding_evidence import (VerifiedOrderFundingWithAllocations, VerifiedTransferredRefundFunding,
+                                          verify_order_funding,
                                           verified_order_allocations_locked)
     if order.refund_records.exists():
         if order.refund_records.count() > 3:
@@ -220,55 +221,17 @@ def _points_transfer_terms_verified(order):
         from .models import PointsNegotiationPosting
         from .points_transfer_refunded_plan import build_refunded_plan
         try:
-            plan, funding = build_refunded_plan(order)
             verified = verify_order_funding(order.pk, allow_finalized=True, include_net_allocations=True)
+            if not isinstance(verified, VerifiedTransferredRefundFunding):
+                raise SettlementError('转单退款后的逐笔补资凭证缺失')
+            basis = verified.basis
+            plan, funding = build_refunded_plan(order, basis=basis)
         except (PointsFundingPlanError, ValidationError, PointsNegotiationPosting.DoesNotExist) as exc:
             raise SettlementError('转单退款后的补资或收益凭证待核对') from exc
         if not verified.fully_funded:
             return plan, None
-        if not isinstance(verified, VerifiedOrderFundingWithAllocations):
-            raise SettlementError('转单退款后的逐笔补资凭证缺失')
-        try:
-            posting = PointsNegotiationPosting.objects.get(points_refund__redemption__order=order)
-        except PointsNegotiationPosting.DoesNotExist as exc:
-            raise SettlementError('转单退款后的协商凭证缺失') from exc
-        from .models import PointsPostRefundTransferRevision, OrderAddonPayment
-        version = PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first()
-        addon_history = (version.snapshot.get('addon_history') if version else
-                         getattr(getattr(posting, 'funding_release_evidence', None), 'addon_funding_snapshot', None))
-        addon_boundary = version.transfer.created_at if version else posting.created_at
-        if version:
-            from .points_transfer_addon_events import later_runs
-            try:
-                later = [row for row in later_runs(order, posting) if row.created_at > version.created_at]
-            except ValidationError as exc:
-                raise SettlementError('转单后的加购资金版本待核对') from exc
-            if later:
-                from django.utils.dateparse import parse_datetime
-                latest_snapshot = later[-1].refunded_main_snapshot
-                if (not isinstance(latest_snapshot, dict)
-                        or latest_snapshot.get('transfer_revision_id') != version.pk):
-                    raise SettlementError('转单后的加购资金来源待核对')
-                addon_history = latest_snapshot.get('addon_history')
-                addon_boundary = parse_datetime(latest_snapshot.get('captured_at', ''))
-                if not isinstance(addon_history, list) or not addon_boundary:
-                    raise SettlementError('加购资金版本时间待核对')
-        if not version:
-            from .points_transfer_addon_events import later_runs
-            try:
-                later = later_runs(order, posting)
-            except ValidationError as exc:
-                raise SettlementError('主单退款后的加购资金版本待核对') from exc
-            if later:
-                from django.utils.dateparse import parse_datetime
-                latest_snapshot = later[-1].refunded_main_snapshot
-                if (not isinstance(latest_snapshot, dict)
-                        or latest_snapshot.get('transfer_origin_posting_id') != posting.pk):
-                    raise SettlementError('主单退款后的加购资金来源待核对')
-                addon_history = latest_snapshot.get('addon_history')
-                addon_boundary = parse_datetime(latest_snapshot.get('captured_at', ''))
-                if not addon_boundary:
-                    raise SettlementError('加购资金版本时间待核对')
+        from .models import OrderAddonPayment
+        posting, addon_history, addon_boundary = basis.posting, basis.addon_history, basis.addon_boundary
         addon_parts = []
         addon_totals = {}
         addon_refunds = []

@@ -17,7 +17,7 @@ class PointsTransferRefundReleaseTests(SimpleTestCase):
         order = SimpleNamespace(pk=7, status=Order.Status.IN_SERVICE, source_order_id=None,
                                 settled_at=None, refund_records=Mock())
         order.refund_records.count.return_value = 1
-        posting = SimpleNamespace(participants={})
+        posting = SimpleNamespace(pk=8, participants={})
         calculation = object()
         orders = Mock()
         orders.select_for_update.return_value.filter.return_value.first.return_value = order
@@ -38,7 +38,7 @@ class PointsTransferRefundReleaseTests(SimpleTestCase):
             closure.assert_called_once_with(order, include_release=True)
             closure.reset_mock()
             self.assertEqual(refunded_funding._plan_refunded_transfer(order.pk, include_basis=True),
-                             (calculation, posting, None, []))
+                             refunded_funding.VerifiedTransferRefundBasis(calculation, posting, None, ()))
             closure.assert_called_once_with(order, include_release=True)
 
             # Older postings can have list participants if the refund preceded the first transfer.
@@ -48,16 +48,20 @@ class PointsTransferRefundReleaseTests(SimpleTestCase):
                 provider_income_units=160, pending_deduction_units=0, provider_external_units=0,
                 inviter_rate=0, allocated_units=0)
             version = SimpleNamespace(pk=9, created_at=2)
+            earlier = SimpleNamespace(payment_id=2, payment=SimpleNamespace(buyer_transaction=SimpleNamespace(created_at=0)),
+                created_at=1, refunded_main_snapshot={'transfer_origin_posting_id': posting.pk})
             event = SimpleNamespace(payment_id=1, payment=SimpleNamespace(buyer_transaction=SimpleNamespace(created_at=3)),
                 created_at=4, refunded_main_snapshot={'transfer_revision_id': version.pk, 'funding': asdict(expected)})
             versions.return_value.order_by.return_value = [version]
-            later_runs.return_value = [event]
+            later_runs.return_value = [earlier, event]
             later_runs.reset_mock()
             closure.reset_mock()
             with (patch('orders.points_post_refund_transfer.verify_locked') as verify_version,
                   patch('orders.points_post_refund_transfer.unresolved_pending_locked', return_value=[])):
-                self.assertEqual(refunded_funding._plan_refunded_transfer(order.pk, include_basis=True),
-                                 (expected, posting, version, [event]))
+                basis = refunded_funding._plan_refunded_transfer(order.pk, include_basis=True)
+                self.assertEqual(basis, refunded_funding.VerifiedTransferRefundBasis(
+                    expected, posting, version, (earlier, event)))
+                self.assertIs(basis.latest_addon_run, event)
             closure.assert_called_once_with(order)
             verify_version.assert_called_once_with(version)
             later_runs.assert_called_once_with(order, posting)

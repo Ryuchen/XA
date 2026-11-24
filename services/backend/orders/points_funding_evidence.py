@@ -21,6 +21,7 @@ from .points_funding_plan import PointsFundingPlanError, plan_verified_order
 
 if TYPE_CHECKING:
     from .points_negotiation_preview import RefundedFunding
+    from .points_transfer_refunded_funding import VerifiedTransferRefundBasis
 
 _ordinary_handover_read = ContextVar('ordinary_handover_funding_read', default=None)
 _ordinary_addon_refund_read = ContextVar('ordinary_addon_refund_funding_read', default=None)
@@ -63,6 +64,11 @@ class VerifiedFirstRefundFunding(VerifiedOrderFundingWithAllocations):
     plan: 'RefundedFunding'
     addon_history: tuple[dict, ...]
     last_addon_run_id: int | None
+
+
+@dataclass(frozen=True)
+class VerifiedTransferredRefundFunding(VerifiedOrderFundingWithAllocations):
+    basis: 'VerifiedTransferRefundBasis'
 
 
 def verified_order_allocations_locked(order, *, pending_followup_posting_id=None, allocation_ids=None,
@@ -456,6 +462,7 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                     raise PointsFundingPlanError('退款后的个人结算凭证待核对') from exc
             return VerifiedOrderFunding(plan.required, plan.allocated, plan.remaining, plan.remaining == 0)
         first_refund_basis = None
+        transfer_refund_basis = None
         verified_addon_releases = {}
         verified_addon_history = ()
         if refunded_points:
@@ -467,7 +474,11 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                                        allow_in_service=order.status == Order.Status.IN_SERVICE)
                 else:
                     from .points_transfer_refunded_funding import plan_refunded_transfer
-                    plan = plan_refunded_transfer(order_id, allow_finalized=allow_finalized)
+                    plan = plan_refunded_transfer(order_id, allow_finalized=allow_finalized,
+                                                 include_basis=include_net_allocations)
+                    if include_net_allocations:
+                        transfer_refund_basis = plan
+                        plan = transfer_refund_basis.funding
             else:
                 if order.refund_records.count() == 2:
                     from .points_followup_funding import verify_followup_funding
@@ -494,6 +505,9 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
             # changes have their own refund revision, require the facts to match.
             if first_refund_basis is not None:
                 evidence, later_runs = first_refund_basis
+            elif transfer_refund_basis is not None:
+                evidence = getattr(transfer_refund_basis.posting, 'funding_release_evidence', None)
+                later_runs = transfer_refund_basis.addon_runs if evidence else ()
             else:
                 from .models import OrderPointsFundingReleaseEvidence
                 from .points_transfer_addon_events import later_runs as transfer_later_runs
@@ -522,7 +536,8 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                     from .models import PointsPostRefundTransferRevision
                     from .points_transfer_refund_access import verification_scope
                     from .points_transfer_refund_evidence import _reconstruct_from_verified_facts
-                    version = PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first()
+                    version = (transfer_refund_basis.revision if transfer_refund_basis is not None else
+                               PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first())
                     facts = version.snapshot['facts'] if version else evidence.posting.participants['facts']
                     last_transfer = version.transfer_id if version else facts['transfers'][-1]['id']
                     with verification_scope(order):
@@ -576,6 +591,8 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                     revision = OrderPointsTransferFollowupFundingRevision.objects.select_related('first_posting').filter(
                         posting__points_refund__redemption__order=order).first()
                     posting = revision.first_posting if revision else None
+                elif transfer_refund_basis is not None:
+                    posting = transfer_refund_basis.posting
                 else:
                     posting = PointsNegotiationPosting.objects.filter(points_refund__redemption__order=order).first()
                 if not posting or not isinstance(posting.participants, (dict, list)):
@@ -642,6 +659,8 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
         remaining = plan.additional_store_funding_units - total
         if include_net_allocations:
             result = (plan.additional_store_funding_units, total, remaining, remaining == 0, tuple(net_allocations))
+            if transfer_refund_basis is not None:
+                return VerifiedTransferredRefundFunding(*result, transfer_refund_basis)
             if first_refund_basis is not None:
                 from .points_negotiation_preview import RefundedFunding
                 if isinstance(plan, RefundedFunding):
