@@ -13,6 +13,14 @@ from .rooms import message_role
 from .room_review_lifecycle import submit as protect_submit, review as protect_review
 
 
+def _formal_points_transfer(order):
+    from .points_business_access import configured
+    from .segment_financial_capture import covered_transfers
+
+    return configured() and covered_transfers(order.pk).filter(
+        previous_segment__attribution__financial_coverage__source='WALLET_POINTS').exists()
+
+
 def _participants(order):
     values = list(order.providers.filter(released_at__isnull=True).values_list('provider_account_id', flat=True))
     if (not values and order.required_provider_count == 1 and order.provider_account_id
@@ -26,7 +34,14 @@ def _participants(order):
         from rest_framework.exceptions import ValidationError
         try:
             from .ordinary_transfer_continuation import applies
-            if applies(order):
+            if order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED and _formal_points_transfer(order):
+                from .points_transfer_refund_access import after_transfer
+                from .points_transfer_refund_continuation import verify_locked as verify_points
+                with after_transfer(order.pk, phase='report', read_only=True) as locked:
+                    posting = verify_points(locked)
+                    continuation = (posting.termination_in_service and not posting.completed_by_negotiation
+                                    and not posting.shares.filter(account_id=values[0]).exists())
+            elif applies(order):
                 from .ordinary_transfer_continuation import verify_locked
                 continuation = verify_locked(order)
             else:
@@ -85,11 +100,10 @@ def _completion_evidence_ready(order, participants):
     if incoming and (len(incoming) != 1 or not incoming[0][0] or not incoming[0][1]
                      or incoming[0][1] < incoming[0][0]):
         return False
-    from .points_business_access import configured
-    from .segment_financial_capture import covered_transfers
-    if (order.payment_status == Order.PaymentStatus.PAID and configured()
-            and covered_transfers(order.pk).filter(
-                previous_segment__attribution__financial_coverage__source='WALLET_POINTS').exists()):
+    if ((order.payment_status == Order.PaymentStatus.PAID
+            or (order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED
+                and order.required_provider_count == 2 and len(participants) == 1))
+            and _formal_points_transfer(order)):
         from .models import OrderParticipationSegment
         current = list(OrderParticipationSegment.objects.filter(attribution__order=order, attribution__status='ACTIVE',
             released_at__isnull=True).values_list('provider_account_id', 'started_at', 'completion_image'))

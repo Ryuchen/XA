@@ -42,11 +42,14 @@ def complete_confirmation_locked(order, row, wait, participants, *, actor, legac
     from .segment_reports import enter_points_report_scope
     from .points_funding_plan import PointsFundingPlanError
     with ExitStack() as scopes:
-        if order.payment_status == Order.PaymentStatus.PAID:
+        paid = order.payment_status == Order.PaymentStatus.PAID
+        continuing = (order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED
+                      and order.required_provider_count == 2 and len(participants) == 1)
+        if paid or continuing:
             try:
-                order = enter_points_report_scope(scopes, order, include_untransferred=True)
+                order = enter_points_report_scope(scopes, order, include_untransferred=paid)
                 from .points_transfer_refund_access import permits
-                if permits(order, phase='report'):
+                if paid and permits(order, phase='report'):
                     from .points_funding_evidence import verify_order_funding
                     verify_order_funding(order.pk)
             except (ValidationError, PointsFundingPlanError) as exc:

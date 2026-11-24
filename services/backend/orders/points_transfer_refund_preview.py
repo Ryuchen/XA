@@ -95,11 +95,19 @@ def preview_locked(case_id, *, refund_equivalent_units):
             raise ValidationError('售后申请时间超出订单售后期')
     if formal:
         from .points_returned_addon_refund import before_first_main_refund, require_other_seat
+        from .points_transfer_refund_access import room_direct_addon_refund
         returned = before_first_main_refund(order)
         if returned:
             if case.addon_payment_id:
                 raise ValidationError('请单独登记主服务售后')
             require_other_seat(order, returned, case.affected_segment_ids)
+        elif order.required_provider_count == 2:
+            addon = room_direct_addon_refund(order)
+            if addon and (case.addon_payment_id or len(selected_segments) != 1
+                    or not OrderParticipationSegment.objects.filter(pk__in=selected_segments,
+                        attribution__order=order, started_at__isnull=False, released_at__isnull=True)
+                    .exclude(slot=addon.payment.intent.segment.slot).exists()):
+                raise ValidationError('请为另一席选择仍在履约的主服务段')
     try:
         original = plan_points_transfer(order.pk, allow_recorded=True, preview_unstarted=True)
         funding = verify_order_funding(order.pk, allow_finalized=True, allow_unstarted=True,

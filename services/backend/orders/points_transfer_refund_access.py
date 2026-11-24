@@ -31,12 +31,14 @@ def room_direct_addon_refund(order):
     """Identify the posted refund for an add-on bought on the room's incoming seat."""
     from .models import OrderOriginalShareTransfer
 
-    if (order.room_required_snapshot is not True or order.status != order.Status.COMPLETED
-            or order.required_provider_count != 1 or order.prestart_handoffs.exists()
+    if (order.room_required_snapshot is not True or order.required_provider_count not in (1, 2)
+            or (order.status != order.Status.COMPLETED
+                and (order.required_provider_count != 2 or order.status != order.Status.IN_SERVICE))
+            or order.prestart_handoffs.exists()
             or order.addon_intents.filter(payment__isnull=False).count() != 1):
         return None
     refunds = list(order.addon_refunds.select_related(
-        'payment__intent', 'payment__buyer_transaction', 'funding_release_run', 'proposal')[:2])
+        'payment__intent__segment', 'payment__buyer_transaction', 'funding_release_run', 'proposal')[:2])
     if len(refunds) != 1:
         return None
     refund = refunds[0]

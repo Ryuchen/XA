@@ -883,7 +883,9 @@ class OrderSerializer(EntityNumberModelSerializer):
             if hasattr(obj, '_formal_transfer_progress'):
                 # A released seat cannot use the retained seat's order action.
                 return bool(request.legacy_user and progress and any(
-                    member['id'] == request.account.pk for member in progress['members']) and any(
+                    member['id'] == request.account.pk
+                    and (obj.room_required_snapshot is not True or not member['submitted'])
+                    for member in progress['members']) and any(
                     segment.started_at and not segment.released_at and segment.attribution.status == 'ACTIVE'
                     for segment in self._my_participation(obj)))
         from .points_funding_plan import PointsFundingPlanError
