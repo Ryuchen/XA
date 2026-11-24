@@ -240,10 +240,34 @@ def _participants(payment, case, amount, selected):
     return result
 
 
-def _data(proposal, *, account=None, execution_income=None):
+def _execution_receipt(proposal, refund):
+    """Read back the wallet credit linked to this proposal's posted refund."""
+    if refund is None:
+        return None
+    payment = proposal.payment
+    intent, debit = payment.intent, payment.buyer_transaction
+    credit = refund.buyer_transaction
+    if (proposal.status != 'ACCEPTED' or refund.proposal_id != proposal.pk
+            or refund.payment_id != payment.pk or refund.order_id != intent.order_id
+            or proposal.case.order_id != intent.order_id or refund.amount != proposal.amount or refund.amount <= 0
+            or intent.buyer_id != intent.order.customer_account_id or credit.wallet.account_id != intent.buyer_id
+            or debit.tx_type != 'PAY' or debit.status != 'SUCCESS' or debit.amount != -intent.amount
+            or credit.wallet_id != debit.wallet_id or credit.order_id is not None
+            or credit.tx_type != 'REFUND' or credit.status != 'SUCCESS' or credit.amount != refund.amount
+            or credit.balance_after != credit.balance_before + credit.amount
+            or credit.operator_account_id != refund.operator_id or credit.operator_id != refund.legacy_operator_id
+            or not debit.created_at <= credit.created_at <= refund.created_at
+            or credit.reversal_of_id or credit.reversals.exists()):
+        return None
+    return {'refund_id': refund.pk, 'buyer_transaction_id': credit.pk,
+            'amount_raw': refund.amount, 'executed_at': refund.created_at}
+
+
+def _data(proposal, *, account=None, execution_income=None, include_execution_receipt=False):
     payment = proposal.payment
     from .addon_refund_execution import enabled
-    executed = hasattr(proposal, 'refund')
+    refund = getattr(proposal, 'refund', None)
+    executed = refund is not None
     from .ordinary_addon_production import eligible as ordinary_addon_eligible
     order = payment.intent.order
     from .ordinary_transfer_capability import enabled as transferred_enabled, permits as transferred_permits
@@ -320,6 +344,8 @@ def _data(proposal, *, account=None, execution_income=None):
         data['case_request_id'] = proposal.case_request_id
         if proposal.created_by_id == account.pk:
             data['request_id'] = proposal.request_id
+        if include_execution_receipt:
+            data['execution_receipt'] = _execution_receipt(proposal, refund)
     return data
 
 
@@ -330,9 +356,12 @@ class StaffAddonRefundProposalView(APIView):
     def get(self, request, order_id, payment_id):
         if 'order:view' not in get_account_permissions(request.account) and 'order:refund' not in get_account_permissions(request.account):
             return Response({'code': 403, 'msg': '无权查看售后方案'}, status=403)
-        rows = OrderAddonRefundProposal.objects.select_related('payment__intent').filter(
+        rows = OrderAddonRefundProposal.objects.select_related(
+            'case', 'payment__intent__order', 'payment__buyer_transaction', 'refund__buyer_transaction__wallet').filter(
             payment_id=payment_id, payment__intent__order_id=order_id).order_by('-pk')
-        return Response({'code': 0, 'data': [_data(row, account=request.account) for row in rows]})
+        return Response({'code': 0, 'data': [
+            _data(row, account=request.account, include_execution_receipt=True) for row in rows
+        ]})
 
     @transaction.atomic
     @scoped_addon_refund_action
@@ -610,4 +639,4 @@ class StaffAddonRefundExecuteView(APIView):
                               'amount': refund.amount}, status_code=200)
         request._request._business_audit_recorded = True
         return Response({'code': 0, 'data': _data(refund.proposal, account=request.account,
-                                                  execution_income=execution_income)})
+            execution_income=execution_income, include_execution_receipt=True)})

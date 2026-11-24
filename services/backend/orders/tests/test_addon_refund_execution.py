@@ -33,12 +33,31 @@ class AddonRefundExecutionTests(TestCase):
 
     def test_confirmed_refunds_restore_original_sources_and_deduct_pending_earnings_once(self):
         first_url = self.approve('refund-one', 500)
+        before = self.fixture.staff.get(self.fixture.staff_url)
+        self.assertEqual(before.status_code, 200, before.data)
+        self.assertIsNone(before.data['data'][0]['execution_receipt'])
         first = self.fixture.staff.post(first_url, {}, format='json')
         self.assertEqual(first.status_code, 200, first.data)
         self.assertTrue(first.data['data']['refund_executed'])
-        self.assertEqual(self.fixture.staff.post(first_url, {}, format='json').status_code, 200)
         refund = OrderAddonRefund.objects.get()
+        receipt = {'refund_id': refund.pk, 'buyer_transaction_id': refund.buyer_transaction_id,
+                   'amount_raw': 500, 'executed_at': refund.created_at}
+        self.assertEqual(first.data['data']['execution_receipt'], receipt)
+        retry = self.fixture.staff.post(first_url, {}, format='json')
+        self.assertEqual(retry.status_code, 200, retry.data)
+        self.assertEqual(retry.data['data']['execution_receipt'], receipt)
+        read_only = staff_client(['order:view'])
+        listed = read_only.get(self.fixture.staff_url)
+        self.assertEqual(listed.status_code, 200, listed.data)
+        self.assertEqual(listed.data['data'][0]['execution_receipt'], receipt)
+        self.assertEqual(read_only.post(first_url, {}, format='json').status_code, 403)
+        for client in (self.fixture.fixture.client, self.fixture.fixture.provider_client):
+            details = client.get(self.fixture.user_url + f'{refund.proposal_id}/')
+            self.assertEqual(details.status_code, 200, details.data)
+            self.assertTrue(details.data['data']['refund_executed'])
+            self.assertNotIn('execution_receipt', details.data['data'])
         self.assertEqual((refund.amount, refund.addon_pending_deduction, refund.main_pending_deduction), (500, 500, 0))
+        self.assertEqual(OrderAddonRefund.objects.filter(proposal_id=refund.proposal_id).count(), 1)
         self.assertEqual(list(refund.earning_deductions.values_list('payment_id', 'amount')), [(self.fixture.payment.pk, 500)])
         self.fixture.wallet.refresh_from_db()
         self.assertEqual(self.fixture.wallet.balance, 2000)
@@ -67,6 +86,20 @@ class AddonRefundExecutionTests(TestCase):
         self.assertEqual(dict(self.fixture.payment.allocations.values_list('kind', 'refunded_amount')),
                          {'PREPAID': 1200, 'GIFT': 200, 'COMPENSATION': 100})
         self.assertEqual(OrderAddonRefund.objects.count(), 2)
+
+    def test_executed_refund_with_unverified_wallet_transaction_has_no_receipt(self):
+        execute_url = self.approve('refund-to-review', 500)
+        posted = self.fixture.staff.post(execute_url, {}, format='json')
+        self.assertEqual(posted.status_code, 200, posted.data)
+        refund = OrderAddonRefund.objects.get()
+        Transaction.objects.filter(pk=refund.buyer_transaction_id).update(status='FAILED')
+
+        listed = self.fixture.staff.get(self.fixture.staff_url)
+        self.assertEqual(listed.status_code, 200, listed.data)
+        proposal = listed.data['data'][0]
+        self.assertTrue(proposal['refund_executed'])
+        self.assertFalse(proposal['execution_available'])
+        self.assertIsNone(proposal['execution_receipt'])
 
     def test_unconfirmed_proposal_and_unprivileged_operator_do_not_refund(self):
         proposal = self.fixture.staff.post(self.fixture.staff_url, self.fixture.body, format='json')

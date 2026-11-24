@@ -67,9 +67,10 @@ class AddonRefundFlowTests(TestCase):
         retry = self.staff.post(self.staff_url, body, format='json')
         self.assertEqual(retry.status_code, 200, retry.data)
         self.assertEqual(retry.data['data'], proposal)
-        self.assertEqual(self.staff.get(self.staff_url).data['data'], [proposal])
+        listed_proposal = {**proposal, 'execution_receipt': None}
+        self.assertEqual(self.staff.get(self.staff_url).data['data'], [listed_proposal])
         self.assertEqual(second_staff.get(self.staff_url).data['data'],
-                         [{key: value for key, value in proposal.items() if key != 'request_id'}])
+                         [{key: value for key, value in listed_proposal.items() if key != 'request_id'}])
         for party in (self.fixture.client, self.fixture.provider_client):
             detail = party.get(self.user_url + f"{proposal['id']}/").data['data']
             self.assertNotIn('request_id', detail)
