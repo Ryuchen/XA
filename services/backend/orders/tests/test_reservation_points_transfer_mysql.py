@@ -323,6 +323,14 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.opening_points_hundredths = 20000
         self.run_in_stores(self.exercise_shared_funding_and_addon_consultation)
 
+    def test_refund_releases_shared_funding_before_other_order_allocates(self):
+        self.opening_points_hundredths = 20000
+        self.run_in_stores(lambda: self.exercise_shared_refund_and_allocation(refund_first=True))
+
+    def test_other_order_allocation_waits_for_a_new_request_after_refund(self):
+        self.opening_points_hundredths = 20000
+        self.run_in_stores(lambda: self.exercise_shared_refund_and_allocation(refund_first=False))
+
     def test_consultation_addon_refund_waits_for_payroll_and_adjusts_next_period(self):
         self.run_in_stores(self.exercise_addon_refund_after_payroll)
 
@@ -930,6 +938,99 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} order={self.order_id} other_order={second_order_id} '
               f'receipt={self.funding_receipt.pk} allocation={allocation["allocation_id"]} '
               f'addon={payment.pk} case={case.pk} money_waits={waits}', flush=True)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+                       NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def exercise_shared_refund_and_allocation(self, *, refund_first):
+        self.transfer_and_join()
+        transfer = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        replacement = self.api(self.replacement)
+        order_path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(replacement.post(order_path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'shared-refund-completed'}, format='multipart'))
+        second_service = make_service(price=10000, commission_override=True, commission_rate=20)
+        _, second_order_id = self.book_points_reservation([self.original], self.start + timedelta(hours=3),
+            'shared-refund-other-reservation', service=second_service)
+        self.ok(self.finance_client.post(self.funding_url, {
+            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 600}, format='json'))
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'reason': '双方案退部分主服务',
+            'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
+        admin = f'/api/admin/aftersales/{case["id"]}/'
+        proposal = self.ok(staff.post(admin + 'negotiation-proposal/', {
+            'request_id': 'shared-funding-refund-proposal', 'expected_version': 0, 'refund_units': 1000,
+            'provider_terms': [{'account_id': self.replacement.pk, 'retained_units': 3200}],
+            'explanation': '按接替段退回部分服务款'}, format='json'))
+        for actor in (self.api(self.buyer), replacement):
+            self.ok(actor.post(order_path + 'negotiation-proposal/',
+                {'proposal_id': proposal['id'], 'accepted': True}, format='json'))
+
+        refund_payload = {'proposal_id': proposal['id'], 'client_request_id': 'shared-funding-refund'}
+        allocation_payload = {'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 400}
+
+        def refund():
+            return staff.post(admin + 'negotiation-execution/', refund_payload, format='json')
+
+        def allocate():
+            return self.finance_client.post(self.funding_url, allocation_payload, format='json')
+
+        events = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
+        before = [('ORDER', 2000), ('RELEASE', 600), ('ORDER', 600)]
+        self.assertEqual(list(events.values_list('kind', 'amount')), before)
+        balance = Wallet.objects.get(account=self.buyer).balance
+        points = MemberProfile.objects.get(account=self.buyer).points_balance
+        held, resume = Event(), Event()
+        if refund_first:
+            first, second = refund, allocate
+            pause = self.pause_refund_race(PassReceiptUsageEvent._meta.db_table, 'insert into', 'RELEASE', held, resume)
+        else:
+            first, second = allocate, refund
+            pause = self.pause_refund_race(PassRefundRepaymentReceipt._meta.db_table, 'for update',
+                                           self.funding_receipt.pk, held, resume)
+        attempts = Queue()
+        money_table = OrderFinancialLock._meta.db_table
+        observer = self.observe_lock_attempt(attempts, money_table, 'for update', account_id=1)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            holding = pool.submit(self.independent_request, first, pause)
+            try:
+                self.assertTrue(held.wait(5), '未观察到先行事务锁定共用到账')
+                competing = pool.submit(self.independent_request, second, observer)
+                waited = self.wait_for_lock(competing, attempts, table=money_table)
+                self.assertEqual(list(events.values_list('kind', 'amount')), before)
+            finally:
+                resume.set()
+            first_response, second_response = holding.result(timeout=18), competing.result(timeout=18)
+
+        refund_response, allocation_response = ((first_response, second_response) if refund_first
+                                                else (second_response, first_response))
+        posted = self.ok(refund_response)
+        self.assertEqual(self.ok(refund()), posted)
+        posting = PointsNegotiationPosting.objects.get(pk=posted['execution_id'])
+        self.assertEqual(posting.funding_release_evidence.expected_release, 400)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, balance + 600)
+        self.assertEqual(MemberProfile.objects.get(account=self.buyer).points_balance, points + 1000)
+        if not refund_first:
+            self.assertEqual((allocation_response.status_code, allocation_response.data['msg']),
+                             (409, '分配金额超过到账未分配余额'))
+            rejected = allocate()
+            self.assertEqual((rejected.status_code, rejected.data), (409, allocation_response.data))
+            allocation_payload['request_id'] = str(uuid4())
+            allocation_response = allocate()
+        allocation = self.ok(allocation_response)
+        self.assertEqual(self.ok(allocate()), allocation)
+        self.assertEqual((allocation['receipt_id'], allocation['order_id'], allocation['amount']),
+                         (self.funding_receipt.pk, second_order_id, 400))
+        self.assertEqual(list(events.values_list('kind', 'amount')), before + [('RELEASE', 400), ('ORDER', 400)])
+        funding_path = f'/api/admin/platform/points-funding/{self.store.slug}/orders/'
+        for order_id, required, allocated in ((self.order_id, 1000, 1000), (second_order_id, 2000, 1000)):
+            status = self.ok(self.finance_client.get(f'{funding_path}{order_id}'))
+            self.assertEqual((status['required_units'], status['allocated_units'], status['remaining_units']),
+                             (required, allocated, required - allocated))
+        print(f'{self.store.slug} refund_first={refund_first} order={self.order_id} other_order={second_order_id} '
+              f'receipt={self.funding_receipt.pk} refund={posting.points_refund.refund_id} '
+              f'allocation={allocation["allocation_id"]} money_wait={waited}', flush=True)
 
     def consultation_payload(self, message):
         return {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
