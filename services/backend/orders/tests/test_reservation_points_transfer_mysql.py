@@ -2731,6 +2731,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
         if deposit_recovery:
             from django.contrib.auth import get_user_model
+            from orders.points_negotiation_execution import _verify_posting_core_locked
+            from orders.points_transfer_refund_access import after_transfer, verification_scope
+
             username = f'isolated-missing-platform-{uuid4().hex}'
             writes = []
 
@@ -2747,6 +2750,18 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.assertEqual(denied.status_code, 409, denied.data)
             self.assertEqual(writes, [], denied.data)
             self.assertFalse(get_user_model().objects.filter(username=username).exists())
+            # Enter the read scope with intact receipt evidence, then check the
+            # posting verifier itself with the configured account missing.
+            with (transaction.atomic(using=self.store.database_alias),
+                  after_transfer(order.pk, phase='report', read_only=True) as locked,
+                  verification_scope(locked)):
+                with (override_settings(PLATFORM_SYSTEM_USERNAME=username),
+                      connections[self.store.database_alias].execute_wrapper(observe_writes),
+                      connections['default'].execute_wrapper(observe_writes)):
+                    with self.assertRaisesMessage(ValidationError, '陪玩退款押金凭证异常'):
+                        _verify_posting_core_locked(posting)
+                transaction.set_rollback(True, using=self.store.database_alias)
+            self.assertEqual(writes, [])
             self.assertEqual(deposit_share.deposit_deficit.source_store_transaction.wallet.user.username,
                              settings.PLATFORM_SYSTEM_USERNAME)
             print(f'{self.store.slug} order={order.pk} refund={posting.points_refund.refund_id} '
