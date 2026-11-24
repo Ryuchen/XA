@@ -2074,9 +2074,10 @@ class CompleteOrderView(APIView):
             side_effect(order)
             complete_fulfillment(order, operator=request.legacy_user, operator_account=request.account)
 
+        from .segment_reports import enter_points_transfer_report_scope
         try:
             if room_order:
-                with transaction.atomic():
+                with transaction.atomic(), ExitStack() as scopes:
                     order = Order.objects.select_for_update().get(pk=order_id)
                     from .rooms import message_role
                     if (order.room_required_snapshot is not True or order.status != Order.Status.IN_SERVICE
@@ -2086,6 +2087,7 @@ class CompleteOrderView(APIView):
                             confirmation__status__in=['RUNNING', 'PAUSED']).exists():
                         raise IllegalTransitionError('结单申请已核实，凭证不能再修改')
                     pre_check(order)
+                    order = enter_points_transfer_report_scope(scopes, order)
                     side_effect(order)
                     from .work_stints import personal_completion
                     personal_completion(order, request.account.pk)
@@ -2095,13 +2097,7 @@ class CompleteOrderView(APIView):
             with transaction.atomic(), ExitStack() as scopes:
                 def check_completion(order):
                     pre_check(order)
-                    if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True:
-                        from .models import OrderOriginalShareTransfer
-                        from .points_service_payment import needs_integrated_processing
-                        if needs_integrated_processing(order) and OrderOriginalShareTransfer.objects.filter(
-                                previous_segment__attribution__order=order).exists():
-                            from .points_transfer_refund_access import after_transfer
-                            scopes.enter_context(after_transfer(order.pk, phase='report'))
+                    enter_points_transfer_report_scope(scopes, order)
 
                 order = transition(
                     order_id,

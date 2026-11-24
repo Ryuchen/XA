@@ -216,7 +216,7 @@ class RoomObjectionResolveView(APIView):
                 if (order.status != Order.Status.IN_SERVICE or not _payment_eligible(order, participants)
                         or participants != wait.request.participants or negotiated_aftersale_blocks_completion(order)):
                     return Response({'code': 409, 'msg': '订单状态或参与人已变化，请核对结单条件'}, status=409)
-                if not _completion_evidence_ready(order):
+                if not _completion_evidence_ready(order, participants):
                     return Response({'code': 409, 'msg': '结单凭证待核对，请当前陪玩重新提交所需凭证'}, status=409)
                 wait.status, wait.deadline = 'RUNNING', timezone.now() + timedelta(microseconds=wait.remaining_microseconds)
             else:

@@ -71,7 +71,7 @@ def _payment_eligible(order, participants):
         return False
 
 
-def _completion_evidence_ready(order):
+def _completion_evidence_ready(order, participants):
     """Preserve existing per-provider completion evidence gates for room orders."""
     from .participation_entry import pending_transfer_segments
     if pending_transfer_segments(order).exists():
@@ -85,6 +85,17 @@ def _completion_evidence_ready(order):
     if incoming and (len(incoming) != 1 or not incoming[0][0] or not incoming[0][1]
                      or incoming[0][1] < incoming[0][0]):
         return False
+    from .points_business_access import configured
+    from .segment_financial_capture import covered_transfers
+    if (order.payment_status == Order.PaymentStatus.PAID and configured()
+            and covered_transfers(order.pk).filter(
+                previous_segment__attribution__financial_coverage__source='WALLET_POINTS').exists()):
+        from .models import OrderParticipationSegment
+        current = list(OrderParticipationSegment.objects.filter(attribution__order=order, attribution__status='ACTIVE',
+            released_at__isnull=True).values_list('provider_account_id', 'started_at', 'completion_image'))
+        return (len(current) == len(participants) and {account for account, _, _ in current} == set(participants)
+                and all(started and image for _, started, image in current)
+                and not order.providers.filter(released_at__isnull=True, team_completion_pending=True).exists())
     if order.escort_mode == 'DOUBLE' and order.requires_boss_selection:
         from .team_progress import team_progress
         progress = team_progress(order)
@@ -198,7 +209,7 @@ class RoomCompletionRequestView(APIView):
         participants = _participants(order)
         if participants is None or not _payment_eligible(order, participants):
             return Response({'code': 409, 'msg': '订单陪玩身份待核对'}, status=409)
-        if not _completion_evidence_ready(order):
+        if not _completion_evidence_ready(order, participants):
             return Response({'code': 409, 'msg': '请先提交所需的陪玩结单凭证'}, status=409)
         if (room.completion_requests.filter(status='PENDING').exists()
                 or room.completion_requests.filter(status='VERIFIED').exclude(confirmation__status='INVALIDATED').exists()):
@@ -274,7 +285,7 @@ class RoomCompletionReviewView(APIView):
             participants = _participants(order)
             if (room.objections.filter(status='OPEN').exists() or participants != row.participants
                     or not _payment_eligible(order, participants)
-                    or not _completion_evidence_ready(order)
+                    or not _completion_evidence_ready(order, participants)
                     or negotiated_aftersale_blocks_completion(order)):
                 return Response({'code': 409, 'msg': '房间异议、售后、结单凭证或陪玩人员待核对'}, status=409)
             from .room_confirmation_config import required_rules

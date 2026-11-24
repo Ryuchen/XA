@@ -78,6 +78,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     gift_returned_addon = False
     main_refund_after_addon = False
     defer_funding = False
+    room_transfer = False
 
     def prepare(self):
         reservation_fixture.AssignedOrderReservationGuardTest.setUp(self)
@@ -110,6 +111,11 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.service.billing_provider_count = 2
             self.service.fulfillment_provider_count = 2
             self.service.save(update_fields=['price', 'billing_provider_count', 'fulfillment_provider_count'])
+        if self.room_transfer:
+            from console.room_confirmation_config import save_room_confirmation
+            save_room_confirmation(30, 0, lambda *_: None)
+            self.service.room_enabled = True
+            self.service.save(update_fields=['room_enabled'])
         self.ok(self.recharge())
         self.points, _ = MemberProfile.objects.update_or_create(
             account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon else 15000})
@@ -2387,6 +2393,77 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_paid_team_transfer_uses_current_completion_actions(self):
         self.team_returned_addon = True
         self.run_in_stores(self.exercise_paid_team_transfer_completion_actions)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_single_transfer_room_requires_current_evidence_and_boss_confirmation(self):
+        self.room_transfer = True
+        self.run_in_stores(self.exercise_paid_transfer_room_confirmation)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_team_transfer_room_requires_both_current_screenshots_before_auto_confirmation(self):
+        self.room_transfer = True
+        self.team_returned_addon = True
+        self.run_in_stores(self.exercise_paid_transfer_room_confirmation)
+
+    def exercise_paid_transfer_room_confirmation(self):
+        from orders.models import OrderRoomConfirmation
+        from orders.room_auto_confirmation import process_one
+
+        share = (2000, 3000) if self.teammate else (4000, 6000)
+        self.ok(self.transfer(self.api(self.staff), share=share))
+        change = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        original, replacement = self.api(self.original), self.api(self.replacement)
+        path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(original.post(path + 'participation-evidence/', {'segment_id': change.previous_segment_id,
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'paid-room-old-evidence'},
+            format='multipart'))
+        self.join_replacement(replacement, change)
+        submission = path + 'room/completion-requests/'
+        payload = {'description': '当前履约已经完成', 'client_request_id': 'paid-room-completion-request'}
+        self.assertEqual(original.post(submission, payload, format='json').status_code, 404)
+        self.assertEqual(replacement.post(submission, payload, format='json').status_code, 409)
+        self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'paid-room-replacement-evidence'}, format='multipart'))
+        actors = [self.replacement.pk]
+        if self.teammate:
+            self.assertEqual(replacement.post(submission, payload, format='json').status_code, 409)
+            self.ok(self.api(self.teammate).post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+                'client_request_id': 'paid-room-continuing-evidence'}, format='multipart'))
+            actors.append(self.teammate.pk)
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual(order.status, Order.Status.IN_SERVICE)
+        requested = self.ok(replacement.post(submission, payload, format='json'))
+        self.assertEqual(requested['participants'], sorted(actors))
+        self.assertEqual(self.ok(replacement.post(submission, payload, format='json'))['id'], requested['id'])
+        reviewer = make_console_user(['order:view', 'support:edit'])
+        reviewer_account = get_or_create_account_for_legacy_user(reviewer)
+        reviewer.admin_membership.account = reviewer_account
+        reviewer.admin_membership.save(update_fields=['account'])
+        room_request_id = requested['id']
+        self.ok(self.api(reviewer_account).post(f'/api/admin/room-completion-requests/{room_request_id}/review/',
+            {'decision': 'VERIFIED', 'note': '已核实当前履约段', 'client_request_id': 'paid-room-review'}, format='json'))
+        wait = OrderRoomConfirmation.objects.get(request_id=room_request_id)
+        self.assertEqual(wait.status, 'RUNNING')
+        if self.teammate:
+            with patch('django.utils.timezone.now', return_value=wait.deadline):
+                self.assertEqual(process_one(wait.pk), 'confirmed')
+                self.assertEqual(process_one(wait.pk), 'skip')
+            wait.refresh_from_db()
+            self.assertEqual((wait.status, wait.confirmed_by_id), ('AUTO', None))
+        else:
+            boss = self.api(self.buyer)
+            confirm = f'{submission}{room_request_id}/confirm/'
+            receipt = {'client_request_id': 'paid-room-boss-confirm'}
+            self.assertEqual(self.ok(boss.post(confirm, receipt, format='json'))['confirmation']['status'], 'CONFIRMED')
+            self.assertEqual(self.ok(boss.post(confirm, receipt, format='json'))['confirmation']['status'], 'CONFIRMED')
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.COMPLETED)
+        self.assertIsNone(order.settled_at)
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} order={order.pk}: paid transfer room, current evidence verified, '
+              f'{"auto" if self.teammate else "boss"} confirmation passed before report income', flush=True)
 
     def exercise_paid_team_transfer_completion_actions(self):
         self.ok(self.transfer(self.api(self.staff), share=(2000, 3000)))
