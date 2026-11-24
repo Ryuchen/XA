@@ -55,19 +55,19 @@ def _compute_from_original(posting, items, original):
 def _add_addon_history(posting, main):
     """Rebuild paid add-ons at the confirmed refund boundary."""
     from collections import defaultdict
+    from django.core.exceptions import ValidationError as DjangoValidationError
     from .models import OrderAddonPayment
     order = posting.proposal.case.order
-    if OrderAddonPayment.objects.filter(intent__order=order,
-            buyer_transaction__created_at=posting.created_at).exists():
+    payments = OrderAddonPayment.objects.filter(intent__order=order)
+    if payments.filter(buyer_transaction__created_at=posting.created_at).exists():
         raise ValidationError('加购付款与主单退款时序无法区分')
-    if not OrderAddonPayment.objects.filter(intent__order=order,
-            buyer_transaction__created_at__lt=posting.created_at).exists():
+    paid_count = payments.filter(buyer_transaction__created_at__lt=posting.created_at).count()
+    if not paid_count:
         return main, None
-    if OrderAddonPayment.objects.filter(intent__order=order,
-            buyer_transaction__created_at__lt=posting.created_at).count() > 1:
+    if paid_count > 1:
         # Verify every earlier refund even when no receipt was allocated (or
         # the net release is zero), before using its earnings and cash facts.
-        from .models import OrderAddonRefund, OrderPointsFundingAllocation
+        from .models import OrderAddonRefund
         from .points_addon_receipt_usage import facts as addon_refund_facts
         witness = OrderPointsFundingAllocation.objects.filter(redemption__order=order).order_by('pk')\
             .values_list('receipt_id', flat=True).first()
@@ -83,11 +83,8 @@ def _add_addon_history(posting, main):
             else:
                 for item in refunds:
                     addon_refund_facts(item, read_receipt_id=witness, _event_history=False)
-        except Exception as exc:
-            from django.core.exceptions import ValidationError as DjangoValidationError
-            if isinstance(exc, (DjangoValidationError, ValidationError)):
-                raise ValidationError('此前加购退款资金凭证待核对') from exc
-            raise
+        except (DjangoValidationError, ValidationError) as exc:
+            raise ValidationError('此前加购退款资金凭证待核对') from exc
     from .addon_funding_history import combined_at
     from .refunded_addon_funding import combine_refunded_history
     from .points_funding_plan import PointsFundingPlanError
