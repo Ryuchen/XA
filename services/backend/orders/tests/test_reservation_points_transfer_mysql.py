@@ -79,6 +79,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     main_refund_after_addon = False
     defer_funding = False
     room_service = False
+    room_addon_purchase = False
 
     def prepare(self):
         reservation_fixture.AssignedOrderReservationGuardTest.setUp(self)
@@ -116,6 +117,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             save_room_confirmation(30, 0, lambda *_: None)
             self.service.room_enabled = True
             self.service.save(update_fields=['room_enabled'])
+        if self.room_addon_purchase:
+            self.room_addon = self.make_consultation_addon()
         self.ok(self.recharge())
         self.points, _ = MemberProfile.objects.update_or_create(
             account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon else 15000})
@@ -129,6 +132,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             provider_accounts, self.start, 'points-transfer-booking')
         self.receipt = OrderPointsRedemption.objects.get(order_id=self.order_id)
         self.assertEqual((self.receipt.deal_units, self.receipt.paid_units, self.receipt.points_hundredths), (10000, 6000, 10000))
+        if self.room_addon_purchase:
+            self.assert_room_addon_unavailable_before_entry()
         self.funding_receipt = self.fund_reservation()
         for account in provider_accounts:
             provider = self.api(account)
@@ -2427,7 +2432,49 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.defer_funding = True
         self.run_in_stores(self.exercise_paid_points_room_confirmation)
 
-    def exercise_paid_transfer_room_confirmation(self):
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+    def test_paid_transfer_room_keeps_addon_on_replacement_segment_after_confirmation(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(self.exercise_paid_transfer_room_addon)
+
+    def assert_room_addon_unavailable_before_entry(self):
+        buyer = self.api(self.buyer)
+        path = f'/api/orders/orders/{self.order_id}/'
+        room = self.ok(buyer.get(path + 'room/'))
+        self.assertEqual(room['order_status'], Order.Status.GRABBED)
+        self.room_id = room['id']
+        quote = buyer.post(path + 'addons/quote/', {'addon_id': self.room_addon.pk, 'unit': 'HOUR',
+            'quantity': 1, 'configuration_version': 1, 'provider_account_id': self.original.pk}, format='json')
+        self.assertEqual(quote.status_code, 409, quote.data)
+        self.assertFalse(OrderAddonPayment.objects.filter(intent__order_id=self.order_id).exists())
+
+    def exercise_paid_transfer_room_addon(self):
+        original, replacement, change = self.transfer_and_enter_room()
+        path = f'/api/orders/orders/{self.order_id}/'
+        former_room = self.ok(original.get(path + 'room/'))
+        current_room = self.ok(replacement.get(path + 'room/'))
+        self.assertEqual((former_room['id'], former_room['role']), (self.room_id, 'FORMER_PROVIDER'))
+        self.assertEqual((current_room['id'], current_room['role']), (self.room_id, 'PROVIDER'))
+        payment = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
+        replay = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
+        self.assertEqual(replay.pk, payment.pk)
+        self.assertEqual((payment.intent.segment_id, payment.intent.provider_id), (change.next_segment_id, self.replacement.pk))
+        self.assertEqual((change.previous_segment.financial_snapshot.commission_rate,
+                          payment.intent.commission_snapshot['rate']), (20, 30))
+        self.assertEqual((payment.principal, payment.commission_fee, payment.provider_income,
+                          payment.buyer_transaction.amount), (1000, 300, 700, -1000))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        self.exercise_paid_points_room_confirmation(self.replacement, former=original)
+        history = self.ok(self.api(self.buyer).get(path + 'addons/intents/'))['items']
+        self.assertEqual([(row['payment_id'], row['segment_id']) for row in history], [(payment.pk, change.next_segment_id)])
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        self.receipt.refresh_from_db()
+        self.assertEqual((self.receipt.paid_units, self.receipt.points_hundredths), (6000, 10000))
+        print(f'{self.store.slug} room={self.room_id} order={self.order_id} addon={payment.pk} '
+              f'segment={change.next_segment_id} wallet_tx={payment.buyer_transaction_id} addon_income_pending=700', flush=True)
+
+    def transfer_and_enter_room(self):
         share = (2000, 3000) if self.teammate else (4000, 6000)
         self.ok(self.transfer(self.api(self.staff), share=share))
         change = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
@@ -2440,6 +2487,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
             self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
         self.join_replacement(replacement, change)
+        return original, replacement, change
+
+    def exercise_paid_transfer_room_confirmation(self):
+        original, _, _ = self.transfer_and_enter_room()
         self.exercise_paid_points_room_confirmation(self.replacement, former=original)
 
     def assert_room_provider_actions(self, client, status, actions, *, submitted=None):
