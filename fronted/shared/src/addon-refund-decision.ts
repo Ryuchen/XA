@@ -4,6 +4,13 @@ export type AddonRefundDecision = {
   accepted: boolean
 }
 
+export type AddonRefundProposalTarget = {
+  payment_id: number
+  proposal_id: number
+  status: string
+  my_accepted: boolean | null
+}
+
 export type AddonRefundProposal = {
   id: number
   payment_id: number
@@ -26,6 +33,21 @@ type DecisionClient = {
 
 export function addonRefundProposalPath(orderId: number, paymentId: number, proposalId: number) {
   return `/orders/orders/${orderId}/addons/payments/${paymentId}/refund-proposals/${proposalId}/`
+}
+
+export async function loadAddonRefundProposalTargets(client: Pick<DecisionClient, "get">, orderId: number) {
+  const targets = await client.get<AddonRefundProposalTarget[]>(`/orders/orders/${orderId}/addons/refund-proposals/`)
+  if (!Array.isArray(targets)) throw new Error("加购退款方案暂无法读取，请重试。")
+  return targets
+}
+
+export async function loadAddonRefundProposal(client: Pick<DecisionClient, "get">, orderId: number,
+  paymentId: number, proposalId: number, accountId: number, role: "boss" | "provider") {
+  const proposal = await client.get<AddonRefundProposal>(addonRefundProposalPath(orderId, paymentId, proposalId))
+  if (proposal.id !== proposalId || proposal.payment_id !== paymentId)
+    throw new Error("原加购退款方案暂无法核对，请联系客服。")
+  ownAddonRefundDecision(proposal, accountId, role)
+  return proposal
 }
 
 export function readAddonRefundDecision(storage: DecisionStorage, key: string): AddonRefundDecision | "invalid" | null {
@@ -63,9 +85,7 @@ export async function recordAddonRefundDecision({ client, storage, key, orderId,
     throw new Error("请先核对原方案和原决定。")
   storage.setItem(key, JSON.stringify(decision))
   const path = addonRefundProposalPath(orderId, decision.paymentId, decision.proposalId)
-  let proposal = await client.get<AddonRefundProposal>(path)
-  if (proposal.id !== decision.proposalId || proposal.payment_id !== decision.paymentId)
-    throw new Error("原加购退款方案暂无法核对，请联系客服。")
+  let proposal = await loadAddonRefundProposal(client, orderId, decision.paymentId, decision.proposalId, accountId, role)
   if (ownAddonRefundDecision(proposal, accountId, role) !== decision.accepted) {
     proposal = await client.post<AddonRefundProposal>(path, { accepted: decision.accepted })
     if (proposal.id !== decision.proposalId || proposal.payment_id !== decision.paymentId ||

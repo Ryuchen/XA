@@ -7,14 +7,15 @@ import { useResource } from "./hooks"
 import { useRealtime } from "./realtime"
 import {
   addonRefundProposalPath,
+  loadAddonRefundProposal,
+  loadAddonRefundProposalTargets,
   ownAddonRefundDecision,
   readAddonRefundDecision,
   recordAddonRefundDecision,
   type AddonRefundDecision,
-  type AddonRefundProposal,
 } from "./addon-refund-decision"
 
-type ProposalTarget = { payment_id: number; proposal_id: number; status: string; my_accepted: boolean | null }
+type ProposalTarget = Pick<AddonRefundDecision, "paymentId" | "proposalId">
 const storage = {
   getItem: (key: string) => sessionStorage.getItem(key),
   setItem: (key: string, value: string) => sessionStorage.setItem(key, value),
@@ -37,44 +38,82 @@ function ScopedAddonRefundProposals({ role, orderId, accountId, scope }: {
 }) {
   const api = useMemo(() => createApiClient(role), [role])
   const key = `xa:addon-refund-decision:${scope}`
+  const pending = readAddonRefundDecision(storage, key)
+  const [target, setTarget] = useState<ProposalTarget | null>(() => pending && pending !== "invalid" ? pending : null)
+  const [refreshVersion, setRefreshVersion] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const load = useResource(() => loadAddonRefundProposalTargets(api, orderId), [api, orderId])
+  function refresh() {
+    setRefreshVersion(value => value + 1)
+    void load.reload()
+  }
+  useRealtime(role, event => {
+    if (!busy && (event.type === "reconnected" ||
+        (event.type === "order_status_update" && Number(event.data?.id) === orderId))) refresh()
+  })
+  if (load.data && !load.data.length && !pending && !target && !load.error && !load.loading) return null
+  return <section className="space-y-3 rounded-lg border p-4 text-sm" aria-label="加购退款方案">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h3 className="font-semibold">加购退款方案</h3>
+      <button type="button" className={buttonClass} disabled={busy || load.loading} onClick={refresh}>刷新方案列表</button>
+    </div>
+    {load.loading && <p role="status" className="text-muted-foreground">正在读取加购退款方案列表…</p>}
+    {load.error && <p role="alert" className="text-destructive">{load.error.message}</p>}
+    {load.data?.map(row => {
+      const selected = target?.paymentId === row.payment_id && target.proposalId === row.proposal_id
+      return <div key={`${row.payment_id}:${row.proposal_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
+        <div className="space-y-1">
+          <p className="font-medium">付款 {row.payment_id} · 方案 {row.proposal_id}</p>
+          <p>{statuses[row.status as keyof typeof statuses] || "方案状态待核对"} · {row.my_accepted === true ? "本人已同意" : row.my_accepted === false ? "本人已提出异议" : "本人尚未确认"}</p>
+        </div>
+        <button type="button" className={buttonClass} aria-expanded={selected} disabled={busy} onClick={() => setTarget({ paymentId: row.payment_id, proposalId: row.proposal_id })}>{selected ? "已选中方案" : "查看方案"}</button>
+      </div>
+    })}
+    {pending === "invalid" ? <p role="alert" className="text-destructive">原确认凭证无法读取，请联系客服核对。</p> : pending && <div className="space-y-2 rounded-md border p-3">
+      <p>原付款 {pending.paymentId}、方案 {pending.proposalId} 的{pending.accepted ? "同意" : "异议"}结果待核对。</p>
+      <button type="button" className={buttonClass} disabled={busy} onClick={() => setTarget(pending)}>查看原决定</button>
+    </div>}
+    {target && <SelectedAddonRefundProposal key={`${target.paymentId}:${target.proposalId}`} api={api} role={role} orderId={orderId} accountId={accountId}
+      target={target} storageKey={key} pending={pending} refreshVersion={refreshVersion} onBusy={setBusy} onRecorded={() => void load.reload()} />}
+  </section>
+}
+
+function SelectedAddonRefundProposal({ api, role, orderId, accountId, target, storageKey, pending, refreshVersion, onBusy, onRecorded }: {
+  api: ReturnType<typeof createApiClient>
+  role: "boss" | "provider"
+  orderId: number
+  accountId: number
+  target: ProposalTarget
+  storageKey: string
+  pending: AddonRefundDecision | "invalid" | null
+  refreshVersion: number
+  onBusy: (value: boolean) => void
+  onRecorded: () => void
+}) {
   const [choice, setChoice] = useState<AddonRefundDecision | null>(null)
   const [busy, setBusy] = useState(false)
   const [issue, setIssue] = useState("")
   const [notice, setNotice] = useState("")
   const submitting = useRef(false)
-  const load = useResource(async () => {
-    const targets = await api.get<ProposalTarget[]>(`/orders/orders/${orderId}/addons/refund-proposals/`)
-    if (!Array.isArray(targets)) throw new Error("加购退款方案暂无法读取，请重试。")
-    const pending = readAddonRefundDecision(storage, key)
-    const located = new Map(targets.map(target => [`${target.payment_id}:${target.proposal_id}`, target]))
-    if (pending && pending !== "invalid") located.set(`${pending.paymentId}:${pending.proposalId}`, {
-      payment_id: pending.paymentId, proposal_id: pending.proposalId, status: "", my_accepted: null,
-    })
-    const proposals = await Promise.all([...located.values()].map(async target => {
-      const proposal = await api.get<AddonRefundProposal>(addonRefundProposalPath(orderId, target.payment_id, target.proposal_id))
-      if (proposal.id !== target.proposal_id || proposal.payment_id !== target.payment_id)
-        throw new Error("加购付款与退款方案不一致，请联系客服。")
-      ownAddonRefundDecision(proposal, accountId, role)
-      return proposal
-    }))
-    return { proposals, pending }
-  }, [api, orderId, key])
-  const snapshot = load.data
-  const pending = snapshot?.pending
+  const load = useResource(() => loadAddonRefundProposal(api, orderId, target.paymentId, target.proposalId, accountId, role),
+    [api, orderId, target.paymentId, target.proposalId, refreshVersion])
+  const proposal = load.data
   const error = issue || load.error?.message
-  useRealtime(role, event => {
-    if (!submitting.current && (event.type === "reconnected" ||
-        (event.type === "order_status_update" && Number(event.data?.id) === orderId))) void load.reload()
-  })
+  const original = pending && pending !== "invalid" && pending.paymentId === target.paymentId && pending.proposalId === target.proposalId ? pending : null
+  const own = proposal ? ownAddonRefundDecision(proposal, accountId, role) : null
+  const selected = proposal && choice?.paymentId === proposal.payment_id && choice.proposalId === proposal.id ? choice : null
+  const amountsKnown = proposal && [proposal.amount_raw, ...(role === "provider" ? [proposal.provider_burden_raw, proposal.provider_income_retained_raw] : [])]
+    .every(value => Number.isSafeInteger(value) && value >= 0)
 
   async function submit(decision: AddonRefundDecision) {
     if (submitting.current || load.loading || load.error) return
     submitting.current = true
     setBusy(true)
+    onBusy(true)
     setIssue("")
     setNotice("")
     try {
-      const proposal = await recordAddonRefundDecision({ client: api, storage, key, orderId, accountId, role, decision })
+      const proposal = await recordAddonRefundDecision({ client: api, storage, key: storageKey, orderId, accountId, role, decision })
       setChoice(null)
       setNotice(proposal.refund_executed ? "原决定已核对。退款已由客服执行，实际到账请查看钱包流水。" : "确认已记录，退款尚未执行。")
     } catch (cause) {
@@ -83,24 +122,20 @@ function ScopedAddonRefundProposals({ role, orderId, accountId, scope }: {
       await load.reload()
       submitting.current = false
       setBusy(false)
+      onBusy(false)
+      onRecorded()
     }
   }
 
-  if (snapshot && !snapshot.proposals.length && !pending && !error && !load.loading) return null
-  return <section className="space-y-3 rounded-lg border p-4 text-sm" aria-label="加购退款方案">
+  return <section className="space-y-3 rounded-md border p-3" aria-label={`付款 ${target.paymentId} 的方案 ${target.proposalId}详情`}>
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <h3 className="font-semibold">加购退款方案</h3>
-      <button type="button" className={buttonClass} disabled={busy || load.loading} onClick={() => { setChoice(null); setIssue(""); void load.reload() }}>刷新方案</button>
+      <h4 className="font-medium">付款 {target.paymentId} · 方案 {target.proposalId}详情</h4>
+      <button type="button" className={buttonClass} disabled={busy || load.loading} onClick={() => { setChoice(null); setIssue(""); void load.reload() }}>刷新所选方案</button>
     </div>
-    {load.loading && <p role="status" className="text-muted-foreground">正在读取加购退款方案…</p>}
+    {load.loading && <p role="status" className="text-muted-foreground">正在读取所选方案详情…</p>}
     {error && <p role="alert" className="text-destructive">{error}</p>}
-    {snapshot?.proposals.map(proposal => {
-      const own = ownAddonRefundDecision(proposal, accountId, role)
-      const selected = choice?.paymentId === proposal.payment_id && choice.proposalId === proposal.id ? choice : null
-      const amountsKnown = [proposal.amount_raw, ...(role === "provider" ? [proposal.provider_burden_raw, proposal.provider_income_retained_raw] : [])]
-        .every(value => Number.isSafeInteger(value) && value >= 0)
-      return <article key={`${proposal.payment_id}:${proposal.id}`} className="space-y-2 rounded-md border p-3">
-        <h4 className="font-medium">{proposal.addon_name} · 付款 {proposal.payment_id} · 方案 {proposal.id}</h4>
+    {proposal && <article className="space-y-2 rounded-md border p-3">
+        <p className="font-medium">{proposal.addon_name}</p>
         <p>{statuses[proposal.status] || "方案状态待核对"}</p>
         <p>方案退款金额 · {amount(proposal.amount_raw)}</p>
         {role === "provider" && <>
@@ -126,11 +161,10 @@ function ScopedAddonRefundProposals({ role, orderId, accountId, scope }: {
             <button type="button" className={buttonClass} disabled={busy} onClick={() => setChoice(null)}>返回修改</button>
           </div>
         </form>}
-      </article>
-    })}
-    {pending === "invalid" ? <p role="alert" className="text-destructive">原确认凭证无法读取，请联系客服核对。</p> : pending && <div className="space-y-2 rounded-md border p-3">
-      <p>原付款 {pending.paymentId}、方案 {pending.proposalId} 的{pending.accepted ? "同意" : "异议"}结果待核对，将先读取本人决定。</p>
-      <button type="button" className={buttonClass} disabled={busy || load.loading || !!load.error} onClick={() => void submit(pending)}>{busy ? "正在核对…" : "核对原决定"}</button>
+      </article>}
+    {original && <div className="space-y-2 rounded-md border p-3">
+      <p>将先读取原方案的本人决定，再核对{original.accepted ? "同意" : "异议"}结果。</p>
+      <button type="button" className={buttonClass} disabled={busy || load.loading || !!load.error} onClick={() => void submit(original)}>{busy ? "正在核对…" : "核对原决定"}</button>
     </div>}
     {notice && <p role="status" className="text-muted-foreground">{notice}</p>}
   </section>

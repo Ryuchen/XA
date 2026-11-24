@@ -2,6 +2,8 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import {
   addonRefundProposalPath,
+  loadAddonRefundProposal,
+  loadAddonRefundProposalTargets,
   ownAddonRefundDecision,
   readAddonRefundDecision,
   recordAddonRefundDecision,
@@ -123,4 +125,47 @@ test("a recorded refusal is read back without changing to agreement or executing
   const result = await recordAddonRefundDecision({ ...options, decision: { paymentId: 5, proposalId: 8, accepted: false }, client })
   assert.equal(result.status, "REJECTED")
   assert.equal(result.refund_executed, false)
+})
+
+test("discovery stays lightweight and a failed historical detail does not prevent choosing another proposal", async () => {
+  const { proposal } = fixture()
+  const discovery = "/orders/orders/7/addons/refund-proposals/"
+  const oldPath = addonRefundProposalPath(7, 4, 6)
+  const currentPath = addonRefundProposalPath(7, 5, 8)
+  const targets = [
+    { payment_id: 5, proposal_id: 8, status: "PENDING", my_accepted: null },
+    ...Array.from({ length: 1000 }, (_, index) => ({ payment_id: 4, proposal_id: index + 10, status: "SUPERSEDED", my_accepted: true })),
+    { payment_id: 4, proposal_id: 6, status: "REJECTED", my_accepted: false },
+  ]
+  const calls: string[] = []
+  const client = {
+    async get<T>(path: string): Promise<T> {
+      calls.push(path)
+      if (path === discovery) return targets as T
+      if (path === currentPath) return proposal as T
+      throw new Error("历史付款方案已结束")
+    },
+  }
+  const listed = await loadAddonRefundProposalTargets(client, 7)
+  assert.equal(listed.length, 1002)
+  assert.deepEqual(calls, [discovery])
+  await assert.rejects(loadAddonRefundProposal(client, 7, 4, 6, 9, "boss"), /历史付款方案已结束/)
+  assert.equal((await loadAddonRefundProposal(client, 7, 5, 8, 9, "boss")).id, 8)
+  assert.deepEqual(calls, [discovery, oldPath, currentPath])
+  assert.equal(listed[0].status, "PENDING")
+})
+
+test("selected detail always uses the new order, target and account scope", async () => {
+  const { proposal } = fixture()
+  const calls: string[] = []
+  const client = {
+    async get<T>(path: string): Promise<T> {
+      calls.push(path)
+      return { ...proposal, id: 20, payment_id: 12,
+        decisions: [{ account_id: 22, role: "PROVIDER", accepted: null, decided_at: null }] } as T
+    },
+  }
+  assert.equal((await loadAddonRefundProposal(client, 19, 12, 20, 22, "provider")).payment_id, 12)
+  await assert.rejects(loadAddonRefundProposal(client, 19, 12, 20, 9, "boss"), /本人确认记录/)
+  assert.deepEqual(calls, [addonRefundProposalPath(19, 12, 20), addonRefundProposalPath(19, 12, 20)])
 })
