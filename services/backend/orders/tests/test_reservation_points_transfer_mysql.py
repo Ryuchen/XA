@@ -131,8 +131,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((self.receipt.deal_units, self.receipt.paid_units, self.receipt.points_hundredths), (10000, 6000, 10000))
         self.funding_receipt = self.fund_reservation()
         for account in provider_accounts:
-            self.ok(self.api(account).post(f'/api/orders/orders/{self.order_id}/start/',
+            provider = self.api(account)
+            if self.room_service:
+                self.assert_room_provider_actions(provider, 'grabbed', ['START'])
+            self.ok(provider.post(f'/api/orders/orders/{self.order_id}/start-service/',
                 {'entry_image': release_fixture.screenshot()}, format='multipart'))
+            if self.room_service and self.teammate and account == self.original:
+                self.assert_room_provider_actions(provider, 'grabbed', [])
         self.service.commission_override = True
         self.service.commission_rate = 30
         self.service.save(update_fields=['commission_override', 'commission_rate'])
@@ -2431,8 +2436,24 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.ok(original.post(path + 'participation-evidence/', {'segment_id': change.previous_segment_id,
             'completion_image': release_fixture.screenshot(), 'client_request_id': 'paid-room-old-evidence'},
             format='multipart'))
+        self.assert_room_provider_actions(replacement, 'in_progress', ['START_PARTICIPATION'])
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
         self.join_replacement(replacement, change)
         self.exercise_paid_points_room_confirmation(self.replacement, former=original)
+
+    def assert_room_provider_actions(self, client, status, actions, *, submitted=None):
+        path = f'/api/orders/orders/{self.order_id}/'
+        listing = f'/api/orders/orders/?status={status}&role=provider&page=1&page_size=20'
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(client.get(path))
+            rows = self.ok(client.get(listing))['list']
+        listed = next(row for row in rows if row['id'] == self.order_id)
+        for order in (detail, listed):
+            self.assertEqual(order['allowed_actions'], actions)
+            if submitted is not None:
+                progress = order['team_progress']
+                self.assertEqual((progress['submitted_count'], progress['total_count']), (submitted, 2))
 
     def exercise_paid_points_room_confirmation(self, provider=None, *, former=None):
         from orders.models import OrderRoomConfirmation
@@ -2445,14 +2466,22 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         payload = {'description': '当前履约已经完成', 'client_request_id': 'paid-room-completion-request'}
         if former:
             self.assertEqual(former.post(submission, payload, format='json').status_code, 404)
+        self.assert_room_provider_actions(current, 'in_progress', ['COMPLETE'],
+            submitted=0 if self.teammate else None)
         self.assertEqual(current.post(submission, payload, format='json').status_code, 409)
         self.ok(current.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'paid-room-current-evidence'}, format='multipart'))
+        self.assert_room_provider_actions(current, 'in_progress', [],
+            submitted=1 if self.teammate else None)
         actors = [provider.pk]
         if self.teammate:
             self.assertEqual(current.post(submission, payload, format='json').status_code, 409)
-            self.ok(self.api(self.teammate).post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            teammate = self.api(self.teammate)
+            self.assert_room_provider_actions(teammate, 'in_progress', ['COMPLETE'], submitted=1)
+            self.ok(teammate.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
                 'client_request_id': 'paid-room-continuing-evidence'}, format='multipart'))
+            self.assert_room_provider_actions(current, 'in_progress', [], submitted=2)
+            self.assert_room_provider_actions(teammate, 'in_progress', [], submitted=2)
             actors.append(self.teammate.pk)
         order = Order.objects.get(pk=self.order_id)
         self.assertEqual(order.status, Order.Status.IN_SERVICE)
