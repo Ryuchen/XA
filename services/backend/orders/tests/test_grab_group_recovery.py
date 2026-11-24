@@ -16,28 +16,50 @@ from orders.dispatching import QUEUE_ERROR, deliver_dispatch, queue_dispatch
 from orders.grab_group_recovery import LEASE_SECONDS, recover_due
 from orders.grab_pool_snapshot import create_initial_snapshot
 from orders.grab_team_draft import first_round
-from orders.tests.factories import make_order, make_service, make_user
+from orders.models import OrderGrabTeamRoundState
+from orders.tests.factories import configure_isolated_wecom, make_order, make_service, make_user
+from stores.context import resolve_store, store_context
 from stores.db import transaction
 
 
 def setup_order():
-    save_grab_window(30, 0, lambda *args: None)
     order = make_order(make_user(), service=make_service(), payment_status='PAID',
         original_amount=10000, amount=8000, required_provider_count=2,
         escort_mode='DOUBLE', pending_timeout_minutes=30)
     with transaction.atomic():
         pool = create_initial_snapshot(order.pk)
-        first_round(pool.pk)
+        OrderGrabTeamRoundState.objects.create(round=first_round(pool.pk))
         order.pool_entered_at, order.auto_cancel_at = pool.opened_at, pool.total_deadline
         order.save(update_fields=['pool_entered_at', 'auto_cancel_at'])
     return order, pool.opened_at + timedelta(seconds=300)
 
 
-@override_settings(GRAB_POOL_GROUP_DISPATCH_ENABLED=True, WECOM_DISPATCH_ENABLED=True,
-    WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=isolated-test')
+@override_settings(GRAB_POOL_GROUP_DISPATCH_ENABLED=True)
 class GrabGroupRecoveryTest(TransactionTestCase):
     def setUp(self):
+        self.store = resolve_store()
+        self.enterContext(store_context(self.store))
+        configure_isolated_wecom()
+        save_grab_window(30, 0, lambda *args: None)
         self.order, self.due = setup_order()
+
+    @patch('orders.dispatching.send_task_safely')
+    @patch('orders.grab_group_recovery.send_task_safely')
+    def test_waiting_round_does_not_use_recovery_slot_and_resumes_after_review(self, recovery_send, initial_send):
+        held = queue_dispatch(self.order, 'WECOM')
+        other_order, other_due = setup_order()
+        ready = queue_dispatch(other_order, 'WECOM')
+        state = OrderGrabTeamRoundState.objects.get(round__pool__order=self.order)
+        OrderGrabTeamRoundState.objects.filter(pk=state.pk).update(status='REVIEW', reason='待核对候选')
+        with patch('django.utils.timezone.now', return_value=other_due):
+            self.assertEqual(recover_due(limit=1), 1)
+            recovery_send.assert_called_once_with('WECOM', ready.pk)
+            held.refresh_from_db()
+            self.assertEqual((held.status, held.attempts, held.pool_recovery_lease_until), ('PENDING', 0, None))
+            OrderGrabTeamRoundState.objects.filter(pk=state.pk).update(status='PARKED', reason='')
+            recovery_send.reset_mock()
+            self.assertEqual(recover_due(limit=1), 1)
+            recovery_send.assert_called_once_with('WECOM', held.pk)
 
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.grab_group_recovery.send_task_safely')
@@ -148,8 +170,9 @@ class GrabGroupRecoveryTest(TransactionTestCase):
         def worker():
             close_old_connections()
             try:
-                barrier.wait(timeout=10)
-                return recover_due()
+                with store_context(self.store):
+                    barrier.wait(timeout=10)
+                    return recover_due()
             finally:
                 close_old_connections()
 
@@ -165,16 +188,17 @@ class GrabGroupRecoveryStoreTest(TransactionTestCase):
     databases = {'default', 'store_b'} if 'store_b' in settings.DATABASES else {'default'}
     reset_sequences = True
 
-    @patch('orders.dispatching.channel_config', return_value=(True, 'test-target', '测试群'))
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.grab_group_recovery.send_task_safely')
-    def test_identical_records_are_recovered_in_their_own_store(self, recovery_send, initial_send, config):
-        from stores.context import current_store, resolve_store, store_context
+    def test_identical_records_are_recovered_in_their_own_store(self, recovery_send, initial_send):
+        from stores.context import current_store
         from stores.tests_hosts import xinan_store
         queued, rows = [], []
         recovery_send.side_effect = lambda channel, pk: queued.append((current_store().slug, channel, pk))
         for store in (resolve_store(), xinan_store()):
             with store_context(store):
+                configure_isolated_wecom(store.slug)
+                save_grab_window(30, 0, lambda *args: None)
                 order, due = setup_order()
                 record = queue_dispatch(order, 'WECOM')
                 rows.append((store, order.pk, record.pk, due))

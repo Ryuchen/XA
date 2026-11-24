@@ -14,12 +14,15 @@ from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from club_accounts.services import get_or_create_account_for_legacy_user
+from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
+from engagement.models import ClubOperationConfig, PointFundingLot
+from orders.models import Order
 from orders.tests.factories import make_provider, make_service, make_user, make_wallet
-from users.models import VoiceRecording
 from orders.applications_models import OrderApplicationVoice
+from users.models import VoiceRecording
 from users.test_voice_recordings import audio_file
+from wallet.models import Transaction
 from wallet.test_deposit_realtime_workflow import single_asgi
 
 
@@ -35,33 +38,48 @@ class AuditionVoiceBrowserTest(LiveServerTestCase):
         media = self.enterContext(TemporaryDirectory(prefix='xa-asgi-media-'))
         self.enterContext(override_settings(MEDIA_ROOT=media))
         self.enterContext(patch.dict(os.environ, {'XA_ASGI_NETWORK_TEST_MEDIA_ROOT': media}))
-        boss = make_user(); boss_account = get_or_create_account_for_legacy_user(boss)
-        make_wallet(boss, balance=100000)
+        boss = make_user()
+        boss_account = get_or_create_account_for_legacy_user(boss)
+        link_legacy_relations(boss, boss_account)
+        wallet = make_wallet(boss, balance=100000)
+        wallet.account = boss_account
+        wallet.save(update_fields=['account'])
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        PointFundingLot.objects.create(account=boss_account, source_key='audition-voice-browser',
+            kind=PointFundingLot.Kind.PREPAID, remaining=wallet.balance)
         player = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True,
                                pass_tier='BLACK', pass_expires_at=timezone.now()+timedelta(days=1))
         provider_account = get_or_create_account_for_legacy_user(player)
-        provider_account.openid = 'isolated-browser-audition'; provider_account.is_openid_bound = True
+        provider_account.openid = 'isolated-browser-audition'
+        provider_account.is_openid_bound = True
         provider_account.save(update_fields=['openid', 'is_openid_bound'])
-        player.escort_profile.account = provider_account; player.escort_profile.save(update_fields=['account'])
+        player.escort_profile.account = provider_account
+        player.escort_profile.save(update_fields=['account'])
         second_account = None
         if double:
             second = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True,
                                    pass_tier='BLACK', pass_expires_at=timezone.now()+timedelta(days=1))
             second_account = get_or_create_account_for_legacy_user(second)
-            second_account.openid = 'isolated-browser-partner'; second_account.is_openid_bound = True
+            second_account.openid = 'isolated-browser-partner'
+            second_account.is_openid_bound = True
             second_account.save(update_fields=['openid', 'is_openid_bound'])
-            second.escort_profile.account = second_account; second.escort_profile.save(update_fields=['account'])
-        service = make_service(price=10000, billing_provider_count=2 if double else 1)
+            second.escort_profile.account = second_account
+            second.escort_profile.save(update_fields=['account'])
+        count = 2 if double else 1
+        service = make_service(price=10000, billing_provider_count=count, fulfillment_provider_count=count)
+        player.escort_profile.service_items.add(service)
+        if second_account:
+            second.escort_profile.service_items.add(service)
         client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss_account)[0], HTTP_HOST='sl.esports.club')
         with patch('orders.views._schedule_auto_cancel'):
             response = client.post('/api/orders/create/', {'service_id': service.pk, 'dispatch_mode': 'BOSS_SELECT',
                 'client_request_id': 'audition-voice-browser'}, format='json')
         self.assertEqual(response.data['code'], 0, response.data)
-        order = response.data['data']
+        order_id = response.data['data']['id']
         with single_asgi() as (api, _):
             root = Path(settings.BASE_DIR).parent.parent
             result = subprocess.run(['node', str(root / 'scripts/audition-voice-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'order': order['id'], 'number': order['order_no'],
+                input=json.dumps({'api': api, 'order': order_id,
                     'audio': base64.b64encode(audio_file().read()).decode('ascii'),
                     'provider': {'id': str(provider_account.pk), 'token': issue_account_tokens(provider_account)[0]},
                     'boss': {'id': str(boss_account.pk), 'token': issue_account_tokens(boss_account)[0]},
@@ -70,6 +88,11 @@ class AuditionVoiceBrowserTest(LiveServerTestCase):
                 text=True, encoding='utf-8', capture_output=True, timeout=90)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(VoiceRecording.objects.filter(owner=provider_account).count(), 1)
+        order = Order.objects.get(pk=order_id)
+        self.assertEqual(order.status, Order.Status.GRABBED)
+        self.assertEqual(order.providers.count(), count)
+        self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')),
+                         [(Transaction.TxType.PAY, -10000 * count)])
         if second_account:
             self.assertEqual(VoiceRecording.objects.filter(owner=second_account).count(), 1)
-            self.assertEqual(OrderApplicationVoice.objects.filter(application__order_id=order['id']).count(), 2)
+            self.assertEqual(OrderApplicationVoice.objects.filter(application__order_id=order_id).count(), 2)

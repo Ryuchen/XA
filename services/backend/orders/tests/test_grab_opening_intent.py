@@ -16,7 +16,7 @@ from orders.grab_opening_intent import observe_committed_payment, record_in_paym
 from orders.models import Order, OrderGrabPoolOpeningIntent, OrderGrabPoolSnapshot
 from orders.tests.factories import make_order, make_user, make_wallet
 from wallet.models import Transaction
-from stores.context import store_context
+from stores.context import resolve_store, store_context
 from stores.tests_hosts import xinan_store
 
 
@@ -99,12 +99,13 @@ class GrabOpeningIntentStoreIsolationTest(OpeningFixture):
 class GrabOpeningIntentMySQLTest(OpeningFixture):
     def test_uncommitted_payment_cannot_be_observed_and_retry_is_idempotent(self):
         require_disposable_mysql(connection)
+        store = resolve_store()
         entered, release = Event(), Event()
 
         def pay():
             close_old_connections()
             try:
-                with transaction.atomic():
+                with store_context(store), transaction.atomic():
                     self.create_paid_intent()
                     entered.set()
                     if not release.wait(20):
@@ -115,7 +116,8 @@ class GrabOpeningIntentMySQLTest(OpeningFixture):
         def observe():
             close_old_connections()
             try:
-                return observe_committed_payment(self.order.pk).pk
+                with store_context(store):
+                    return observe_committed_payment(self.order.pk).pk
             finally:
                 close_old_connections()
 

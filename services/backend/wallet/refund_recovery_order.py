@@ -1,11 +1,42 @@
 """Experimental, account-serialized permit for one refund-gap recovery order."""
+from dataclasses import dataclass
+
 from django.conf import settings
-from django.db.models import Q, Sum
+from django.db.models import BigIntegerField, Exists, OuterRef, Q, Subquery, Sum, Value
 from django.utils import timezone
 from stores.db import transaction
 
 from .models import RefundDepositDeficit, RefundDepositRecoveryPermit
 from .refund_deposit import enabled as deficit_enabled
+
+
+@dataclass(frozen=True)
+class RecoveryOfferRead:
+    has_account_deficit: bool
+    remaining: int | None
+    has_open_permit: bool
+
+    @classmethod
+    def from_roster(cls, profile):
+        return cls(profile.has_account_refund_deficit, profile.current_refund_deficit, profile.has_open_recovery_permit)
+
+
+def annotate_recovery_offer(profiles, *, allow_recovery):
+    """Read same-store eligibility facts with the roster, including legacy account gaps."""
+    deficits = RefundDepositDeficit.objects.filter(account_id=OuterRef('account_id'), remaining__gt=0)
+    remaining = Value(None, output_field=BigIntegerField())
+    open_permit = Value(False)
+    if allow_recovery:
+        own_deficits = deficits.filter(profile_id=OuterRef('pk')).order_by().values('profile_id')
+        remaining = Subquery(own_deficits.annotate(total=Sum('remaining')).values('total'))
+        open_permit = Exists(RefundDepositRecoveryPermit.objects.filter(
+            account_id=OuterRef('account_id'), closed_at__isnull=True,
+        ))
+    return profiles.annotate(
+        has_account_refund_deficit=Exists(deficits),
+        current_refund_deficit=remaining,
+        has_open_recovery_permit=open_permit,
+    )
 
 
 def enabled():
@@ -27,30 +58,43 @@ def _remaining(profile):
         value=Sum('remaining'))['value'] or 0
 
 
-def eligibility_error(profile, *, existing_order_id=None, lock_current=False):
+def eligibility_error(profile, *, existing_order_id=None, lock_current=False, offer_read=None,
+                      deposit_required_override=None):
     """Use current locked facts only when the caller already holds the profile lock."""
     if not enabled() or not profile.account_id:
         return '退款押金缺口待补，补差接单功能尚未开放'
-    if lock_current:
+    use_offer_read = offer_read is not None and not lock_current and existing_order_id is None
+    if use_offer_read:
+        remaining = offer_read.remaining
+    elif lock_current:
         _atomic()
         deficits = list(RefundDepositDeficit.objects.select_for_update().filter(
             account_id=profile.account_id, remaining__gt=0).order_by('created_at', 'pk'))
         if any(row.profile_id != profile.pk for row in deficits):
             raise ValueError('退款押金缺口与陪玩资料不匹配')
         remaining = sum(row.remaining for row in deficits)
-        permits_query = RefundDepositRecoveryPermit.objects.select_for_update()
     else:
         remaining = _remaining(profile)
-        permits_query = RefundDepositRecoveryPermit.objects
     if not remaining:
         return '退款押金缺口已变化，请刷新后重试'
-    permits = list(permits_query.filter(account_id=profile.account_id, closed_at__isnull=True).order_by('pk'))
-    if permits and not (len(permits) == 1 and permits[0].profile_id == profile.pk
-                        and existing_order_id is not None and permits[0].order_id == existing_order_id):
+    if use_offer_read:
+        blocked_by_permit = offer_read.has_open_permit
+    else:
+        permits = RefundDepositRecoveryPermit.objects.filter(
+            account_id=profile.account_id, closed_at__isnull=True,
+        ).order_by('pk')
+        permits = list(permits.select_for_update() if lock_current else permits)
+        blocked_by_permit = permits and not (
+            len(permits) == 1 and permits[0].profile_id == profile.pk
+            and existing_order_id is not None and permits[0].order_id == existing_order_id
+        )
+    if blocked_by_permit:
         return '补差订单尚未完成结算，暂不能再接新单'
-    if (profile.deposit_mode != 'EARNINGS'
-            and max(profile.effective_deposit_required - profile.deposit_paid, 0) > remaining):
-        return '陪玩存在非退款造成的押金不足，请先补缴'
+    if profile.deposit_mode != 'EARNINGS':
+        required = (deposit_required_override if use_offer_read and deposit_required_override is not None
+                    else profile.effective_deposit_required)
+        if max(required - profile.deposit_paid, 0) > remaining:
+            return '陪玩存在非退款造成的押金不足，请先补缴'
     return ''
 
 

@@ -52,13 +52,14 @@ def deliver(intent_id):
     if not initial:
         return
     with transaction.atomic():
-        account = ClubAccount.objects.select_for_update().filter(pk=initial['account_id']).first()
         source = OrderAddonRefund.objects.filter(pk=initial['refund_id']).values('order_id', 'payment_id').first()
+        # Funding reads lock the order before the buyer's account.
         order = Order.objects.select_for_update().filter(pk=source['order_id']).first() if source else None
         payment = (OrderAddonPayment.objects.select_for_update().filter(pk=source['payment_id'],
             intent__order=order).first() if order else None)
         refund = OrderAddonRefund.objects.select_for_update().filter(pk=initial['refund_id'],
             order=order, payment=payment).first() if payment else None
+        account = ClubAccount.objects.select_for_update().filter(pk=initial['account_id']).first()
         intent = AddonRefundNotice.objects.select_for_update().filter(pk=intent_id,
             account_id=initial['account_id'], refund_id=initial['refund_id']).first()
         if not intent or intent.completed_at:

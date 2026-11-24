@@ -1,5 +1,6 @@
 import { getStoreSlug, isAdminEntry, storeStorageKey, validStoreSlug } from "./store.ts";
 import { randomUuid } from "./ids.ts";
+import { readFundMarkers, updateFundMarker } from "./fund-marker-storage.ts";
 import {
   clearSession,
   getSession,
@@ -263,75 +264,166 @@ function stable(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 const funds = new Map<string, Promise<any>>();
+
+export type PendingFundRequest = {
+  key: string;
+  path: string;
+  payload: Record<string, unknown>;
+  requestId: string;
+};
+
+const fundStoragePrefix = (role: Role, userId: string | number) =>
+  storeStorageKey(`xa:fronted:fund:${role}:${userId}:`);
+
+function pendingFundRequest(key: string, requestId: string | null, prefix: string, matchesPath: (path: string) => boolean): PendingFundRequest | null {
+  if (!key.startsWith(prefix) || !requestId || requestId.trim() !== requestId || requestId.length > 64) return null;
+  const boundary = key.indexOf(":{", prefix.length);
+  if (boundary === -1) return null;
+  const path = key.slice(prefix.length, boundary);
+  if (!matchesPath(path)) return null;
+  try {
+    const encoded = key.slice(boundary + 1);
+    const payload = JSON.parse(encoded) as Record<string, unknown>;
+    if (Object.hasOwn(payload, "client_request_id") || stable(payload) !== encoded) return null;
+    return { key, path, payload, requestId };
+  } catch {
+    return null;
+  }
+}
+
+export function listPendingFundRequests(role: Role, matchesPath: (path: string) => boolean): PendingFundRequest[] {
+  const { user } = getSession(role);
+  if (!user) return [];
+  const prefix = fundStoragePrefix(role, user.id);
+  const pending: PendingFundRequest[] = [];
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (!key?.startsWith(prefix)) continue;
+    const item = pendingFundRequest(key, localStorage.getItem(key), prefix, matchesPath);
+    if (item) pending.push(item);
+  }
+  return pending;
+}
+
+export async function listCoordinatedPendingFundRequests(role: Role, matchesPath: (path: string) => boolean): Promise<PendingFundRequest[]> {
+  const session = getSession(role), store = getStoreSlug();
+  if (!session.user) return [];
+  const prefix = fundStoragePrefix(role, session.user.id);
+  const markers = await readFundMarkers(prefix).catch(() => new Map<string, string>());
+  if (getStoreSlug() !== store || getSession(role).revision !== session.revision) return [];
+  const pending = new Map<string, PendingFundRequest>();
+  try {
+    for (const item of listPendingFundRequests(role, matchesPath)) pending.set(item.key, item);
+  } catch {
+    // IndexedDB can still hold the exact original request if the mirror is lost.
+  }
+  for (const [key, id] of markers) {
+    const item = pendingFundRequest(key, id, prefix, matchesPath);
+    if (item) pending.set(key, item);
+  }
+  return [...pending.values()];
+}
+
+type FundRequestOptions<T> = RequestOptions & {
+  keepOriginalOnFailure?: boolean;
+  coordinateAcrossTabs?: boolean;
+  acceptsResult?: (data: T) => boolean;
+};
+
+export function retryPendingFundRequest<T>(role: Role, pending: PendingFundRequest, accepts: (data: T) => boolean,
+  options: { coordinateAcrossTabs?: boolean } = {}): Promise<T> {
+  return fundRequest(role, pending.path, pending.payload, { ...options, acceptsResult: accepts }, pending);
+}
+
 export function fundRequest<T = any>(
   role: Role,
   path: string,
   payload: Record<string, unknown>,
-  options: RequestOptions = {},
+  options: FundRequestOptions<T> = {},
+  recovery?: PendingFundRequest,
 ): Promise<T> {
+  const { keepOriginalOnFailure, coordinateAcrossTabs, acceptsResult, ...requestOptions } = options;
   const session = getSession(role);
   if (!session.user) return Promise.reject(new ApiError("请先登录", 401));
   const store = getStoreSlug();
-  const key = storeStorageKey(
-    `xa:fronted:fund:${role}:${session.user.id}:${path}:${stable(payload)}`,
-  );
-  if (funds.has(key)) return funds.get(key) as Promise<T>;
-  let id = String(payload.client_request_id || "");
-  let hadPending = false;
-  try {
-    const previousId = localStorage.getItem(key);
-    hadPending = !!previousId;
-    id ||= previousId || `fund-${randomUuid()}`;
-    localStorage.setItem(key, id);
-  } catch {
-    return Promise.reject(
-      new Error("无法保存交易请求，请检查浏览器存储后重试"),
-    );
-  }
-  const discard = () => {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      /* Reusing an old key is safer than losing a pending write. */
-    }
+  const key = `${fundStoragePrefix(role, session.user.id)}${path}:${stable(payload)}`;
+  const changed = () => new ApiError("原操作记录已变化，请重新核对钱包。", 409, { errorCode: "FUND_RECOVERY_CHANGED" });
+  const active = () => getStoreSlug() === store && getSession(role).revision === session.revision;
+  const requireActive = () => { if (!active()) throw sessionChangedError(); };
+  const storageFailure = (cause: unknown) => {
+    requireActive();
+    if (cause instanceof ApiError) throw cause;
+    const message = "无法保存交易请求，请检查浏览器存储后重试";
+    if (coordinateAcrossTabs) throw new ApiError(message, 400, { errorCode: "FUND_STORAGE_UNAVAILABLE" });
+    throw new Error(message);
   };
-  const operation = createApiClient(role)
-    .request<T>(path, {
-      ...options,
-      method: options.method || "POST",
-      data: { ...payload, client_request_id: id },
-    })
-    .then((data) => {
-      discard();
-      return data;
-    })
-    .catch((error: ApiError) => {
-      if (
-        getStoreSlug() !== store ||
-        getSession(role).revision !== session.revision
-      )
-        throw sessionChangedError();
-      if (
-        error.errorCode === "FUND_ALREADY_PROCESSED" &&
-        error.fundResult?.code === 0
-      ) {
-        discard();
-        return error.fundResult.data as T;
+  const inFlight = funds.get(key);
+  if (inFlight) return recovery ? Promise.reject(changed()) : inFlight as Promise<T>;
+
+  function reserve(canonical: string | null) {
+    requireActive();
+    const mirror = localStorage.getItem(key);
+    if (canonical && mirror && canonical !== mirror) throw changed();
+    const previous = canonical || mirror;
+    if (recovery && (key !== recovery.key || previous !== recovery.requestId)) throw changed();
+    const explicit = recovery?.requestId || String(payload.client_request_id || "");
+    if (coordinateAcrossTabs && explicit && previous && previous !== explicit) throw changed();
+    const id = explicit || previous || `fund-${randomUuid()}`;
+    if (!recovery || coordinateAcrossTabs) localStorage.setItem(key, id);
+    return { id, value: { id, hadPending: !!previous } };
+  }
+
+  function send({ id, hadPending }: { id: string; hadPending: boolean }) {
+    requireActive();
+    const removeMirror = () => { if (localStorage.getItem(key) === id) localStorage.removeItem(key); };
+    async function discard() {
+      try {
+        if (coordinateAcrossTabs) {
+          await updateFundMarker(key, current => {
+            if (!active() || (current && current !== id)) return { id: current, value: undefined };
+            removeMirror();
+            return { id: null, value: undefined };
+          });
+        } else {
+          removeMirror();
+        }
+      } catch {
+        /* Reusing an old key is safer than losing a pending write. */
       }
-      if (
-        !hadPending &&
-        typeof error.code === "number" &&
-        error.code >= 400 &&
-        error.code < 500 &&
-        error.code !== 409 &&
-        error.code !== 429
-      )
-        discard();
+    }
+    async function complete(data: T) {
+      if (acceptsResult && !acceptsResult(data)) throw new ApiError("原操作返回的结果暂不可核对，请保留原编号。");
+      await discard();
+      requireActive();
+      return data;
+    }
+    return createApiClient(role).request<T>(path, {
+      ...requestOptions,
+      method: requestOptions.method || "POST",
+      data: { ...payload, client_request_id: id },
+    }).then(complete).catch(async (error: ApiError) => {
+      requireActive();
+      if (error.errorCode === "FUND_ALREADY_PROCESSED" && error.fundResult?.code === 0) {
+        return complete(error.fundResult.data as T);
+      }
+      if (!keepOriginalOnFailure && !hadPending && typeof error.code === "number" && error.code >= 400
+          && error.code < 500 && error.code !== 409 && error.code !== 429) await discard();
       throw error;
-    })
-    .finally(() => {
-      funds.delete(key);
     });
+  }
+
+  let request: Promise<T>;
+  try {
+    if (coordinateAcrossTabs) {
+      request = updateFundMarker(key, reserve).catch(storageFailure).then(send);
+    } else {
+      const { value } = reserve(null);
+      request = send(value);
+    }
+  } catch (cause) {
+    return Promise.reject(cause).catch(storageFailure);
+  }
+  const operation = request.finally(() => funds.delete(key));
   funds.set(key, operation);
   return operation;
 }

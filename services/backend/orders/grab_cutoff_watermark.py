@@ -11,8 +11,7 @@ import json
 from django.conf import settings
 from stores.db import connection, transaction
 
-from .models import (Order, OrderGrabCutoffWatermark, OrderGrabReceiptProbe,
-                     OrderGrabSingleRoundState, OrderGrabTeamRoundState)
+from .models import Order, OrderGrabCutoffWatermark, OrderGrabReceiptProbe
 
 
 def enabled():
@@ -46,6 +45,31 @@ def _facts(rows):
     return len(facts), hashlib.sha256(encoded).hexdigest()
 
 
+def matches_seal(mark, rows, *, cutoff, observed_at, precision_us, identity=None):
+    count, digest = _facts(rows)
+    return (mark.cutoff_at == cutoff and mark.precision_us == precision_us
+            and mark.clock_vendor == connection.vendor and mark.server_id == (_server_id() if identity is None else identity)
+            and mark.observed_at - timedelta(microseconds=mark.precision_us) > mark.cutoff_at
+            and observed_at + timedelta(microseconds=precision_us) >= mark.observed_at
+            and mark.receipt_count == count and mark.receipt_digest == digest)
+
+
+def verified_reopen_seal(round_, *, cutoff, reopened_at, lock):
+    """Verify the prior seal against a cutoff already derived by the caller."""
+    from .grab_receipt_probe import _db_clock
+
+    marks = OrderGrabCutoffWatermark.objects.filter(round=round_)
+    mark = (marks.select_for_update() if lock else marks).first()
+    if not mark:
+        return None
+    receipts = OrderGrabReceiptProbe.objects.filter(round=round_, round_phase='OPEN').order_by('pk')
+    rows = receipts.select_for_update() if lock else receipts
+    _, precision_us, _ = _db_clock()
+    if matches_seal(mark, rows, cutoff=cutoff, observed_at=reopened_at, precision_us=precision_us):
+        return mark
+    return None
+
+
 def verify(round_, rows, *, observed_at, precision_us):
     """Caller holds the order lock; never infer trust from the test override."""
     mark = OrderGrabCutoffWatermark.objects.select_for_update().filter(round=round_).first()
@@ -59,32 +83,33 @@ def verify(round_, rows, *, observed_at, precision_us):
         cutoff = cutoff_bounds(round_, 'OPEN')[1]
     else:
         cutoff = round_.deadline
-    count, digest = _facts(rows)
-    return (mark.cutoff_at == cutoff and mark.precision_us == precision_us
-            and mark.clock_vendor == connection.vendor and mark.server_id == _server_id()
-            and mark.observed_at - timedelta(microseconds=mark.precision_us) > mark.cutoff_at
-            and observed_at + timedelta(microseconds=precision_us) >= mark.observed_at
-            and mark.receipt_count == count and mark.receipt_digest == digest)
+    return matches_seal(mark, rows, cutoff=cutoff, observed_at=observed_at, precision_us=precision_us)
 
 
-def seal(order_id, *, team):
+def seal(order_id, *, team, expected_round_id=None):
     """Freeze OPEN receipt identities after cutoff in an independent transaction."""
     if not enabled():
         return 'DISABLED'
     if transaction.get_connection().in_atomic_block:
         raise RuntimeError('截止水位必须使用独立最外层事务')
     from .grab_receipt_probe import _db_clock
-    from .grab_round_facts import current_round
-    model = OrderGrabTeamRoundState if team else OrderGrabSingleRoundState
+    from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, locked_latest_round_id
     with transaction.atomic():
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order or order.status != Order.Status.PENDING:
             return 'NO_OPEN_ROUND'
-        state = (model.objects.select_for_update().select_related('round__pool')
-                 .filter(round__pool__order=order).order_by('-round__number').first())
+        if expected_round_id is not None and locked_latest_round_id(order.pk) != expected_round_id:
+            return 'STALE_ROUND'
+        seats = 2 if team else 1
+        if order.required_provider_count != seats:
+            return 'REVIEW'
+        try:
+            state = latest_round_state(order.pk, seats=seats, lock=True)
+        except GrabRoundReviewRequired:
+            return 'REVIEW'
         if not state or state.status not in ('OPEN', 'PARKED'):
             return 'NO_OPEN_ROUND'
-        round_ = current_round(state.round.pool, state.round_id, lock=True)
+        round_ = state.round
         from .grab_clock_contract import production_enabled, round_identity_valid
         if production_enabled() and not round_identity_valid(round_):
             return 'REVIEW'

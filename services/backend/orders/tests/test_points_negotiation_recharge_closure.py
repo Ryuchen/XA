@@ -196,12 +196,13 @@ class PointsNegotiatedRechargeClosureTest(TestCase):
             # Recreate a versioned receipt around the real committed release
             # inside a rolled-back savepoint. Allocation-only reconciliation
             # must not overlook this unintegrated release on the shared receipt.
-            with override_settings(RECEIPT_USAGE_LEDGER_INTERNAL_TESTING=True), transaction.atomic():
+            with override_settings(RECEIPT_USAGE_LEDGER_INTERNAL_TESTING=True,
+                                   SERVICE_POINTS_FIRST_REFUND_USAGE_TESTING=True), transaction.atomic():
                 PassReceiptUsageState.objects.create(receipt_id=self.receipt_id)
                 PassRefundRepaymentReceipt.objects.filter(pk=self.receipt_id).update(usage_version=0)
                 allocation = OrderPointsFundingAllocation.objects.get(redemption__order=order)
                 record_order_locked(allocation)
-                with self.assertRaisesMessage(DjangoValidationError, '尚未接入账本核验的释放凭证'):
+                with self.assertRaisesMessage(DjangoValidationError, '到账用途与实际分配凭证不一致'):
                     verify_allocations_locked(self.receipt_id)
                 transaction.set_rollback(True)
             with transaction.atomic():

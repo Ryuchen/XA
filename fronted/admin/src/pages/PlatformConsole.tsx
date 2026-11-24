@@ -41,7 +41,7 @@ type Store = {
 type Aggregate = {
   complete: boolean
   generated_at: string
-  partial_totals: { orders: number; bosses: number; providers: number }
+  partial_totals: { orders: number; bosses: number; providers: number } | null
   stores: {
     slug: string
     name: string
@@ -352,6 +352,7 @@ function PlatformOverview({
     [superAdmin, revision]
   )
   const aggregate = summary.data
+  const totals = aggregate?.partial_totals
   const hasReadStores = !!aggregate?.stores.some(row => row.status === "OK" && !!row.counts)
   return (
     <div className="space-y-6">
@@ -376,14 +377,16 @@ function PlatformOverview({
           )}
           {aggregate && !aggregate.complete && (
             <p role="alert" className="saas-note">
-              部分俱乐部未取得数据，以下仅为已读取俱乐部的合计。
+              {hasReadStores
+                ? "部分俱乐部未取得数据，以下仅为已读取俱乐部的合计。"
+                : "尚未读取到俱乐部数据，暂时无法汇总。"}
             </p>
           )}
           <dl className="saas-definition">
             {([
-              ["订单", aggregate?.partial_totals.orders, ClipboardList],
-              ["老板", aggregate?.partial_totals.bosses, Users],
-              ["陪玩", aggregate?.partial_totals.providers, Headphones],
+              ["订单", totals?.orders, ClipboardList],
+              ["老板", totals?.bosses, Users],
+              ["陪玩", totals?.providers, Headphones],
             ] as const).map(([name, value, Icon]) => (
               <div key={name}>
                 <dt className="flex items-center gap-2"><Icon size={16} strokeWidth={1.75} aria-hidden="true" />{name}</dt>

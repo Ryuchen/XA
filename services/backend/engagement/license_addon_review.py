@@ -201,9 +201,20 @@ def resolve_locked(consumption_id, *, request_id, actor_id, vip_outcome, points_
                         verify_finalized(locked, manifest)
                     except SettlementError as exc:
                         raise ValidationError('第三轮退款最终结算凭证待核对') from exc
-    consumption = OrderAddonConsumption.objects.select_for_update().select_related('payment__intent__order').get(pk=consumption_id)
-    review = LicenseAddonBenefitsReview.objects.select_for_update().filter(consumption=consumption).first()
     vip_outcome, points_outcome = vip_outcome or '', points_outcome or ''
+    reviews = LicenseAddonBenefitsReview.objects.filter(consumption_id=consumption_id)
+    wallet = None
+    # The order lock prevents a new review. Another order can clear a pending
+    # recalculation under the wallet lock, so acquire it before the review row
+    # and read the current pending state again after waiting.
+    if vip_outcome == 'ALLOW':
+        pending = reviews.filter(request_id=request_id, vip_recalculation_pending=True).values_list(
+            'vip_outcome', 'points_outcome', 'reason').first()
+        if pending == (vip_outcome, points_outcome, reason):
+            from wallet.services import get_wallet
+            wallet = get_wallet(account_id=initial.account_id, for_update=True, create=False)
+    consumption = OrderAddonConsumption.objects.select_for_update().select_related('payment__intent__order').get(pk=consumption_id)
+    review = reviews.select_for_update().first()
     if review:
         if (review.request_id != request_id or review.vip_outcome != vip_outcome
                 or review.points_outcome != points_outcome or review.reason != reason):
@@ -219,8 +230,7 @@ def resolve_locked(consumption_id, *, request_id, actor_id, vip_outcome, points_
             if (not vip['applicable'] or vip['outcome'] != 'UNKNOWN'
                     or review.vip_outcome != 'ALLOW'):
                 raise ValidationError('原加购会员授权决定待核对')
-            from wallet.services import get_wallet
-            if not get_wallet(account_id=consumption.account_id, for_update=True, create=False):
+            if not wallet or wallet.account_id != consumption.account_id:
                 raise ValidationError('加购老板钱包不存在')
             from club_accounts.models import ClubAccount
             account = ClubAccount.objects.select_for_update().get(pk=consumption.account_id)
@@ -258,6 +268,11 @@ def resolve_locked(consumption_id, *, request_id, actor_id, vip_outcome, points_
             and (vip_outcome in ('ALLOW', 'DENY') if needs_vip else not vip_outcome)
             and (points_outcome in ('ALLOW', 'DENY') if needs_points else not points_outcome))
         if valid_outcomes:
+            from stores.certificate_admission import require_original_certificate
+            if vip_outcome == 'ALLOW':
+                require_original_certificate(vip.get('evidence'))
+            if points_outcome == 'ALLOW':
+                require_original_certificate(points.get('evidence'))
             from club_accounts.models import ClubAccount
             observed_cycle = ClubAccount.objects.filter(pk=consumption.account_id).values_list('business_cycle', flat=True).first()
             if observed_cycle is not None and observed_cycle > consumption.business_cycle:

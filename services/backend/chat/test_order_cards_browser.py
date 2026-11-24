@@ -31,7 +31,7 @@ class ChatOrderCardsBrowserTest(LiveServerTestCase):
         staff.admin_membership.account = accounts[2]
         staff.admin_membership.save(update_fields=['account'])
         order = make_order(boss, customer_account=accounts[0], provider=provider, provider_account=accounts[1], status='IN_SERVICE')
-        pool = make_order(boss, customer_account=accounts[0])
+        pool = make_order(boss, customer_account=accounts[0], requires_boss_selection=True)
         Order.objects.filter(pk=pool.pk).update(created_at=timezone.now() - timedelta(hours=2))
         sessions = [ChatSession.objects.create(account=account, user=user) for user, account in zip((boss, provider), accounts[:2])]
         boss_client = APIClient(HTTP_HOST='sl.esports.club')

@@ -1,9 +1,11 @@
+from django.db import DatabaseError, InterfaceError
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
+from club_accounts.authentication import ClubAccountAuthenticationUnavailable
 from club_accounts.permissions import IsClubAccountAuthenticated
 from club_accounts.tokens import refresh_account_access_token
 
@@ -64,6 +66,8 @@ class ConsoleRefreshView(APIView):
             return Response({'code': 400, 'msg': '缺少 refresh token'})
         try:
             access_token = refresh_account_access_token(token, require_console=True)
+        except (DatabaseError, InterfaceError) as exc:
+            raise ClubAccountAuthenticationUnavailable() from exc
         except TokenError:
             # HTTP 状态码必须真的是 401：信封里的 code=401 只有业务代码看得懂，
             # 而浏览器 fetch 封装、网关、监控告警看的都是 HTTP 状态码。

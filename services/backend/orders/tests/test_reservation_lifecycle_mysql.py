@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Event
+from time import monotonic, sleep
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -11,9 +12,10 @@ from django.test import TransactionTestCase, override_settings
 from rest_framework.test import APIClient
 
 from club_accounts import provider_lifecycle
-from club_accounts.models import ClubAccount
+from club_accounts.models import ClubAccount, ProviderLifecycleLock
 from club_accounts.tokens import issue_account_tokens
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
+from engagement.models import PointFundingLot
 from orders.models import Reservation, ServiceItem
 from orders.models import Order, ReservationSeat
 from orders.tests import test_game_commission_payment as game_fixture
@@ -25,6 +27,7 @@ from stores.context import store_context
 from stores.db import transaction
 from stores.tests_hosts import xinan_store
 from wallet.test_deposit_lifecycle_mysql import require_isolated
+from wallet.models import IdempotencyKey, Transaction, Wallet
 from users.models import EscortProfile
 
 
@@ -95,41 +98,64 @@ class SelectedTeamLifecycleMySQLTest(TransactionTestCase):
         with store_context(self.store):
             game_fixture.GameCommissionPaymentTest.setUp(self)
             self.service.billing_provider_count = 2
-            self.service.save(update_fields=['billing_provider_count'])
+            self.service.fulfillment_provider_count = 2
+            self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
 
-    def test_team_checkout_rechecks_both_before_service_and_wallet_locks(self):
-        entered = Event()
-        actual = provider_lifecycle.lock_provider_operations
-
-        def observe(accounts):
-            entered.set()
-            return actual(accounts)
+    def checkout_during_membership_change(self, request_id, *, active):
+        partner = self.accounts[1]
 
         def post():
             close_old_connections()
             try:
                 return self.client.post('/api/orders/create/', {'service_id': self.service.pk,
                     'provider_ids': [account.pk for account in self.accounts],
-                    'client_request_id': 'lifecycle-team-checkout'}, format='json')
+                    'client_request_id': request_id}, format='json')
             finally:
                 close_old_connections()
 
-        with patch('club_accounts.provider_lifecycle.lock_provider_operations', side_effect=observe):
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                with store_context(self.store), transaction.atomic():
-                    provider_lifecycle.lock_provider_closure(self.accounts[1])
-                    future = pool.submit(post)
-                    self.assertTrue(entered.wait(15))
-                    self.assertFalse(future.done())
-                    ServiceItem.objects.select_for_update(nowait=True).get(pk=self.service.pk)
-                    ClubAccount.objects.filter(pk=self.accounts[1].pk).update(
-                        license_membership_active=False, business_cycle=F('business_cycle') + 1)
-                result = future.result(timeout=30)
-        self.assertEqual(result.status_code, 409, result.data)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with store_context(self.store), transaction.atomic():
+                provider_lifecycle.lock_provider_closure(partner)
+                future = pool.submit(post)
+                db = connections['store_b']
+                wait_deadline = monotonic() + 8
+                table = ProviderLifecycleLock._meta.db_table.upper()
+                while True:
+                    self.assertFalse(future.done(), 'checkout exited before waiting for the lifecycle row')
+                    with db.cursor() as cursor:
+                        cursor.execute('SHOW FULL PROCESSLIST')
+                        waiting = any(
+                            row[3] == db.settings_dict['NAME'] and row[4] == 'Query'
+                            and table in str(row[7]).upper()
+                            and 'LOCK IN SHARE MODE' in str(row[7]).upper()
+                            and f'account_id = {partner.pk} ' in str(row[7])
+                            for row in cursor.fetchall()
+                        )
+                    if waiting:
+                        break
+                    self.assertLess(monotonic(), wait_deadline, 'checkout did not wait on the lifecycle row')
+                    sleep(.05)
+                self.assertFalse(future.done())
+                ServiceItem.objects.select_for_update(nowait=True).get(pk=self.service.pk)
+                Wallet.objects.select_for_update(nowait=True).get(pk=self.wallet.pk)
+                ClubAccount.objects.filter(pk=partner.pk).update(
+                    license_membership_active=active, business_cycle=F('business_cycle') + 1)
+            return future.result(timeout=30)
+
+    def test_team_checkout_rechecks_both_before_service_and_wallet_locks(self):
+        changed = self.checkout_during_membership_change('lifecycle-team-cycle', active=True)
+        self.assertEqual((changed.status_code, changed.data['code']), (409, 409), changed.data)
+        self.assertIn('陪玩账号周期已变化', changed.data['msg'])
+        closed = self.checkout_during_membership_change('lifecycle-team-close', active=False)
+        self.assertEqual(closed.data['code'], 400, closed.data)
+        self.assertIn('陪玩已退出门店', closed.data['msg'])
         with store_context(self.store):
             self.wallet.refresh_from_db()
             self.assertEqual(self.wallet.balance, 100000)
+            self.assertEqual(PointFundingLot.objects.get(account=self.boss_account).remaining, 100000)
             self.assertFalse(Order.objects.exists())
+            self.assertFalse(Transaction.objects.filter(tx_type=Transaction.TxType.PAY).exists())
+            self.assertFalse(IdempotencyKey.objects.filter(account=self.boss_account).exists())
 
 
 @skipUnless(connection.vendor == 'mysql' and 'store_b' in connections, 'Requires two isolated MySQL stores')

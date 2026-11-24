@@ -93,6 +93,13 @@ def preview_locked(case_id, *, refund_equivalent_units):
         deadline = aftersale_deadline(order)
         if not deadline or case.created_at >= deadline:
             raise ValidationError('售后申请时间超出订单售后期')
+    if formal:
+        from .points_returned_addon_refund import before_first_main_refund, require_other_seat
+        returned = before_first_main_refund(order)
+        if returned:
+            if case.addon_payment_id:
+                raise ValidationError('请单独登记主服务售后')
+            require_other_seat(order, returned, case.affected_segment_ids)
     try:
         original = plan_points_transfer(order.pk, allow_recorded=True, preview_unstarted=True)
         funding = verify_order_funding(order.pk, allow_finalized=True, allow_unstarted=True,

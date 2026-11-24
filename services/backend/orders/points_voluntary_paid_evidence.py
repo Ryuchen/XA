@@ -253,8 +253,7 @@ def record_locked(refund, before):
     """Bind the captured paid ledger to the real refund and its release run."""
     if before is None:
         return None
-    from .models import (OrderAddonFundingReleaseRun, OrderSegmentSettlementManifest,
-                         PointsVoluntaryPaidRefundEvidence)
+    from .models import OrderAddonFundingReleaseRun, OrderSegmentSettlementManifest
     from .addon_funding_release import verify_run
     from .points_transfer_refund_evidence import _verify_prior_settlement
     from .points_voluntary_handover_event import entry_matches
@@ -270,7 +269,81 @@ def record_locked(refund, before):
         raise ValidationError('已付退款缺少原清单或真实资金事件')
     _verify_prior_settlement(order, before)
     verify_run(run, _skip_usage=True)
-    snapshot = {'version': 1, 'order_id': order.pk, 'payment_id': refund.payment_id,
+    return _save_refund_evidence(refund, run, manifest, before)
+
+
+def recover_standard_refunds_locked(order, manifest, refund_ids):
+    """Reconcile committed standard add-on refunds against the still-open original manifest."""
+    from .addon_funding_release import verify_run
+    from .models import OrderAddonFundingReleaseRun, OrderSegmentPersonSettlement
+    from .points_transfer_refund_access import permits
+    from .points_transfer_refund_evidence import _prior_settlement, _verify_prior_settlement
+
+    connection = transaction.get_connection()
+    if (not connection.in_atomic_block or not permits(order, phase='settlement')
+            or order._state.db != connection.alias or manifest._state.db != connection.alias
+            or manifest.order_id != order.pk or manifest.finalized_at or order.settled_at
+            or order.refund_records.exists()):
+        raise ValidationError('已付加购退款须在未结清的转单事务中核对')
+    prior = _prior_settlement(order)
+    if not prior or prior['manifest_id'] != manifest.pk:
+        raise ValidationError('已付加购退款缺少原结算清单')
+    _verify_prior_settlement(order, prior)
+    accounts = {item['account_id'] for item in prior['people']}
+    runs = list(OrderAddonFundingReleaseRun.objects.filter(
+        refund__order=order, refund_id__in=refund_ids).select_related('refund__proposal__case')
+        .order_by('refund__created_at', 'refund_id'))
+    if len(runs) != len(refund_ids):
+        raise ValidationError('已付加购退款缺少真实资金版本')
+    for run in runs:
+        refund = run.refund
+        proposal = refund.proposal
+        affected = set(proposal.participants.values_list('account_id', flat=True))
+        if (not refund.created_at or run.created_at < refund.created_at
+                or not _standard_funding_run(run)
+                or proposal.payment_id != refund.payment_id or proposal.case.order_id != order.pk
+                or not affected or accounts.intersection(affected)
+                or OrderSegmentPersonSettlement.objects.filter(manifest=manifest, settled_at=refund.created_at).exists()):
+            raise ValidationError('已付人员与原加购退款范围不一致')
+        verify_run(run)
+        verify_historical_paid(order, prior, refund.created_at, manifest.pk)
+        _save_refund_evidence(refund, run, manifest, prior)
+    return prior
+
+
+def _standard_funding_run(run):
+    return bool(run.refund_id is not None and run.points_addon_snapshot and run.points_addon_hash
+                and run.refunded_main_snapshot is None and run.points_followup_snapshot is None)
+
+
+def verify_standard_refund_current_read(run, *, in_revision=False):
+    """Require the paid witness once a standard refund is included in the manifest history."""
+    from .models import (OrderSegmentAddonSettlementRevision, OrderSegmentPersonSettlement,
+                         OrderSegmentSettlementManifest)
+
+    if not _standard_funding_run(run):
+        return
+    paid = verify_current_read(run)
+    refund = run.refund
+    if paid is None and not OrderSegmentPersonSettlement.objects.filter(
+            manifest__order_id=refund.order_id, settled_at__lte=refund.created_at).exists():
+        return
+    if not in_revision:
+        versions = OrderSegmentAddonSettlementRevision.objects.filter(manifest__order_id=refund.order_id)
+        if not any(refund.pk in ids for ids in versions.values_list('refund_ids', flat=True) if isinstance(ids, list)):
+            ids = OrderSegmentSettlementManifest.objects.filter(order_id=refund.order_id).values_list(
+                'plan__points_funding__addon_refund_ids', flat=True).first()
+            if isinstance(ids, list) and refund.pk in ids:
+                raise ValidationError('已付加购退款缺少清单版本')
+            return
+    if paid is None:
+        raise ValidationError('已付加购退款缺少人员结算凭证')
+
+
+def _save_refund_evidence(refund, run, manifest, before):
+    from .models import PointsVoluntaryPaidRefundEvidence
+
+    snapshot = {'version': 1, 'order_id': refund.order_id, 'payment_id': refund.payment_id,
                 'refund_id': refund.pk, 'refund_at': refund.created_at.isoformat(),
                 'funding_run_id': run.pk, 'funding_hash': run.refunded_main_hash,
                 'addon_hash': run.points_addon_hash, 'followup_hash': run.points_followup_hash,

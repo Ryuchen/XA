@@ -28,6 +28,17 @@ def _wake_after_commit():
     transaction.on_commit(wake, using='default')
 
 
+def _queue_threshold(event_key, defaults):
+    notice, created = LicenseNotice.objects.get_or_create(event_key=event_key, defaults=defaults)
+    revived = bool(not created and notice.suppressed_at and not (notice.platform_delivered_at and notice.store_delivered_at))
+    if revived:
+        notice.suppressed_at, notice.next_attempt_at = None, None
+        notice.save(update_fields=['suppressed_at', 'next_attempt_at'])
+    if created or revived:
+        _wake_after_commit()
+    return notice
+
+
 def enqueue_cancellation(code, *, now=None):
     now = now or timezone.now()
     notice, created = LicenseNotice.objects.get_or_create(event_key=f'cancel:{code.pk}', defaults={
@@ -84,16 +95,9 @@ def collect_store_notice(store, *, now=None):
         LicenseNotice.objects.filter(store=store, license_code=code, kind__in=earlier, suppressed_at__isnull=True).filter(
             Q(platform_delivered_at__isnull=True) | Q(store_delivered_at__isnull=True)
         ).update(suppressed_at=now)
-    notice, created = LicenseNotice.objects.get_or_create(event_key=event_key, defaults={
+    return _queue_threshold(event_key, {
         'store': store, 'license_code': code, 'kind': kind, 'deadline': deadline,
     })
-    revived = bool(not created and notice.suppressed_at and not (notice.platform_delivered_at and notice.store_delivered_at))
-    if revived:
-        notice.suppressed_at, notice.next_attempt_at = None, None
-        notice.save(update_fields=['suppressed_at', 'next_attempt_at'])
-    if created or revived:
-        _wake_after_commit()
-    return notice
 
 
 def collect_all_notices(*, now=None):
@@ -107,6 +111,10 @@ def collect_all_notices(*, now=None):
 
 
 def _text(notice):
+    if notice.business_certificate_id:
+        from .business_certificates import CERTIFICATE_TIMEZONE
+        date = timezone.localdate(notice.deadline, CERTIFICATE_TIMEZONE).isoformat()
+        return '门店营业执照即将到期', f'本店营业执照有效期至 {date}（北京时间，含当日），请核对换证进度。'
     if notice.kind == 'CANCEL':
         return '待生效授权已取消', '平台已取消一项尚未生效的授权安排，请查看门店授权状态。'
     deadline = timezone.localtime(notice.deadline).strftime('%Y-%m-%d %H:%M')
@@ -118,6 +126,9 @@ def _text(notice):
 
 
 def _still_current(notice, now):
+    if notice.business_certificate_id:
+        from .certificate_notices import still_current
+        return still_current(notice, now)
     if notice.kind == 'CANCEL':
         return True
     state = status_for_store(notice.store, now=now)
@@ -141,6 +152,15 @@ def _still_current(notice, now):
     return notice.kind == current_kind
 
 
+def _locked_notice(notice_id, store_id):
+    # Collection, renewal and certificate replacement also lock the store
+    # before touching pending reminders.
+    store = Store.objects.select_for_update().get(pk=store_id)
+    notice = LicenseNotice.objects.select_for_update().get(pk=notice_id, store_id=store_id)
+    notice.store = store
+    return notice
+
+
 def deliver_notice(notice_id):
     """Idempotent control-plane + tenant delivery across separate databases."""
     from .context import store_context
@@ -148,8 +168,9 @@ def deliver_notice(notice_id):
     from site_messages.models import LicenseNoticeDelivery, Message
     from site_messages.notifier import notify_messages_after_commit
 
+    store_id = LicenseNotice.objects.values_list('store_id', flat=True).get(pk=notice_id)
     with transaction.atomic(using='default'):
-        notice = LicenseNotice.objects.select_for_update().select_related('store', 'license_code').get(pk=notice_id)
+        notice = _locked_notice(notice_id, store_id)
         if notice.suppressed_at or (notice.platform_delivered_at and notice.store_delivered_at):
             return
         now = timezone.now()
@@ -172,7 +193,7 @@ def deliver_notice(notice_id):
     # Platform delivery is committed independently: an unavailable tenant must
     # not prevent a platform administrator from seeing the reminder.
     with transaction.atomic(using='default'):
-        notice = LicenseNotice.objects.select_for_update().select_related('store', 'license_code').get(pk=notice_id)
+        notice = _locked_notice(notice_id, store_id)
         if notice.suppressed_at or notice.store_delivered_at:
             return
         now = timezone.now()
@@ -187,8 +208,10 @@ def deliver_notice(notice_id):
         from .dynamic_database import store_connection_ready
         if not store_connection_ready(store):
             return
-        delegated = list(StoreLicenseActivatorGrant.objects.filter(store=store, is_active=True)
-                         .values_list('account_id', 'account_no'))
+        delegated = []
+        if not notice.business_certificate_id:
+            delegated = list(StoreLicenseActivatorGrant.objects.filter(store=store, is_active=True)
+                             .values_list('account_id', 'account_no'))
         title, detail = _text(notice)
         with store_context(store), transaction.atomic(using=store.database_alias):
             staff = ClubAccount.objects.filter(account_type='STAFF', is_active=True, can_login=True,

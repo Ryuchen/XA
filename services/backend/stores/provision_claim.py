@@ -1,6 +1,4 @@
 """Durable proof for retrying only a database created for this store."""
-import hashlib
-import json
 import os
 import sqlite3
 from contextlib import closing
@@ -9,23 +7,33 @@ from pathlib import Path
 from django.core.management.base import CommandError
 from django.db import DatabaseError, transaction
 
-from .database_identity import assert_distinct_store_database, database_identity, lock_store_registration
+from .database_identity import (assert_distinct_store_database, database_identity,
+                                identity_fingerprint, lock_store_registration)
 from .models import Store, StoreProvisioningClaim
 
 MARKER = 'xa_store_provision_identity'
 
 
+class StoreAlreadyInitialized(CommandError):
+    """A concurrent request has already committed initialization."""
+
+    def __init__(self, store):
+        super().__init__('门店已完成初始化，请核对现有账号')
+        self.store = store
+
+
 def fingerprint(alias):
-    identity = database_identity(alias)
-    return hashlib.sha256(json.dumps(identity, ensure_ascii=True, separators=(',', ':')).encode()).hexdigest()
+    return identity_fingerprint(database_identity(alias))
 
 
-def reserve_claim(store):
-    """Commit the nonce before touching the target; no customer DB is inspected."""
+def reserve_claim(store, *, admin_username=None):
+    """Reserve the target and intended admin before touching any tenant database."""
     with transaction.atomic(using='default'):
         lock_store_registration()
         current = Store.objects.select_for_update().get(pk=store.pk)
-        if current.initialized_at is not None or current.status != Store.Status.PROVISIONING:
+        if current.initialized_at is not None:
+            raise StoreAlreadyInitialized(current)
+        if current.status != Store.Status.PROVISIONING:
             raise CommandError('仅待初始化门店可申请新数据库')
         try:
             assert_distinct_store_database(current.database_alias, exclude_store_id=current.pk)
@@ -36,12 +44,12 @@ def reserve_claim(store):
             defaults={'database_fingerprint': target})
         if claim.database_fingerprint != target:
             raise CommandError('目标数据库配置已变化，不能继续初始化；请人工核对')
+        _record_admin(claim, admin_username)
         return claim
 
 
 def reserve_admin_intent(store, username):
     """Persist the intended first admin before any tenant-side account write."""
-    username = (username or '').strip()
     with transaction.atomic(using='default'):
         lock_store_registration()
         current = Store.objects.select_for_update().get(pk=store.pk)
@@ -54,12 +62,20 @@ def reserve_admin_intent(store, username):
             raise CommandError(str(exc)) from exc
         if claim.database_fingerprint != target:
             raise CommandError('目标数据库配置已变化，不能继续初始化；请人工核对')
-        if username and claim.admin_username and username != claim.admin_username:
-            raise CommandError('恢复初始化须使用原先登记的管理员账号')
-        if username and not claim.admin_username:
-            claim.admin_username = username
-            claim.save(update_fields=['admin_username', 'updated_at'])
+        _record_admin(claim, username)
         return claim
+
+
+def _record_admin(claim, username):
+    username = (username or '').strip()
+    if not username or username == claim.admin_username:
+        return
+    if claim.admin_username:
+        raise CommandError('恢复初始化须使用原先登记的管理员账号')
+    if len(username) > 150:
+        raise CommandError('管理员用户名必须为1到150位')
+    claim.admin_username = username
+    claim.save(update_fields=['admin_username', 'updated_at'])
 
 
 def expected_marker(claim):

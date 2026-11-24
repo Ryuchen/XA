@@ -45,14 +45,14 @@ def deliver(intent_id):
     from .models import ServiceTransferNotice, Message
     from .notifier import notify_messages_after_commit
 
-    initial = ServiceTransferNotice.objects.filter(pk=intent_id).values('account_id', 'transfer_id').first()
+    initial = ServiceTransferNotice.objects.filter(pk=intent_id).values(
+        'account_id', 'transfer_id', 'transfer__next_segment__attribution__order_id').first()
     if not initial:
         return
     with transaction.atomic():
+        # Both transfer notices serialize on the order before the recipient.
+        order = Order.objects.select_for_update().filter(pk=initial['transfer__next_segment__attribution__order_id']).first()
         account = ClubAccount.objects.select_for_update().filter(pk=initial['account_id']).first()
-        order_id = OrderOriginalShareTransfer.objects.filter(pk=initial['transfer_id']).values_list(
-            'next_segment__attribution__order_id', flat=True).first()
-        order = Order.objects.select_for_update().filter(pk=order_id).first()
         transfer = (OrderOriginalShareTransfer.objects.select_for_update().filter(pk=initial['transfer_id'],
             next_segment__attribution__order=order).first() if order else None)
         intent = ServiceTransferNotice.objects.select_for_update().filter(pk=intent_id,

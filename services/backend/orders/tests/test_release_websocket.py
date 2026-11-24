@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
@@ -45,6 +47,60 @@ class ReleaseWebSocketTest(TransactionTestCase):
                 self.assertEqual(await socket.receive_json_from(), {'type': 'pong'})
             finally:
                 await socket.disconnect()
+
+        async_to_sync(verify)()
+
+    def test_order_provider_refresh_skips_locking_order_serializer(self):
+        from orders.models import OrderProvider
+        from orders.notifier import notify_order_update
+        from orders.serializers import OrderSerializer
+        providers = [make_provider(), make_provider()]
+        accounts = [get_or_create_account_for_legacy_user(user) for user in providers]
+        boss = make_user()
+        boss_account = get_or_create_account_for_legacy_user(boss)
+        staff = make_console_user(['order:view'])
+        staff_account = get_or_create_account_for_legacy_user(staff)
+        staff.admin_membership.account = staff_account
+        staff.admin_membership.save(update_fields=['account'])
+        outsider = get_or_create_account_for_legacy_user(make_provider())
+        order = make_order(boss, provider=providers[0], customer_account=boss_account,
+            provider_account=accounts[0], business_cycle=boss_account.business_cycle,
+            status='IN_SERVICE', payment_status='PARTIALLY_REFUNDED', in_service_at=timezone.now())
+        for user, account in zip(providers, accounts, strict=True):
+            OrderProvider.objects.create(order=order, provider=user, provider_account=account,
+                provider_business_cycle=account.business_cycle,
+                released_at=order.in_service_at if account == accounts[0] else None)
+        tokens = [issue_account_tokens(account)[0] for account in (*accounts, boss_account, staff_account, outsider)]
+        provider_ids = {account.pk for account in accounts}
+        render = OrderSerializer.to_representation
+
+        def without_provider_snapshot(serializer, instance):
+            account = getattr(serializer.context.get('request'), 'account', None)
+            self.assertNotIn(getattr(account, 'pk', None), provider_ids)
+            return render(serializer, instance)
+
+        async def verify():
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
+                       for token in tokens]
+            for socket in sockets:
+                self.assertTrue((await socket.connect())[0])
+            try:
+                with patch.object(OrderSerializer, 'to_representation', new=without_provider_snapshot):
+                    await database_sync_to_async(notify_order_update)(order, refresh_providers=True)
+                for socket in sockets[:2]:
+                    self.assertEqual(await socket.receive_json_from(), {
+                        'type': 'order_status_update', 'data': {'id': order.pk, 'status': 'IN_SERVICE'},
+                    })
+                for socket in sockets[2:4]:
+                    event = await socket.receive_json_from()
+                    self.assertEqual(event['type'], 'order_status_update')
+                    self.assertEqual((event['data']['id'], event['data']['payment_status']),
+                                     (order.pk, 'PARTIALLY_REFUNDED'))
+                    self.assertIn('aftersale_deadline', event['data'])
+                self.assertTrue(await sockets[4].receive_nothing(timeout=0.2))
+            finally:
+                for socket in sockets:
+                    await socket.disconnect()
 
         async_to_sync(verify)()
 

@@ -100,6 +100,17 @@ def transfer_settlement_pending(order):
         previous_segment__attribution=coverage.attribution).exists())
 
 
+def covered_transfers(order_id, account_id=None):
+    from django.db.models import Q
+    from .models import OrderOriginalShareTransfer
+    events = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order_id=order_id,
+        previous_segment__attribution__financial_coverage__isnull=False)
+    if account_id is not None:
+        events = events.filter(Q(previous_segment__provider_account_id=account_id)
+                               | Q(next_segment__provider_account_id=account_id))
+    return events
+
+
 def transfer_income_pending(order, account_id=None):
     """Read-only presentation check; already settled historical shares remain visible."""
     if not order or not order.pk:
@@ -107,20 +118,21 @@ def transfer_income_pending(order, account_id=None):
     from .segment_settlement import protection_enabled
     if protection_enabled():
         from .models import OrderSegmentSettlementManifest
-        if OrderSegmentSettlementManifest.objects.filter(order=order).exists():
+        has_manifest = getattr(order, '_provider_has_manifest', None)
+        if has_manifest is None:
+            has_manifest = OrderSegmentSettlementManifest.objects.filter(order=order).exists()
+        if has_manifest:
             return True  # Old person/order amounts cannot represent segmented credits.
-    if order.settled_at:
+    covered = (order._provider_has_covered_transfer
+               if account_id and account_id == getattr(order, '_provider_display_account_id', None) else None)
+    if order.settled_at or covered is False:
         return False
-    from django.db.models import Q
-    from .models import OrderOriginalShareTransfer
-    events = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
-        previous_segment__attribution__financial_coverage__isnull=False)
     if account_id is not None:
         if order.providers.filter(provider_account_id=account_id, settled_at__isnull=False).exists():
             return False
-        events = events.filter(Q(previous_segment__provider_account_id=account_id)
-                               | Q(next_segment__provider_account_id=account_id))
-    return events.exists()
+    if covered is True:
+        return True
+    return covered_transfers(order.pk, account_id).exists()
 
 
 def retained_transfer_accounts(order):
@@ -414,7 +426,10 @@ def service_transferred(attribution, order, event, *, game_plan=None, commission
         from .points_transfer_capture import enabled as points_enabled, locked_deal
         from .points_transfer_revision_scope import active as funding_revision_active
         from .points_transfer_refund_access import permits as points_transfer_permits
-        if points_transfer_permits(order, phase='transfer'):
+        # For a no-refund revision, transfer_capture already verified the
+        # earlier add-on handover and the outgoing account under the order lock.
+        if (points_transfer_permits(order, phase='transfer')
+                and (not funding_revision_active(order) or order.refund_records.exists())):
             from .models import OrderAddonPayment
             if OrderAddonPayment.objects.filter(intent__order=order, handovers__status='ACCEPTED',
                     handovers__shares__segment_id=event.previous_segment_id,

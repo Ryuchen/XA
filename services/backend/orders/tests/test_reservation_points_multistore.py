@@ -13,7 +13,7 @@ from club_accounts.services import get_or_create_account_for_legacy_user, link_l
 from club_accounts.tokens import issue_account_tokens
 from console.points_redemption_config import save_points_terms
 from console.reservation_deadlines import save_deadlines
-from engagement.models import MemberProfile
+from engagement.models import MemberProfile, PointFundingLot
 from engagement.services import config
 from orders.models import Order, Reservation
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
@@ -22,6 +22,14 @@ from stores.tests_hosts import xinan_store
 from users.models import EscortProfile
 from wallet.models import Wallet
 from wallet.services import get_wallet
+
+
+def seed_principal_balance(wallet, amount):
+    wallet.balance = amount
+    wallet.save(update_fields=['balance'])
+    PointFundingLot.objects.create(account_id=wallet.account_id,
+        source_key=f'isolated-reservation-principal-{wallet.account_id}',
+        kind=PointFundingLot.Kind.PREPAID, remaining=amount)
 
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated stores')
@@ -48,8 +56,7 @@ class ReservationPointsStoresTest(TestCase):
                 boss = get_or_create_account_for_legacy_user(user)
                 link_legacy_relations(user, boss)
                 wallet = get_wallet(user=user, account=boss)
-                wallet.balance = 20000
-                wallet.save(update_fields=['balance'])
+                seed_principal_balance(wallet, 20000)
                 MemberProfile.objects.create(account=boss, points_balance=10000)
                 player_user = make_provider(deposit_mode='EARNINGS')
                 player = get_or_create_account_for_legacy_user(player_user)
@@ -81,6 +88,7 @@ class ReservationPointsStoresTest(TestCase):
         with store_context(rows[1][0]):
             self.assertFalse(Order.objects.exists())
             self.assertEqual(Wallet.objects.get(account_id=rows[1][3]).balance, 20000)
+            self.assertEqual(PointFundingLot.objects.get(account_id=rows[1][3]).remaining, 20000)
             self.assertEqual(MemberProfile.objects.get(account_id=rows[1][3]).points_balance, 10000)
         payload['points_checkout_test_token'] = rows[1][4]['points_preview']['checkout_test_token']
         self.assertEqual(rows[1][1].post(path, payload, format='json').data['code'], 0)
@@ -104,7 +112,7 @@ class ReservationPointsStoresTest(TestCase):
                 boss = get_or_create_account_for_legacy_user(boss_user)
                 link_legacy_relations(boss_user, boss)
                 wallet = get_wallet(user=boss_user, account=boss)
-                wallet.balance = 20000; wallet.save(update_fields=['balance'])
+                seed_principal_balance(wallet, 20000)
                 MemberProfile.objects.create(account=boss, points_balance=10000)
                 provider_user = make_provider(deposit_mode='EARNINGS')
                 provider = get_or_create_account_for_legacy_user(provider_user)
@@ -124,7 +132,9 @@ class ReservationPointsStoresTest(TestCase):
             self.assertEqual(created.data['code'], 0, created.data)
             path = f"/api/orders/reservations/{created.data['data']['id']}/"
             self.assertEqual(player.post(path+'confirm/', {}, format='json').data['code'], 0)
-            quote = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000}).data['data']
+            quoted = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000})
+            self.assertEqual(quoted.data['code'], 0, quoted.data)
+            quote = quoted.data['data']
             paid = boss_client.post(path+'convert/', {'discount_selection_token': quote['discount_selection_token'],
                 'points_checkout_test_token': quote['points_preview']['checkout_test_token'],
                 'expected_amount': 6000, 'client_request_id': 'same-store-payment'}, format='json')
@@ -139,8 +149,9 @@ class ReservationPointsStoresTest(TestCase):
             with store_context(store):
                 self.assertEqual(Order.objects.get(pk=order_id).payment_status,
                                  'REFUNDED' if store.slug == 'xinan' else 'PAID')
-                self.assertEqual(Wallet.objects.get(account_id=boss_id).balance,
-                                 20000 if store.slug == 'xinan' else 14000)
+                expected_balance = 20000 if store.slug == 'xinan' else 14000
+                self.assertEqual(Wallet.objects.get(account_id=boss_id).balance, expected_balance)
+                self.assertEqual(PointFundingLot.objects.get(account_id=boss_id).remaining, expected_balance)
                 self.assertEqual(OrderPointsRefund.objects.filter(redemption__order_id=order_id).count(),
                                  1 if store.slug == 'xinan' else 0)
 
@@ -172,7 +183,12 @@ class ReservationPointsFinanceTest(TestCase):
     def test_cancel_release_is_recorded_in_shared_receipt_ledger(self):
         self._cancel_funding_case(usage=True)
 
-    def _cancel_funding_case(self, *, usage):
+    @override_settings(RECEIPT_USAGE_LEDGER_INTERNAL_TESTING=True,
+                       RECEIPT_USAGE_ALLOCATIONS_INTERNAL_TESTING=True)
+    def test_prestart_refund_with_formal_release_closes_platform_funding(self):
+        self._cancel_funding_case(usage=True, formal=True)
+
+    def _cancel_funding_case(self, *, usage, formal=False):
         from orders.models import ReservationPointsCancelFundingEvidence, ReservationPointsCancelFundingRelease
         from stores import test_platform_pass_repayment as platform_tests
         from stores.db import transaction
@@ -189,14 +205,13 @@ class ReservationPointsFinanceTest(TestCase):
             boss = get_or_create_account_for_legacy_user(boss_user)
             link_legacy_relations(boss_user, boss)
             wallet = get_wallet(user=boss_user, account=boss)
-            wallet.balance = 40000; wallet.save(update_fields=['balance'])
-            from engagement.models import PointFundingLot
-            PointFundingLot.objects.create(account=boss, source_key='reservation-funding-fixture', kind='PREPAID', remaining=40000)
+            seed_principal_balance(wallet, 40000)
             MemberProfile.objects.create(account=boss, points_balance=20000)
             provider_user = make_provider(deposit_mode='EARNINGS')
             provider = get_or_create_account_for_legacy_user(provider_user)
             link_legacy_relations(provider_user, provider)
             EscortProfile.objects.filter(user=provider_user).update(account=provider)
+            get_wallet(account=provider, user=provider_user)
             service = make_service(price=10000, commission_rate=20)
             admin = make_console_user(['order:view', 'order:refund'])
             staff = get_or_create_account_for_legacy_user(admin)
@@ -241,6 +256,9 @@ class ReservationPointsFinanceTest(TestCase):
             return self.client.post(funding_url, {'request_id': str(uuid4()), 'order_id': order_id, 'amount': amount},
                 format='json', HTTP_AUTHORIZATION='Bearer '+self.token)
         self.assertEqual(fund(first, 2000).status_code, 200)
+        if formal:
+            self._verify_formal_cancel_status(first, reviewer)
+            return
         preview = reviewer.get(f'/api/admin/orders/{first}/refund-preview/')
         self.assertEqual(preview.data['code'], 0, preview.data)
         self.assertEqual(preview.data['data']['released_funding_units'], 2000)
@@ -300,6 +318,46 @@ class ReservationPointsFinanceTest(TestCase):
             self.assertIsNone(broken['claims'][0]['receipt']['unallocated_amount'])
             transaction.set_rollback(True)
 
+    def _verify_formal_cancel_status(self, order_id, reviewer):
+        from orders.models import PointsPrestartCancelFundingEvidence, ReservationStatusLog
+        from stores.db import transaction
+
+        refund_url = f'/api/admin/orders/{order_id}/refund/'
+        queue_url = '/api/admin/platform/points-funding/xinan/orders'
+        auth = {'HTTP_AUTHORIZATION': 'Bearer ' + self.token}
+
+        # Use the production refund and evidence on SQLite, substituting the
+        # MySQL-only capability check after the isolated checkout.
+        with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, RECEIPT_USAGE_LEDGER_ENABLED=True),
+              patch('orders.points_business_access.configured', return_value=True)):
+            payload = {'reason': '未开工，取消已转单预约', 'client_request_id': 'reservation-formal-release'}
+            refunded = reviewer.post(refund_url, payload, format='json')
+            self.assertEqual(refunded.data['code'], 0, refunded.data)
+            with store_context(self.second):
+                booking = Reservation.objects.get(order_id=order_id, status=Reservation.Status.CONVERTED)
+                release = PointsPrestartCancelFundingEvidence.objects.get(points_refund__refund__order_id=order_id)
+                self.assertEqual(release.releases.get().amount, 2000)
+
+            detail = self.client.get(f'{queue_url}/{order_id}', **auth)
+            self.assertEqual(detail.status_code, 200, detail.data)
+            funding = detail.data['data']
+            self.assertEqual((funding['required_units'], funding['allocated_units'], funding['remaining_units'],
+                              funding['fully_funded']), (0, 0, 0, True))
+            queue = self.client.get(queue_url, {'after_id': order_id - 1}, **auth)
+            self.assertEqual(queue.data['data']['list'], [], queue.data)
+
+            with store_context(self.second), transaction.atomic():
+                Reservation.objects.filter(pk=booking.pk).update(required_provider_count=2)
+                damaged = self.client.get(f'{queue_url}/{order_id}', **auth)
+                self.assertEqual((damaged.status_code, damaged.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
+                transaction.set_rollback(True)
+            with store_context(self.second):
+                booking.status_logs.filter(action=ReservationStatusLog.Action.CONVERT).update(reason='转为订单：另一订单')
+            damaged = self.client.get(f'{queue_url}/{order_id}', **auth)
+            self.assertEqual((damaged.status_code, damaged.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
+            queue = self.client.get(queue_url, {'after_id': order_id - 1}, **auth)
+            self.assertEqual([row['funding_status'] for row in queue.data['data']['list']], ['REVIEW'])
+
     def test_platform_receipt_funds_booking_before_payout_and_vip_confirmation(self):
         from engagement.confirmation import process_order
         from engagement.models import ConsumptionConfirmation
@@ -321,7 +379,7 @@ class ReservationPointsFinanceTest(TestCase):
                 boss = get_or_create_account_for_legacy_user(boss_user)
                 link_legacy_relations(boss_user, boss)
                 wallet = get_wallet(user=boss_user, account=boss)
-                wallet.balance = 20000; wallet.save(update_fields=['balance'])
+                seed_principal_balance(wallet, 20000)
                 MemberProfile.objects.create(account=boss, points_balance=10000)
                 provider_user = make_provider(deposit_mode='EARNINGS')
                 provider = get_or_create_account_for_legacy_user(provider_user)
@@ -336,7 +394,9 @@ class ReservationPointsFinanceTest(TestCase):
                 self.assertEqual(response.data['code'], 0, response.data)
                 path = f"/api/orders/reservations/{response.data['data']['id']}/"
                 self.assertEqual(player.post(path+'confirm/', {}, format='json').data['code'], 0)
-                quote = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000}).data['data']
+                quoted = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000})
+                self.assertEqual(quoted.data['code'], 0, quoted.data)
+                quote = quoted.data['data']
                 paid = boss_client.post(path+'convert/', {'discount_selection_token': quote['discount_selection_token'],
                     'points_checkout_test_token': quote['points_preview']['checkout_test_token'],
                     'expected_amount': 6000, 'client_request_id': 'finance-reservation-pay'}, format='json')

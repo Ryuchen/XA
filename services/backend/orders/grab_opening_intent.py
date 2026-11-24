@@ -1,18 +1,13 @@
-"""Durable paid-order observation for a future grab-pool opening protocol.
-
-An observation is only an upper bound on payment commit, not an opening time
-or proof of a trustworthy clock. Order endpoints record it only in explicitly
-isolated tests; it cannot authorize production opening or assignment.
-"""
-import os
+"""Observe committed payments and stage their first grab-pool round."""
 import logging
+import os
 
 from django.conf import settings
 from django.db import DatabaseError
 from stores.db import connection, transaction
 from wallet.models import Transaction
 
-from .models import Order, OrderGrabPoolOpeningIntent, Reservation
+from .models import Order, OrderGrabPoolOpeningIntent, OrderGrabPoolSnapshot, OrderGrabRoundOpeningEvidence, Reservation
 from .grab_receipt_probe import _db_clock
 
 logger = logging.getLogger(__name__)
@@ -207,42 +202,107 @@ def observe_committed_payment(order_id):
         intent = OrderGrabPoolOpeningIntent.objects.select_for_update().filter(order_id=order_id).first()
         if not order or not intent:
             raise ValueError('待开池付款尚未提交或不存在')
-        _order_and_payment(order_id, intent.payment_id)
-        if intent.paid_amount != order.amount:
-            raise ValueError('付款金额与待开池意向不一致')
-        if intent.state == 'OBSERVED':
-            return intent
-        if intent.state != 'PENDING':
-            raise ValueError('待开池意向需要人工核对')
-        observed, precision, identity = _clock_observation()
-        intent.state, intent.commit_observed_at = 'OBSERVED', observed
-        intent.clock_precision_us, intent.database_identity = precision, identity
-        intent.save(update_fields=['state', 'commit_observed_at', 'clock_precision_us', 'database_identity'])
+        _observe_locked_payment(order, intent)
         return intent
 
 
-def open_committed_payment(order_id):
-    """Open one observed paid order once, in the current tenant database.
+def _observe_locked_payment(order, intent):
+    _order_and_payment(order.pk, intent.payment_id)
+    if intent.paid_amount != order.amount:
+        raise ValueError('付款金额与待开池意向不一致')
+    if intent.state == 'OBSERVED':
+        return
+    if intent.state != 'PENDING':
+        raise ValueError('待开池意向需要人工核对')
+    observed, precision, identity = _clock_observation()
+    intent.state, intent.commit_observed_at = 'OBSERVED', observed
+    intent.clock_precision_us, intent.database_identity = precision, identity
+    intent.save(update_fields=['state', 'commit_observed_at', 'clock_precision_us', 'database_identity'])
 
-    The stored database time is observed during this opening transaction; it
-    is not an exact commit timestamp and does not authorize ranked dispatch.
-    """
+
+def _lock_pending_opening(order_id):
+    order = Order.objects.select_for_update().filter(pk=order_id).first()
+    if not order or order.status != Order.Status.PENDING:
+        return None, None
+    return order, OrderGrabPoolOpeningIntent.objects.select_for_update().filter(order=order).first()
+
+
+def _committed_pool_result(intent):
+    pool_id = (OrderGrabPoolSnapshot.objects.filter(order_id=intent.order_id)
+               .values_list('pk', flat=True).first())
+    if pool_id is None:
+        return None
+    evidence = (OrderGrabRoundOpeningEvidence.objects.filter(round__pool_id=pool_id, round__number=1)
+                .select_related('round').first())
+    if intent.state != 'OBSERVED' or not evidence or evidence.reason:
+        return 'REVIEW'
+    if evidence.state in ('PENDING', 'PREPARED'):
+        return 'WAIT_OPENING'
+    if (evidence.state != 'OBSERVED' or not intent.database_identity or not intent.commit_observed_at
+            or not evidence.upper_at or not evidence.activation_lower_at or not evidence.activation_upper_at
+            or not intent.commit_observed_at <= evidence.round.opened_at <= evidence.lower_at
+            or evidence.activation_lower_at < evidence.upper_at):
+        return 'REVIEW'
+    from .grab_clock_contract import valid_bounds
+    identity = intent.database_identity
+    if (not valid_bounds(evidence.lower_at, evidence.upper_at, evidence.clock_evidence, identity=identity)
+            or not valid_bounds(evidence.activation_lower_at, evidence.activation_upper_at,
+                                evidence.activation_clock_evidence, identity=identity)):
+        return 'REVIEW'
+    return 'OPENED'
+
+
+def _window_enabled(order):
+    from .grab_clock_contract import production_enabled
+    from .grab_single_flow import enabled as single_window_enabled
+    from .grab_team_flow import enabled as team_window_enabled
+
+    return production_enabled() and (
+        (order.required_provider_count == 1 and single_window_enabled())
+        or (order.required_provider_count == 2 and team_window_enabled()))
+
+
+def _prepare_opening(order_id):
+    # Commit the first payment upper bound independently of a later pool
+    # configuration or staging failure.
+    with transaction.atomic(durable=True):
+        order, intent = _lock_pending_opening(order_id)
+        if intent is None:
+            return 'NOT_PENDING'
+        if intent.state not in ('PENDING', 'OBSERVED'):
+            return 'REVIEW'
+        if result := _committed_pool_result(intent):
+            return result
+        if not _window_enabled(order):
+            return 'DISABLED'
+        if intent.state == 'PENDING':
+            _observe_locked_payment(order, intent)
+
+
+def open_committed_payment(order_id):
+    """Stage the first pool once and report its persisted activation state."""
     if not getattr(settings, 'GRAB_COMMITTED_OPENING_ENABLED', False):
         return 'DISABLED'
     db = transaction.get_connection()
     if db.in_atomic_block or not db.get_autocommit():
         raise RuntimeError('已付款开池须使用独立最外层事务')
-    if not OrderGrabPoolOpeningIntent.objects.filter(order_id=order_id, order__status=Order.Status.PENDING).exists():
-        return 'NOT_PENDING'
     try:
-        observe_committed_payment(order_id)
+        if result := _prepare_opening(order_id):
+            return result
         with transaction.atomic(durable=True):
-            order = Order.objects.select_for_update().filter(pk=order_id).first()
-            intent = OrderGrabPoolOpeningIntent.objects.select_for_update().filter(order_id=order_id).first()
-            if not order or not intent or order.status != Order.Status.PENDING:
+            order, intent = _lock_pending_opening(order_id)
+            if intent is None:
                 return 'NOT_PENDING'
             if intent.state != 'OBSERVED':
                 return 'REVIEW'
+            # Another worker can open after the payment observation commits.
+            # A replay must preserve the original round and its clock bounds.
+            if result := _committed_pool_result(intent):
+                return result
+            if not _window_enabled(order):
+                return 'DISABLED'
+            if intent.paid_amount != order.amount:
+                raise ValueError('付款金额与待开池意向不一致')
             _order_and_payment(order.pk, intent.payment_id)
             observed, precision, identity = _clock_observation()
             if (identity != intent.database_identity or precision != intent.clock_precision_us
@@ -261,7 +321,7 @@ def open_committed_payment(order_id):
                 from .models import KookDispatchRecord
                 transaction.on_commit(lambda: enqueue_kook_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER), robust=True)
                 transaction.on_commit(lambda: enqueue_wecom_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER), robust=True)
-            return 'OPENED'
+        return _committed_pool_result(intent)
     except (DatabaseError, ValueError):
         logger.exception('已付款订单开池待重试 order_id=%s', order_id)
         return 'RETRY'

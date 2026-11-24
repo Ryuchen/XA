@@ -1,1 +1,32 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><link rel="icon" href="%BASE_URL%brand.svg"><title>正在载入门店</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="%BASE_URL%brand.svg">
+  <link rel="stylesheet" href="/src/store-entry-fallback.css">
+  <title>老板服务中心 · 门店入口</title>
+</head>
+<body>
+  <div id="root">
+    <main class="xa-store-entry-fallback">
+      <div class="xa-store-entry-hero">
+        <h1>老板服务中心</h1>
+        <p>门店状态将在页面载入后显示。若页面一直停在这里，请重新打开入口。</p>
+        <noscript><p>请启用 JavaScript 后重新打开入口，以查询门店状态。</p></noscript>
+        <a href="%BASE_URL%">重新打开门店入口</a>
+      </div>
+      <section class="xa-store-entry-help">
+        <h2>已有订单或售后问题？</h2>
+        <p>请通过原下单渠道联系本店客服。</p>
+        <dl>
+          <dt>联系前请准备</dt>
+          <dd>订单编号和需要处理的问题。</dd>
+        </dl>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

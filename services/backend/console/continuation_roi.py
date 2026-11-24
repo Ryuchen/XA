@@ -10,13 +10,8 @@ def continuation_reward_cost(start, end):
     total = 0
     invalid = []
     for reward in rewards:
-        tx = reward.transaction
-        if (tx.status != 'SUCCESS' or tx.tx_type != 'REWARD' or tx.amount != reward.amount
-                or reward.amount <= 0 or tx.order_id != reward.continuation.continuation_order_id
-                or tx.wallet.account_id != reward.provider_id or tx.reversal_of_id
-                or tx.balance_after != tx.balance_before + tx.amount
-                or tx.reversals.filter(status='SUCCESS').exists()):
-            invalid.append(reward.pk)
-        else:
+        if reward.has_verified_payment():
             total += reward.amount
+        else:
+            invalid.append(reward.pk)
     return total, invalid

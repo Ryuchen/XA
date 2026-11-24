@@ -54,24 +54,39 @@ def deliver(receipt_id):
             return
         if _effective_state(receipt, getattr(receipt, 'pass_evidence', None)) != 'BEFORE':
             return
+        from orders.grab_customer_review import has_pending_review
+        if has_pending_review(order.pk, lock=True):
+            GrabInviteNoticeDelivery.objects.get_or_create(receipt=receipt, defaults={
+                'skipped_reason': '订单取消申请待核对，邀请未发送',
+            })
+            return
+        from orders.grab_round_facts import current_pending_round_state, paid_pending_grab_order
+        from orders.models import OrderGrabRound
+        state = current_pending_round_state(order, round_.pk)
+        if state is None and paid_pending_grab_order(order) and not OrderGrabRound.objects.select_for_update().filter(
+                pool_id=round_.pool_id, number__gt=round_.number).exists():
+            return
+        if state and state.status == 'REVIEW':
+            return
+        live_state = bool(state and state.status in ('OPEN', 'PARKED'))
         from datetime import timedelta
-        from orders.grab_clock_contract import production_enabled
-        from orders.models import OrderGrabTeamRoundState, Order
-        now, precision, _ = _db_clock()
-        if production_enabled():
-            try:
-                from orders.grab_round_opening import cutoff_bounds
-                lower_cutoff, upper_cutoff = cutoff_bounds(round_, 'PARKED')
-            except ValueError:
-                return
-        else:
+        from orders.grab_clock_contract import production_enabled, round_identity_valid
+        definitely_expired = False
+        if live_state and actor and account and team:
+            now, precision, _ = _db_clock()
             lower_cutoff = upper_cutoff = round_.total_deadline
-        definitely_live = now + timedelta(microseconds=precision) < lower_cutoff
-        definitely_expired = now - timedelta(microseconds=precision) >= upper_cutoff
-        live_state = (order.status == Order.Status.PENDING
-                      and OrderGrabTeamRoundState.objects.filter(round=round_, status__in=('OPEN', 'PARKED')).exists())
-        if actor and account and team and live_state and not definitely_live and not definitely_expired:
-            return  # The clock interval straddles the deadline; retry without inventing a result.
+            if production_enabled():
+                try:
+                    from orders.grab_round_opening import cutoff_bounds
+                    if not round_identity_valid(round_, lock=True):
+                        return
+                    lower_cutoff, upper_cutoff = cutoff_bounds(round_, 'PARKED', lock=True)
+                except ValueError:
+                    return
+            definitely_live = now + timedelta(microseconds=precision) < lower_cutoff
+            definitely_expired = now - timedelta(microseconds=precision) >= upper_cutoff
+            if not definitely_live and not definitely_expired:
+                return  # The clock interval straddles the deadline; retry.
         delivery, created = GrabInviteNoticeDelivery.objects.get_or_create(receipt=receipt)
         if not created:
             return

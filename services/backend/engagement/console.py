@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet, GenericViewSet
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
@@ -330,13 +331,32 @@ class ContentViewSet(EnvelopeViewSetMixin, ModelViewSet):
     # this API and must not become a way around content admission.
     licensed_kinds = (ClubContent.Kind.RIGHTS, ClubContent.Kind.HOT, ClubContent.Kind.POPUP)
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self._setting_up():
+            return queryset.filter(kind=ClubContent.Kind.ORDER_RULES)
+        return queryset
+
+    def _setting_up(self):
+        from stores.context import current_store
+        from stores.models import Store
+        store = current_store()
+        return store is not None and store.status == Store.Status.CONFIGURING
+
+    def _check_setup_kind(self, kind):
+        if self._setting_up() and kind != ClubContent.Kind.ORDER_RULES:
+            raise PermissionDenied('门店配置期间仅可维护下单须知')
+
     def perform_create(self, serializer):
-        if serializer.validated_data.get('kind') in self.licensed_kinds:
+        kind = serializer.validated_data['kind']
+        self._check_setup_kind(kind)
+        if kind in self.licensed_kinds:
             from stores.license_benefits import require_content_operations
             require_content_operations()
         serializer.save()
 
     def perform_update(self, serializer):
+        self._check_setup_kind(serializer.validated_data.get('kind', serializer.instance.kind))
         optional = self.licensed_kinds
         from stores.license_benefits import content_deactivation_only, require_content_operations
         if ((serializer.instance.kind in optional or serializer.validated_data.get('kind') in optional)

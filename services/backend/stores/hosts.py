@@ -26,11 +26,11 @@ def host_store_slug(host):
     # tenant-domain API; they remain stable during a directory outage.
     if domain in bindings:
         return bindings[domain]
-    from django.db import DatabaseError
+    from django.db import DatabaseError, InterfaceError
     from .models import StoreDomain
     try:
         row = StoreDomain.objects.select_related('store').filter(hostname=domain).first()
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         from .routing_snapshot import lookup_domain
         store = lookup_domain(domain)
         if store is None:
@@ -85,11 +85,24 @@ def websocket_store_slug(scope, params):
     return request_store_slug(host, header, params.get('store', []))
 
 
+def registered_store_hostname(slug):
+    bindings = getattr(settings, 'STORE_HOST_BINDINGS', DEFAULT_HOST_BINDINGS)
+    deployment_hostname = next((host for host in DEFAULT_HOST_BINDINGS if bindings.get(host) == slug), None)
+    if deployment_hostname:
+        return deployment_hostname
+    domain = next((host for host, owner in sorted(bindings.items()) if owner == slug), None)
+    if domain:
+        return domain
+    from .models import StoreDomain
+    return (StoreDomain.objects.filter(store__slug=slug, active=True)
+            .order_by('hostname').values_list('hostname', flat=True).first())
+
+
 def store_entry_url(value, slug):
     """Return a store-owned link or no link while its hostname is unbound."""
     if not value:
         return ''
-    from django.db import DatabaseError
+    from django.db import DatabaseError, InterfaceError
     try:
         parts = urlsplit(value)
         if (parts.scheme not in ('http', 'https') or not parts.hostname
@@ -104,14 +117,35 @@ def store_entry_url(value, slug):
             bound = None
         if bound == slug:
             return urlunsplit(parts._replace(query=urlencode(query)))
-        bindings = getattr(settings, 'STORE_HOST_BINDINGS', DEFAULT_HOST_BINDINGS)
-        domain = next((host for host, owner in sorted(bindings.items()) if owner == slug), None)
-        if not domain:
-            from .models import StoreDomain
-            domain = (StoreDomain.objects.filter(store__slug=slug, active=True)
-                      .order_by('hostname').values_list('hostname', flat=True).first())
+        domain = registered_store_hostname(slug)
         if not domain:
             return ''
         return urlunsplit(parts._replace(netloc=domain, query=urlencode(query)))
-    except (DatabaseError, ValueError, UnicodeError):
+    except (DatabaseError, InterfaceError, ValueError, UnicodeError):
+        return ''
+
+
+def store_media_origin(store, request=None):
+    """Use a store's registered origin, including when rendered by neutral admin."""
+    from django.db import DatabaseError, InterfaceError
+
+    try:
+        request_store = getattr(request, 'store', None)
+        if request_store and request_store.slug == store.slug and not is_admin_host(request.get_host()):
+            return request.build_absolute_uri('/').rstrip('/')
+        base = urlsplit(getattr(settings, 'MEDIA_BASE_URL', ''))
+        scheme = 'https' if request and request.is_secure() else base.scheme
+        for value in (store.boss_url, store.provider_url):
+            parts = urlsplit(store_entry_url(value, store.slug))
+            if parts.netloc and not is_admin_host(parts.netloc):
+                if scheme == 'https' and parts.scheme != scheme:
+                    return f'https://{parts.hostname}'
+                return urlunsplit((parts.scheme, parts.netloc, '', '', ''))
+        hostname = registered_store_hostname(store.slug)
+        if not hostname:
+            return ''
+        scheme = scheme or (request.scheme if request else 'https')
+        port = f':{base.port}' if base.scheme == scheme and base.port else ''
+        return f'{scheme}://{hostname}{port}'
+    except (DatabaseError, InterfaceError, ValueError, UnicodeError):
         return ''

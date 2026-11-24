@@ -16,7 +16,7 @@ from orders.tests.factories import make_provider, make_user
 from users.test_voice_recordings import audio_file
 
 
-@override_settings(AUDITION_RECORDINGS_REQUIRED=True, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
+@override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
                    REQUIRE_RECHARGE_PROOF=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
@@ -101,9 +101,19 @@ class AuditionRecordingTests(APITransactionTestCase):
         order = self.order(2)
         self.login(self.provider)
         pool = self.ok(self.client.get('/api/orders/orders/', {'status': 'pending'}))
-        self.assertIn(order['id'], [item['id'] for item in pool])
-        self.ok(self.client.post(f"/api/orders/orders/{order['id']}/grab/", {
-            'team_size': 2, 'partner_id': partner_account.pk, 'recording_id': first['id']}, format='json'))
+        pool_by_id = {item['id']: item for item in pool}
+        self.assertIn(order['id'], pool_by_id)
+        self.assertIn('GRAB', pool_by_id[order['id']]['allowed_actions'])
+        detail = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))
+        self.assertEqual(detail['escort_mode'], 'DOUBLE')
+        self.assertEqual(detail['required_team_size'], 2)
+        self.assertTrue(detail['audition_recordings_required'])
+        self.assertIn('GRAB', detail['allowed_actions'])
+        grab = f"/api/orders/orders/{order['id']}/grab/"
+        team = {'team_size': 2, 'partner_id': partner_account.pk}
+        self.assertNotEqual(self.client.post(grab, team, format='json').data['code'], 0)
+        self.assertFalse(OrderApplication.objects.filter(order_id=order['id']).exists())
+        self.ok(self.client.post(grab, {**team, 'recording_id': first['id']}, format='json'))
         application = OrderApplication.objects.get(order_id=order['id'])
         self.login(partner)
         pool = self.ok(self.client.get('/api/orders/orders/', {'status': 'pending'}))
@@ -141,9 +151,13 @@ class AuditionRecordingTests(APITransactionTestCase):
         self.login(self.boss)
         listing = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['applications'][0]
         self.assertTrue(listing['ready'])
+        path = urlsplit(listing['members'][0]['recording']['audio_url']).path
+        ticket = path.rstrip('/').rsplit('/', 1)[-1]
         file_path.unlink()
         listing = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['applications'][0]
         self.assertFalse(listing['ready'])
+        self.assertIsNone(listing['members'][0]['recording'])
+        self.assertEqual(self.client.post('/api/media/renew/', {'ticket': ticket}, format='json').status_code, 404)
         self.assertIn('录音暂不可用', listing['not_ready_reason'])
         select = f"/api/orders/orders/{order['id']}/applications/{application.pk}/select/"
         self.assertNotEqual(self.client.post(select, {}, format='json').data['code'], 0)
@@ -156,37 +170,85 @@ class AuditionRecordingTests(APITransactionTestCase):
         self.login(self.boss)
         self.ok(self.client.post(select, {}, format='json'))
 
+    def test_submitted_audio_must_match_the_uploaded_snapshot(self):
+        from pathlib import Path
+        from users.models import VoiceRecording
+
+        self.prepare(self.provider)
+        uploaded = self.upload(self.provider, '原始试音')
+        file_path = Path(VoiceRecording.objects.get(pk=uploaded['id']).audio.path)
+        original = file_path.read_bytes()
+        order = self.order()
+        self.login(self.provider)
+        grab = f"/api/orders/orders/{order['id']}/grab/"
+        application_params = {'recording_id': uploaded['id']}
+        replacement = original[:-1] + b'\x01'
+        self.assertNotEqual(original, replacement)
+        file_path.write_bytes(replacement)
+        self.assertNotEqual(self.client.post(grab, application_params, format='json').data['code'], 0)
+        self.assertFalse(OrderApplication.objects.filter(order_id=order['id']).exists())
+
+        file_path.write_bytes(original)
+        self.ok(self.client.post(grab, application_params, format='json'))
+        application = OrderApplication.objects.get(order_id=order['id'])
+        self.login(self.boss)
+        detail = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))
+        path = urlsplit(detail['applications'][0]['members'][0]['recording']['audio_url']).path
+        ticket = path.rstrip('/').rsplit('/', 1)[-1]
+        select = f"/api/orders/orders/{order['id']}/applications/{application.pk}/select/"
+        for content in (original[:20], replacement):
+            with self.subTest(size=len(content)):
+                file_path.write_bytes(content)
+                self.assertEqual(self.client.get(path).status_code, 404)
+                self.assertEqual(self.client.head(path).status_code, 404)
+                self.assertEqual(self.client.get(path, HTTP_RANGE='bytes=0-43').status_code, 404)
+                self.assertEqual(self.client.post('/api/media/renew/', {'ticket': ticket}, format='json').status_code, 404)
+                self.assertNotEqual(self.client.post(select, {}, format='json').data['code'], 0)
+                application.refresh_from_db()
+                self.assertEqual(application.status, 'PENDING')
+
+        file_path.write_bytes(original)
+        audio = self.client.get(path, HTTP_RANGE='bytes=44-53')
+        self.assertEqual(audio.status_code, 206)
+        self.assertEqual(b''.join(audio.streaming_content), original[44:54])
+        self.ok(self.client.post(select, {}, format='json'))
+
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '双陪试音抢单池入池与逐人录音确认属正式契约深水区（18-盘点 试音/抢单池待联调）；最终联调启用')
     def test_existing_confirmed_team_can_supplement_each_own_recording(self):
-        self.prepare(self.provider)
+        applicant_account = self.prepare(self.provider)
         partner = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         partner_account = self.prepare(partner)
         first = self.upload(self.provider, '历史甲录音')
         second = self.upload(partner, '历史乙录音')
         order = self.order(2)
-        with override_settings(AUDITION_RECORDINGS_REQUIRED=False):
-            self.login(self.provider)
-            self.ok(self.client.post(f"/api/orders/orders/{order['id']}/grab/", {
-                'team_size': 2, 'partner_id': partner_account.pk}, format='json'))
-            application = OrderApplication.objects.get(order_id=order['id'])
-            self.login(partner)
-            endpoint = f"/api/orders/orders/{order['id']}/applications/{application.pk}/action/"
-            self.ok(self.client.post(endpoint, {'action': 'CONFIRM_TEAM'}, format='json'))
+        # Existing confirmed applications can predate per-member recordings.
+        application = OrderApplication.objects.create(
+            order_id=order['id'], applicant=applicant_account, partner=partner_account,
+            applicant_business_cycle=applicant_account.business_cycle,
+            partner_business_cycle=partner_account.business_cycle, partner_confirmed=True,
+        )
+        endpoint = f"/api/orders/orders/{order['id']}/applications/{application.pk}/action/"
+        select = f"/api/orders/orders/{order['id']}/applications/{application.pk}/select/"
         self.login(self.boss)
         listing = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['applications'][0]
         self.assertFalse(listing['ready'])
-        self.assertNotEqual(self.client.post(f"/api/orders/orders/{order['id']}/applications/{application.pk}/select/", {}, format='json').data['code'], 0)
+        self.assertNotEqual(self.client.post(select, {}, format='json').data['code'], 0)
         self.login(self.provider)
         detail = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/applications/{application.pk}/mine/"))
         self.assertFalse(detail['application']['my_recording_submitted'])
         self.assertNotEqual(self.client.post(endpoint, {'action': 'SUBMIT_VOICE', 'recording_id': second['id']}, format='json').data['code'], 0)
         self.ok(self.client.post(endpoint, {'action': 'SUBMIT_VOICE', 'recording_id': first['id']}, format='json'))
+        self.ok(self.client.post(endpoint, {'action': 'SUBMIT_VOICE', 'recording_id': first['id']}, format='json'))
         detail = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/applications/{application.pk}/mine/"))
         self.assertTrue(detail['application']['my_recording_submitted'])
+        self.login(self.boss)
+        self.assertNotEqual(self.client.post(select, {}, format='json').data['code'], 0)
         self.login(partner)
         self.ok(self.client.post(endpoint, {'action': 'SUBMIT_VOICE', 'recording_id': second['id']}, format='json'))
         self.login(self.boss)
         listing = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['applications'][0]
         self.assertTrue(listing['ready'])
         self.assertEqual([m['recording']['title'] for m in listing['members']], ['历史甲录音', '历史乙录音'])
+        self.assertEqual(application.voices.count(), 2)
+        self.ok(self.client.post(select, {}, format='json'))

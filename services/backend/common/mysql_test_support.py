@@ -17,7 +17,8 @@ def require_disposable_mysql(connection):
     while module is None and (configured := getattr(configured, 'default_settings', None)) is not None:
         module = getattr(configured, 'SETTINGS_MODULE', None)
     if (connection.vendor != 'mysql'
-            or module not in {'config.mysql_test_settings', 'config.multitenant_mysql_test_settings'}
+            or module not in {'config.mysql_test_settings', 'config.multitenant_mysql_test_settings',
+                              'config.certificate_mysql_test_settings'}
             or not str(database.get('NAME', '')).startswith('test_xa_test_')
             or not str(database.get('USER', '')).startswith('xa_test')
             or database.get('HOST') not in {'127.0.0.1', 'localhost', 'db'}):
@@ -27,8 +28,12 @@ def require_disposable_mysql(connection):
                              f'host={database.get("HOST")!r}')
 
 
-def mysql_locking_statements(observer, table):
-    """Count this test account's active locking SQL for a known held-row table.
+def mysql_locking_statements(observer, table, *, session_id=None, include_shared=False):
+    return len(mysql_locking_sessions(observer, table, session_id=session_id, include_shared=include_shared))
+
+
+def mysql_locking_sessions(observer, table, *, session_id=None, include_shared=False, row_id=None):
+    """Find this test account's sessions running locking SQL for a held row.
 
     Call only while the test holds the target row lock. SHOW FULL PROCESSLIST
     exposes only the connected account without PROCESS privilege; no other
@@ -41,16 +46,22 @@ def mysql_locking_statements(observer, table):
     with observer.cursor() as cursor:
         cursor.execute('SHOW FULL PROCESSLIST')
         processes = cursor.fetchall()
-    count = 0
+    sessions = []
+    table_name = f'`{table.upper()}`'
     for process in processes:
+        if session_id is not None and process[0] != session_id:
+            continue
         if process[3] != observer.settings_dict['NAME'] or process[4] != 'Query':
             continue
         query = str(process[7] or '').upper()
-        if f'`{table.upper()}`' not in query:
+        if table_name not in query:
             continue
-        if 'FOR UPDATE' in query or re.match(r'\s*(?:UPDATE|INSERT|DELETE)\b', query):
-            count += 1
-    return count
+        if row_id is not None and not re.search(rf'{table_name}\.`ID`\s*=\s*{int(row_id)}\b', query):
+            continue
+        if ('FOR UPDATE' in query or re.match(r'\s*(?:UPDATE|INSERT|DELETE)\b', query)
+                or (include_shared and 'LOCK IN SHARE MODE' in query)):
+            sessions.append(process[0])
+    return sessions
 
 
 def call_test_catalog_import(**options):

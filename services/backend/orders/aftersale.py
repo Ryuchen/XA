@@ -494,15 +494,16 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 from .points_negotiation_preview import agreement_enabled
                 from .models import PointsNegotiationPosting
                 previous = PointsNegotiationPosting.objects.get(points_refund_id=result['prior_refund_id'])
-                from .points_followup_termination import addon_followup_available
+                from .points_followup_termination import (addon_followup_available, endpoint_available,
+                    formal_followup_funding_ready)
                 addon_ready = addon_followup_available(order, previous, prior_paid=result['prior_paid'])
+                funding_ready = not formal_followup or formal_followup_funding_ready(result)
                 can_agree = (agreement_enabled() and bool(case.client_request_id)
-                             and addon_ready
+                             and addon_ready and funding_ready
                              and (formal_followup or getattr(settings, 'SERVICE_POINTS_FOLLOWUP_AGREEMENT_TESTING', False))
                              and (formal_followup or result['prior_paid'] or getattr(settings, 'SERVICE_POINTS_UNPAID_FOLLOWUP_AGREEMENT_TESTING', False)))
-                from .points_followup_termination import endpoint_available
                 from .refunds import authorized_refund
-                can_execute = (addon_ready and endpoint_available(
+                can_execute = (addon_ready and funding_ready and endpoint_available(
                     result['prior_refund_id'], prior_paid=result['prior_paid']) and authorized_refund(request.account))
                 from dataclasses import asdict
                 return Response({'code': 0, 'data': {
@@ -511,21 +512,28 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     'provider_terms': [term], 'rounding_to_store_units': result['rounding_to_store_units'],
                     'has_addons': result['has_addons'], 'conditional_funding': asdict(result['conditional_funding']),
                     'read_only': not can_agree, 'agreement_available': can_agree, 'execution_available': can_execute},
-                    'msg': ('带加购的后续退款目前仅供核对' if result['has_addons'] and not addon_ready else
+                    'msg': ('已有陪玩结算的后续退款须先完成资金核对' if not funding_ready else
+                            '带加购的后续退款目前仅供核对' if result['has_addons'] and not addon_ready else
                             '原陪玩尚未结算，后续协商目前仅供核对' if not result['prior_paid'] and not can_agree else
                             ('等待双方确认后由授权客服处理' if formal_followup else '仅隔离测试可执行后续退款') if can_execute else
                             ('可确认方案，退款暂未开放' if formal_followup else '仅隔离测试确认，后续退款尚未开放') if can_agree
                             else '仅供核对，后续协商确认和退款尚未开放')})
             from .points_negotiation_preview import agreement_enabled, preview_locked
+            from .points_negotiation_termination import main_refund_preview_capability
+            from .refunds import authorized_refund
             calculated = preview_locked(case.pk, refund_equivalent_units=requested)
             can_agree = agreement_enabled() and bool(case.client_request_id)
+            _, path_enabled = main_refund_preview_capability(order, case)
+            available = can_agree and path_enabled
             return Response({'code': 0, 'data': {
                 'refund_units': requested, 'refund_coin_units': calculated['coin_units'],
                 'refund_points_hundredths': calculated['points_hundredths'],
                 'provider_terms': calculated['provider_terms'],
                 'rounding_to_store_units': calculated['rounding_to_store_units'],
-                'read_only': not can_agree, 'agreement_available': can_agree, 'execution_available': False},
-                'msg': '仅隔离测试确认，积分订单退款尚未开放' if can_agree else '仅供核对，积分订单协商确认和退款尚未开放'})
+                'read_only': not can_agree, 'agreement_available': can_agree,
+                'execution_available': available and authorized_refund(request.account)},
+                'msg': ('当事人确认后，由具备退款权限的客服核对并执行' if available else
+                        '可确认方案，当前退款暂不可执行' if can_agree else '仅供核对，当前协商方案不可确认')})
         from .ordinary_transfer_followup import applies as transfer_followup_applies, calculation_locked
         if transfer_followup_applies(order):
             from .financial_lock import lock_order_money
@@ -612,24 +620,97 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         'refund_points_hundredths': calculated['points_hundredths']},
                         'msg': '双方确认后可由授权客服处理' if can_execute else '仅供核对，转单后的追加协商退款尚未开放'})
                 from .points_transfer_refund_preview import preview_locked
+                from .points_negotiation_termination import main_refund_preview_capability
+                from .refunds import authorized_refund
+                from wallet.refund_recovery_order import enabled as deposit_recovery_enabled
                 calculated = preview_locked(case.pk, refund_equivalent_units=requested)
                 providers = [{'account_id': item['account_id'], 'pending_income_units': item['pending_units'],
                               'wallet_units': item['wallet_units'], 'deposit_units': item['deposit_units'],
                               'shortfall_units': item['shortfall_units']} for item in calculated['provider_recovery_preview']]
-                return Response({'code': 0, 'data': {'providers': providers,
-                    'book_amounts_sufficient': calculated['estimated_sufficient'], 'calculated_at': timezone.now(),
-                    'executable': False, 'read_only_points': True, 'refund_units': requested,
-                    'refund_coin_units': calculated['coin_units'], 'refund_points_hundredths': calculated['points_hundredths']},
-                    'msg': '仅供核对，转单后的积分协商退款尚未开放'})
-            from .points_negotiation_preview import preview_locked
+                check_required, path_enabled = main_refund_preview_capability(order, case)
+                available = path_enabled and authorized_refund(request.account)
+                sufficient = calculated['estimated_sufficient']
+                needs_deposit = any(row['deposit_units'] for row in providers)
+                executable = available and sufficient and (not needs_deposit or deposit_recovery_enabled())
+                result = {'providers': providers, 'book_amounts_sufficient': sufficient, 'calculated_at': timezone.now(),
+                    'executable': executable, 'read_only_points': not available, 'refund_units': requested,
+                    'refund_coin_units': calculated['coin_units'], 'refund_points_hundredths': calculated['points_hundredths']}
+                if check_required:
+                    result['execution_check_required'] = True
+                if check_required and len(providers) > 2:
+                    message = '当前转单首退最多支持两名受影响陪玩，请核对售后范围'
+                elif not available:
+                    message = '仅供核对，当前转单退款暂不可执行'
+                elif not sufficient:
+                    message = '陪玩承担资金不足，补足后才能退款'
+                elif not executable:
+                    message = '本次需要扣减押金，当前押金扣款或后续补差尚未启用'
+                else:
+                    message = '当事人确认后可处理，执行时重新核验资金与凭证'
+                return Response({'code': 0, 'data': result, 'msg': message})
+            from .points_business_access import permits
+            formal_followup = any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon'))
+            if (requested and order.refund_records.exists()
+                    and (formal_followup or getattr(settings, 'SERVICE_POINTS_FOLLOWUP_PREVIEW_TESTING', False))):
+                from .points_followup_preview import preview_followup
+                from .points_followup_termination import endpoint_available, formal_followup_funding_ready
+                from .refunds import authorized_refund
+                from wallet.refund_deposit import enabled as deposit_enabled
+                from wallet.refund_recovery_order import tracking_enabled
+                calculated = preview_followup(case.pk, refund_equivalent_units=requested)
+                result = funding_preview(order, calculated['provider_terms'])
+                available = (authorized_refund(request.account) and endpoint_available(
+                    calculated['prior_refund_id'], prior_paid=calculated['prior_paid']))
+                funding_ready = not formal_followup or formal_followup_funding_ready(calculated)
+                needs_deposit = any(row['deposit_units'] for row in result['providers'])
+                deposit_ready = not needs_deposit or (deposit_enabled() and tracking_enabled())
+                executable = available and funding_ready and result['book_amounts_sufficient'] and deposit_ready
+                result.update(refund_units=requested, refund_coin_units=calculated['coin_units'],
+                              refund_points_hundredths=calculated['points_hundredths'],
+                              read_only_points=not available, execution_check_required=True, executable=executable)
+                if not funding_ready:
+                    message = '已有陪玩结算的后续退款须先完成资金核对'
+                elif not available:
+                    message = '仅供核对，当前后续退款暂不可执行'
+                elif not result['book_amounts_sufficient']:
+                    message = '陪玩承担资金不足，补足后才能退款'
+                elif not deposit_ready:
+                    message = '本次需要扣减押金，当前押金扣款或后续补差尚未启用'
+                else:
+                    message = '当事人确认后可处理，执行时重新核验资金与凭证'
+                return Response({'code': 0, 'data': result, 'msg': message})
+            from .points_negotiation_preview import combined_funding_sufficient, preview_locked
+            from .points_negotiation_termination import main_refund_preview_capability
+            from .refunds import authorized_refund
+            from wallet.refund_recovery_order import enabled as deposit_recovery_enabled
             calculated = preview_locked(case.pk, refund_equivalent_units=requested)
             result = funding_preview(order, calculated['provider_terms'])
+            check_required, path_enabled = main_refund_preview_capability(order, case)
+            available = path_enabled and authorized_refund(request.account)
+            combined_ready = (not permits(order, phase='refund', kind='addon')
+                              or combined_funding_sufficient(calculated))
+            needs_deposit = any(row['deposit_units'] for row in result['providers'])
+            executable = (available and result['book_amounts_sufficient'] and combined_ready
+                          and (not needs_deposit or deposit_recovery_enabled()))
             result.update(refund_units=requested, refund_coin_units=calculated['coin_units'],
-                          refund_points_hundredths=calculated['points_hundredths'], read_only_points=True)
+                          refund_points_hundredths=calculated['points_hundredths'],
+                          read_only_points=not available, executable=executable)
+            if check_required:
+                result['execution_check_required'] = True
             if calculated.get('conditional_combined_funding') is not None:
                 from dataclasses import asdict
                 result['conditional_combined_funding'] = asdict(calculated['conditional_combined_funding'])
-            return Response({'code': 0, 'data': result, 'msg': '仅供核对，积分协商退款尚未开放'})
+            if not available:
+                message = '仅供核对，当前退款暂不可执行'
+            elif not result['book_amounts_sufficient']:
+                message = '陪玩承担资金不足，补足后才能退款'
+            elif not combined_ready:
+                message = '主单与加购的到账补资不足，补足后才能退款'
+            elif not executable:
+                message = '本次需要扣减押金，当前押金扣款或后续补差尚未启用'
+            else:
+                message = '当事人确认后可处理，执行时重新核验资金与凭证'
+            return Response({'code': 0, 'data': result, 'msg': message})
         from .negotiation_zero import marked_execution_id
         followup = (order.payment_status in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
                     or marked_execution_id(order) is not None)
@@ -986,11 +1067,16 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         if OrderRefund.objects.filter(order=order, client_request_id=request_id).exists():
                             raise serializers.ValidationError('操作凭证已用于其他退款')
                         return Response({'code':0, 'data':{'status':'NOT_FOUND'}, 'msg':'未查到退款记录，请使用原操作凭证重试'})
+                    from .models import OrderOriginalShareTransfer
+                    transferred_followup = is_points_followup and OrderOriginalShareTransfer.objects.filter(
+                        previous_segment__attribution__order=order).exists()
+                    if is_points_followup and not transferred_followup:
+                        from .points_followup_termination import require_followup_request_locked
+                        require_followup_request_locked(receipt, request_id)
                     if receipt.operator_id != request.account.pk or receipt.points_refund.refund.client_request_id != request_id:
                         raise serializers.ValidationError('退款操作凭证不匹配，请联系原经办人核对')
                     if is_points_followup:
-                        from .models import OrderOriginalShareTransfer
-                        if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
+                        if transferred_followup:
                             from .models import PointsRefundRoundEvidence
                             if (getattr(getattr(receipt.proposal, 'points_terms', None), 'round_context', None)
                                     is not None):
@@ -1101,23 +1187,51 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     @scoped_transfer_open_action
     def open_negotiation(self, request):
         """Record a customer's request for an in-service negotiation, not agreement or refund."""
+        from club_accounts.models import ClubAccount
+        from console.permissions import get_account_permissions, is_console_account
+        from rest_framework.exceptions import PermissionDenied
+
         order_id = serializers.IntegerField(min_value=1).run_validation(request.data.get('order_id'))
         reason = serializers.CharField(min_length=2, max_length=1000).run_validation(request.data.get('reason'))
         request_id = serializers.CharField(min_length=1, max_length=64).run_validation(request.data.get('client_request_id'))
         scope = normalize_scope(request.data.get('affected_provider_account_ids'))
         requested_segments = normalize_scope(request.data.get('affected_segment_ids'))
-        consultation = getattr(request, '_consultation_aftersale_source', None)
         addon_payment_id = request.data.get('addon_payment_id')
         if addon_payment_id is not None and (type(addon_payment_id) is not int or addon_payment_id <= 0):
             raise serializers.ValidationError('请选择有效的加购付款')
         if not scope:
             raise serializers.ValidationError('请选择受影响的陪玩')
         order = get_object_or_404(Order.objects.select_for_update(), pk=order_id)
+        context = None
+        consultation_hint = getattr(request, '_consultation_aftersale_hint', None)
+        if consultation_hint is not None:
+            from chat.aftersale_context import lock_context
+            from .financial_lock import lock_order_money
+            # Enter the order's funding scope before locking the chat owner.
+            lock_order_money()
+            message_id, hint = consultation_hint
+            context = lock_context(hint, message_id)
         case = order.aftersales.select_for_update().first()
+
+        # Staff access may have changed while waiting for the store's locks.
+        original_actor = request.account
+        actor = (ClubAccount.objects.select_related('admin_membership').prefetch_related('admin_membership__roles')
+                 .filter(pk=original_actor.pk, business_cycle=original_actor.business_cycle).first())
+        if actor is not None and getattr(original_actor, '_legacy_is_superuser', False):
+            actor._legacy_is_superuser = True
+        if not is_console_account(actor) or 'support:edit' not in get_account_permissions(actor):
+            raise PermissionDenied('当前账号无权登记售后')
+        request.account = actor
+        consultation = None
+        if context is not None:
+            from chat.aftersale_context import verify_order
+            consultation = verify_order(context, order, scope, actor=actor)
         prior = next((entry for entry in case.history if entry.get('client_request_id') == request_id), None) if case else None
         if prior:
+            segments_changed = ((addon_payment_id is not None or requested_segments is not None)
+                                and prior.get('affected_segment_ids') != requested_segments)
             if (prior.get('reason') != reason or prior.get('affected_provider_account_ids') != scope
-                    or (requested_segments is not None and prior.get('affected_segment_ids') != requested_segments)
+                    or segments_changed
                     or prior.get('addon_payment_id') != addon_payment_id
                     or prior.get('consultation_message_id') != (consultation.get('message_id') if consultation else None)
                     or prior.get('operator_id') != request.account.pk):
@@ -1132,7 +1246,15 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                              'msg': '已有售后处理中，请查看原记录'}, status=409)
         from .aftersale_segment_scope import resolve_locked as resolve_segments
         segments = resolve_segments(order, scope, requested_segments) if addon_payment_id is None else None
+        if addon_payment_id is None:
+            from .points_transfer_refund_access import permits as points_transfer_permits
+            if points_transfer_permits(order, phase='refund'):
+                from .points_returned_addon_refund import before_first_main_refund, require_other_seat
+                returned = before_first_main_refund(order)
+                if returned:
+                    require_other_seat(order, returned, segments)
         addon_only = False
+        addon_segments = None
         if addon_payment_id is not None:
             from .financial_lock import lock_order_money
             from .models import NegotiationExecution, OrderAddonPayment
@@ -1140,6 +1262,8 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             lock_order_money()
             payment = OrderAddonPayment.objects.select_for_update().select_related('intent').filter(
                 pk=addon_payment_id, intent__order=order).first()
+            from .points_returned_addon_refund import returned_handover
+            returned = returned_handover(order, payment_id=payment.pk) if payment else None
             deadline = aftersale_deadline(order)
             eligible_state = ((order.required_provider_count == 1 and order.status == Order.Status.COMPLETED
                                and deadline and timezone.now() < deadline)
@@ -1182,7 +1306,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     if not team_run and not (first_handover_refund(order, transfers)
                                              or single_post_refund_handover(order, pending_payment_id=other_pending)
                                              or post_refund_handover_history(order, pending_payment_id=other_pending)
-                                             or refund_preflight_active(order, payment) or third_addon):
+                                             or refund_preflight_active(order, payment) or third_addon or returned):
                         raise serializers.ValidationError('该加购接替后的退款范围尚未接通')
                     if team_run:
                         from .addon_funding_release import verify_run
@@ -1332,6 +1456,9 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                                 and not order.providers.filter(provider_account_id=payment.intent.provider_id,
                                     released_at__isnull=True, settled_at__isnull=True).exists())):
                             raise serializers.ValidationError('加购负责人或主单协商凭证待核对')
+            if requested_segments is not None or returned:
+                from .addon_refund import resolve_case_segments_locked
+                addon_segments = resolve_case_segments_locked(order, payment, scope, requested_segments)
         completed_transfer_case = False
         if order.status == Order.Status.COMPLETED and segments is not None and not order.settled_at:
             deadline = aftersale_deadline(order)
@@ -1440,7 +1567,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         case.operator = request.account
         case.client_request_id = request_id
         case.affected_provider_account_ids = scope
-        case.affected_segment_ids = segments
+        case.affected_segment_ids = addon_segments if addon_only else segments
         case.addon_payment_id = addon_payment_id if addon_only else None
         case.save()
         append_history(case)

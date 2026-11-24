@@ -36,6 +36,8 @@ def preview_followup(case_id, *, refund_equivalent_units):
     if formal and not any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon')):
         raise ValidationError('后续退款与当前订单资金上下文不一致')
     case = AfterSale.objects.select_for_update().get(pk=case_id, order=order)
+    if case.addon_payment_id is not None:
+        raise ValidationError('该售后仅适用于指定加购，不能退款主单')
     from .financial_lock import lock_order_money
     lock_order_money()
     from .points_receipt_usage import prelock_followup_receipts, followup_eligible

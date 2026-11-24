@@ -359,9 +359,10 @@ def _preview_funded_order(intent_id, *, actor):
             initial = OrderAddonIntent.objects.filter(pk=intent_id).values('order_id').first()
             if not initial:
                 return False
-            order = Order.objects.select_for_update().select_related('customer_account', 'service').get(pk=initial['order_id'])
+            order_id = Order.objects.select_for_update().values_list('pk', flat=True).get(pk=initial['order_id'])
             # Never create a mutex from a read. Missing lock means unknown.
             lock_existing_order_money()
+            order = Order.objects.select_for_update().select_related('customer_account', 'service').get(pk=order_id)
             if not ordinary_addon_eligible(order, allow_unpaid=True, payment_intent_id=intent_id):
                 return False
             actor = ClubAccount.objects.select_for_update().filter(pk=getattr(actor, 'pk', None)).first()
@@ -583,8 +584,9 @@ def _pay(intent_id, *, actor, lifecycle=None):
         if getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
             from console.payroll_event_barrier import lock_payment_refund_events
             lock_payment_refund_events()
-        order = Order.objects.select_for_update().select_related('service', 'customer_account').get(pk=initial['order_id'])
+        order_id = Order.objects.select_for_update().values_list('pk', flat=True).get(pk=initial['order_id'])
         lock_order_money()
+        order = Order.objects.select_for_update().select_related('service', 'customer_account').get(pk=order_id)
         from .points_addon_receipt_usage import prelock as prelock_addon_receipts
         prelock_addon_receipts(order)
         from .ordinary_addon_production import eligible as ordinary_addon_eligible

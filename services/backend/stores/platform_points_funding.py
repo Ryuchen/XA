@@ -1,6 +1,7 @@
 """Recoverable platform-finance allocation for enabled order funding paths."""
 import json
 from collections.abc import Mapping
+from contextlib import contextmanager
 from uuid import UUID
 
 from django.conf import settings
@@ -15,7 +16,7 @@ from rest_framework.views import APIView
 from orders.models import OrderPointsFundingAction, OrderPointsFundingAllocation
 from orders.points_checkout_test import (ordinary_production_enabled, require_isolated_checkout,
                                          require_order_funding_access)
-from orders.points_funding_write import allocate
+from orders.points_funding_write import allocate, pending_handover_for_allocation_replay
 from stores.context import store_context
 from stores.db import transaction as tenant_transaction
 from .hosts import is_admin_host
@@ -48,37 +49,31 @@ def _require_funding_environment():
             raise
 
 
-from contextlib import contextmanager
-
-
 @contextmanager
-def _addon_funding_scope(order_id, receipt_id):
-    from django.conf import settings
+def _addon_funding_scope(order_id, receipt_id, *, request_key=None):
+    if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is not True:
+        yield
+        return
     from orders.models import Order, OrderOriginalShareTransfer
     from orders.points_service_payment import needs_integrated_processing
-    order = Order.objects.filter(pk=order_id).first()
-    has_transfer = bool(order and OrderOriginalShareTransfer.objects.filter(
-        previous_segment__attribution__order=order).exists())
-    if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True and order
-            and needs_integrated_processing(order) and has_transfer):
-        from orders.points_transfer_refund_access import after_transfer
-        if receipt_id is None:
-            from orders.financial_lock import lock_existing_order_money
-            Order.objects.select_for_update().get(pk=order_id)
-            lock_existing_order_money()
-        with after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id):
-            yield
+    # Transfers use the same row lock. Classify the order only after any
+    # concurrent transfer has finished in this tenant.
+    order = Order.objects.select_for_update().filter(pk=order_id).first()
+    if not order or not needs_integrated_processing(order):
+        yield
         return
-    if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True and order
-            and needs_integrated_processing(order) and not has_transfer):
-        from orders.points_business_access import service_order
-        if receipt_id is None:
-            from orders.financial_lock import lock_existing_order_money
-            Order.objects.select_for_update().get(pk=order_id)
-            lock_existing_order_money()
-        with service_order(order_id, phase='funding', addon=order.addon_intents.exists(), extra_receipt_id=receipt_id):
-            yield
+    if receipt_id is None:
+        from orders.financial_lock import lock_existing_order_money
+        lock_existing_order_money()
+    if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
+        from orders.points_transfer_refund_access import after_transfer
+        pending_payment_id = pending_handover_for_allocation_replay(order, receipt_id, request_key)
+        scope = after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id,
+                               pending_payment_id=pending_payment_id, allocation_request_key=request_key)
     else:
+        from orders.points_business_access import service_order
+        scope = service_order(order_id, phase='funding', addon=order.addon_intents.exists(), extra_receipt_id=receipt_id)
+    with scope:
         yield
 
 
@@ -105,7 +100,7 @@ def _checked_points_action(operation, receipt, order_id, amount, *, pending_foll
 
 
 def _checked_points_action_for_locked_order(operation, receipt, order_id, amount, *,
-                                            pending_followup_posting_id=None, action=None):
+                                            pending_followup_posting_id=None, action=None, verified_usage=None):
     # Caller must have locked and authorized the order in this tenant.
     key = f'points:{operation.pk.hex}'
     action = action or OrderPointsFundingAction.objects.select_related('allocation__redemption').filter(request_key=key).first()
@@ -114,15 +109,15 @@ def _checked_points_action_for_locked_order(operation, receipt, order_id, amount
     allocation = action.allocation
     expected = {'receipt_id': receipt.pk, 'allocation_id': allocation.pk, 'order_id': order_id, 'amount': amount}
     if receipt.usage_version is not None:
-        if pending_followup_posting_id is not None:
-            raise RepaymentError('账本尚未接通后续退款', 409, 'POINTS_FUNDING_REVIEW')
-        from users.receipt_usage_guard import isolated_allocation_state_locked
+        # A pending refund can verify the receipt only with the current
+        # locked usage proof prepared by the follow-up revision verifier.
+        if pending_followup_posting_id is not None and verified_usage is None:
+            raise RepaymentError('后续退款缺少已核对的到账用途', 409, 'POINTS_FUNDING_REVIEW')
+        from users.receipt_usage_guard import used_allocation_units_locked
         try:
-            ledger = isolated_allocation_state_locked(receipt)
+            pass_used, points_used = used_allocation_units_locked(receipt, verified_usage=verified_usage)
         except ValidationError as exc:
             raise RepaymentError('到账用途账本待核对', 409, 'POINTS_FUNDING_REVIEW') from exc
-        pass_used, points_used = ledger.pass_units, (ledger.order_units + ledger.referral_units
-            - ledger.referral_released_units - ledger.released_units)
     else:
         pass_used = receipt.allocations.aggregate(value=Sum('amount'))['value'] or 0
         from orders.points_funding_release import receipt_points_used_locked
@@ -138,11 +133,11 @@ def _checked_points_action_for_locked_order(operation, receipt, order_id, amount
     return action
 
 
-def _verified_receipt(claim, receipt):
+def _verified_receipt(claim, receipt, *, verified_usage=None):
     operations = list(PlatformPassRepaymentOperation.objects.filter(claim=claim, kind='VERIFY',
         tenant_action_id__isnull=False, completed_at__isnull=False, rejected_at__isnull=True, voided_at__isnull=True))
     for operation in operations:
-        action = _checked_action(operation, receipt, 'VERIFY', None, None)
+        action = _checked_action(operation, receipt, 'VERIFY', None, None, verified_usage=verified_usage)
         if action and action.pk == operation.tenant_action_id:
             return
     raise RepaymentError('到账核实记录不完整，请先核对', 409, 'POINTS_FUNDING_REVIEW')
@@ -153,7 +148,10 @@ def _enqueue_settlement_after_commit(store_slug, order_id):
     def enqueue():
         try:
             from engagement.tasks import process_funded_order
-            process_funded_order.apply_async(args=[order_id], headers={'store_slug': store_slug}, retry=False)
+            # The finance response uses the committed receipt. Subscribing to
+            # this task's result can block it while the result store reconnects.
+            process_funded_order.apply_async(args=[order_id], headers={'store_slug': store_slug},
+                                             retry=False, ignore_result=True)
         except Exception:
             import logging
             logging.getLogger(__name__).exception(
@@ -187,10 +185,6 @@ def act(token, slug, claim_id, data):
             claim = PlatformPassRepaymentClaim.objects.filter(pk=claim_id, store=store, voided_at__isnull=True).first()
             if not claim or claim.tenant_receipt_id is None:
                 raise RepaymentError('到账记录不存在或尚未完成', 404, 'REPAYMENT_NOT_FOUND')
-            with store_context(store), tenant_transaction.atomic(), _addon_funding_scope(order_id, claim.tenant_receipt_id):
-                _require_order(order_id)
-                receipt = _claimed_receipt(claim, slug)
-                _verified_receipt(claim, receipt)
             if PlatformPassRepaymentOperation.objects.filter(request_id=request_id).exists():
                 raise RepaymentError('请求编号已用于其他操作', 409, 'REQUEST_CONFLICT')
             operation = PlatformPointsFundingOperation.objects.filter(request_id=request_id).first()
@@ -201,7 +195,13 @@ def act(token, slug, claim_id, data):
                     raise RepaymentError(operation.rejection_message, 409, 'POINTS_FUNDING_REJECTED')
                 if operation.voided_at:
                     raise RepaymentError('该操作已作废，请使用新请求', 409, 'POINTS_FUNDING_VOIDED')
-            else:
+            request_key = f'points:{operation.pk.hex}' if operation else None
+            with store_context(store), tenant_transaction.atomic(), _addon_funding_scope(
+                    order_id, claim.tenant_receipt_id, request_key=request_key):
+                _require_order(order_id)
+                receipt = _claimed_receipt(claim, slug)
+                _verified_receipt(claim, receipt)
+            if not operation:
                 if _has_pending(store):
                     raise RepaymentError('本店有待确认的补款操作，请先核对', 409, 'REPAYMENT_BUSY')
                 operation = PlatformPointsFundingOperation.objects.create(request_id=request_id, claim=claim,
@@ -216,18 +216,20 @@ def act(token, slug, claim_id, data):
                 raise RepaymentError(operation.rejection_message, 409, 'POINTS_FUNDING_REJECTED')
             if operation.voided_at:
                 raise RepaymentError('该操作已作废，请使用新请求', 409, 'POINTS_FUNDING_VOIDED')
-            with store_context(store), tenant_transaction.atomic(), _addon_funding_scope(order_id, operation.claim.tenant_receipt_id):
+            request_key = f'points:{operation.pk.hex}'
+            with store_context(store), tenant_transaction.atomic(), _addon_funding_scope(
+                    order_id, operation.claim.tenant_receipt_id, request_key=request_key):
                 receipt = _claimed_receipt(operation.claim, slug)
                 _verified_receipt(operation.claim, receipt)
                 action = _checked_points_action(operation, receipt, order_id, amount)
                 if operation.tenant_action_id is not None and (not action or action.pk != operation.tenant_action_id):
                     raise RepaymentError('订单补资结果缺失，请先核对', 409, 'POINTS_FUNDING_REVIEW')
-                allocation = allocate(actor=str(actor.pk), request_key=f'points:{operation.pk.hex}',
+                allocation = allocate(actor=str(actor.pk), request_key=request_key,
                                       receipt_id=receipt.pk, order_id=order_id, amount=amount)
                 if not action:
                     result = {'receipt_id': receipt.pk, 'allocation_id': allocation.pk,
                               'order_id': order_id, 'amount': amount}
-                    action = OrderPointsFundingAction.objects.create(request_key=f'points:{operation.pk.hex}',
+                    action = OrderPointsFundingAction.objects.create(request_key=request_key,
                         allocation=allocation, actor=str(actor.pk), result=result)
             if operation.tenant_action_id is None:
                 operation.tenant_action_id, operation.completed_at = action.pk, timezone.now()
@@ -305,7 +307,7 @@ def recover_or_void(token, slug, operation_id, *, reason=None):
                         raise RepaymentError('门店补资记录不完整，请先核对', 409, 'RECOVERY_EVIDENCE_MISSING')
                     order_id, amount = allocation.funding_order_id, allocation.amount
                     digest = _sha(json.dumps([str(operation.claim_id), order_id, amount], separators=(',', ':')))
-                    with _addon_funding_scope(order_id, receipt.pk):
+                    with _addon_funding_scope(order_id, receipt.pk, request_key=key):
                         checked = _checked_points_action(operation, receipt, order_id, amount)
                         if (not checked or checked.pk != action.pk or digest != operation.payload_digest
                                 or (operation.tenant_action_id is not None and operation.tenant_action_id != action.pk)):
@@ -387,7 +389,7 @@ class PlatformOrderFundingStatusView(APIView):
                     try:
                         with tenant_transaction.atomic(), _addon_funding_scope(order_id, None):
                             funding = verify_order_funding(order_id, allow_finalized=True,
-                                                           allow_followup_recorded=True)
+                                                           allow_followup_recorded=True, include_prestart_cancelled=True)
                     except (PointsFundingPlanError, RestValidationError, SettlementError) as exc:
                         raise RepaymentError('订单补资记录待核对', 409, 'POINTS_FUNDING_REVIEW') from exc
         except RepaymentError as error:
@@ -446,7 +448,7 @@ class PlatformOrderFundingQueueView(APIView):
                         continue
                     try:
                         with tenant_transaction.atomic(), _addon_funding_scope(cursor, None):
-                            funding = verify_order_funding(cursor, allow_unstarted=True)
+                            funding = verify_order_funding(cursor, allow_unstarted=True, include_prestart_cancelled=True)
                     except (PointsFundingPlanError, RestValidationError, SettlementError):
                         if not Order.objects.filter(pk=cursor, settled_at__isnull=True).exists():
                             continue

@@ -624,6 +624,16 @@ def _apply_admin_refund(order_id,*,reason,operator,operator_account,refund_amoun
         return order
     if order.payment_status not in PAID_STATES or order.status == 'CANCELLED':
         raise RefundError('订单当前没有可退余额')
+    if order.status == Order.Status.PENDING:
+        from .grab_customer_review import PendingGrabCancellationReview, require_no_pending_review
+        from .grab_round_facts import GrabRoundReviewRequired, latest_round_state
+        try:
+            latest_round_state(order.pk, seats=order.required_provider_count, lock=True)
+            require_no_pending_review(order.pk)
+        except GrabRoundReviewRequired as exc:
+            raise RefundError(str(exc), code='GRAB_ROUND_REVIEW') from exc
+        except PendingGrabCancellationReview as exc:
+            raise RefundError(str(exc), code='GRAB_CANCEL_REVIEW_PENDING') from exc
     if zero_subsidy and order.status == Order.Status.GRABBED:
         if refund_amount is not None or plan_token:
             raise RefundError('安全箱服务前取消不产生钱包退款，请核对原券')
@@ -789,8 +799,10 @@ def refund_summary(order,*,detailed=False,account=None,customer_owner=False,prov
             rows = [row for row in rows if row.pk not in marked or row.pk in own_refunds]
         # Points negotiations use distinct posting evidence.  Never expose
         # another teammate's reason or amount through the generic summary.
-        from .points_service_payment import needs_integrated_processing
-        if rows and needs_integrated_processing(order):
+        from .points_service_payment import display_has_points, needs_integrated_processing
+        has_points = (display_has_points if hasattr(order, '_display_points_evidence')
+                      else needs_integrated_processing)
+        if rows and has_points(order):
             from .models import PointsNegotiationPosting, PointsNegotiationPostingShare
             from stores.db import connection
             with connection.cursor() as cursor:

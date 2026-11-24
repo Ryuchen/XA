@@ -139,12 +139,15 @@ def include_paid_addons(order, main_plan, *, allow_unassigned=False, allow_open_
         transferred = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
         if transferred:
             from .points_service_payment import needs_integrated_processing
+            from .points_transfer_refund_access import addon_payment_read, permits, verification_scope
             from .segment_settlement_plan import build_segment_settlement_plan
             from .settlement import SettlementError
             try:
                 points_order = needs_integrated_processing(order)
-                plan = build_segment_settlement_plan(order, allow_recorded=True,
-                    _allow_points=points_order, _preview_unstarted=points_order)
+                scope = verification_scope(order) if permits(order, phase='settlement') else addon_payment_read(order)
+                with scope:
+                    plan = build_segment_settlement_plan(order, allow_recorded=True,
+                        _allow_points=points_order, _preview_unstarted=points_order)
             except SettlementError as exc:
                 raise PointsFundingPlanError('转单主单收益待核对') from exc
             limits = defaultdict(int)

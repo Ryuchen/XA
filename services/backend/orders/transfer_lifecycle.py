@@ -3,9 +3,14 @@ from django.conf import settings
 
 from club_accounts.models import ClubAccount
 from club_accounts.provider_lifecycle import (ProviderLifecycleError, ensure_provider_lifecycle,
-    lock_provider_operations, provider_membership_current)
+    lock_provider_accounts_for_read, lock_provider_operations, provider_membership_current)
 
 from .state_machine import IllegalTransitionError
+
+
+def lock_incoming_cycles(account_ids):
+    """Keep the incoming cycle stable while allowing schedule foreign-key reads."""
+    return {pk: account.business_cycle for pk, account in lock_provider_accounts_for_read(account_ids).items()}
 
 
 def capture(commands):

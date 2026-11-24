@@ -520,20 +520,25 @@ def recover_addon_handover_result_notices():
 
 @shared_task
 def recover_service_transfer_notices():
+    import logging
     from django.conf import settings
     if not getattr(settings, 'SERVICE_TRANSFER_NOTICE_RECOVERY_ENABLED', False):
         return 0
-    from .models import ServiceTransferNotice
+    from .models import ServiceTransferAssignmentNotice, ServiceTransferNotice
+    from .service_transfer_assignment_notice import deliver as deliver_assignment
     from .service_transfer_notice import deliver
-    ids = ServiceTransferNotice.objects.filter(completed_at__isnull=True).order_by('pk').values_list('pk', flat=True)
+    routes = [(ServiceTransferNotice, deliver)]
+    if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
+        routes.append((ServiceTransferAssignmentNotice, deliver_assignment))
     count = 0
-    for intent_id in ids.iterator(chunk_size=200):
-        try:
-            deliver(intent_id)
-        except Exception:
-            import logging
-            logging.getLogger(__name__).exception('服务转单确认通知待恢复 intent=%s', intent_id)
-        count += 1
+    for model, send in routes:
+        ids = model.objects.filter(completed_at__isnull=True).order_by('pk').values_list('pk', flat=True)
+        for intent_id in ids.iterator(chunk_size=200):
+            try:
+                send(intent_id)
+            except Exception:
+                logging.getLogger(__name__).exception('服务转单通知待恢复 model=%s intent=%s', model.__name__, intent_id)
+            count += 1
     return count
 
 

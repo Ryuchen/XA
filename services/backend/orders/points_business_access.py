@@ -25,6 +25,33 @@ def configured():
         and store.database_alias == connection.alias)
 
 
+def formal_service_read_candidate(order, *, phase):
+    if phase not in ('report', 'settlement'):
+        return False
+    from .models import Order
+    from .points_service_payment import display_has_points
+    statuses = (Order.Status.IN_SERVICE, Order.Status.COMPLETED) if phase == 'report' else (Order.Status.COMPLETED,)
+    return (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+            and order.status in statuses and display_has_points(order))
+
+
+@contextmanager
+def formal_service_read_scope_locked(order, *, phase):
+    """Reenter the plain service capability after locking the tenant order."""
+    from .addon_settlement import has_paid_addons
+    from .models import Order, OrderOriginalShareTransfer
+    if (not configured() or not formal_service_read_candidate(order, phase=phase)
+            or order.payment_status != Order.PaymentStatus.PAID or order.refund_records.exists()
+            or has_paid_addons(order)
+            or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+        yield False
+        return
+    from .financial_lock import lock_existing_order_money
+    lock_existing_order_money()
+    with service_order(order.pk, phase=phase):
+        yield True
+
+
 def checkout_shape_allowed(data):
     """Specified one- or two-person services with frozen assignment rules."""
     from .models import Order
@@ -795,6 +822,9 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
     else:
         provider_count_valid = order.providers.count() in (1, 2)
     transfer_addon = bool(addon and phase in ('payment', 'refund') and transfers and not order.refund_records.exists())
+    from .points_returned_addon_refund import returned_handover
+    returned = (returned_handover(order, payment_id=refund_payment_id, transfers=transfers)
+                if transfer_addon and phase == 'refund' and refund_payment_id is not None else None)
     pending_other_refund = False
     invalidated_handover_history = False
     if transfer_addon:
@@ -1001,7 +1031,7 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
         independent_handover_refund = (phase == 'refund' and transfer_addon
                                       and (independent_refund_after_handovers(order, transfers)
                                            or first_handover_refund(order, transfers) or pending_other_refund
-                                           or invalidated_handover_history))
+                                           or invalidated_handover_history or returned))
         multiple_transfer_addon = transfer_addon and (not prestarts or independent_handover_refund)
         multiple_after_followup = False
         if not transfers and order.refund_records.count() == 2:
@@ -1059,11 +1089,13 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
     receipts = list(PassRefundRepaymentReceipt.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
     if len(receipts) != len(ids):
         raise ValidationError('积分订单到账凭证缺失')
+    from .points_addon_receipt_usage import reuse_history_locked
     try:
         for receipt in receipts:
             if receipt.usage_version is None:
                 raise ValidationError('积分订单到账用途账本缺失')
-            isolated_allocation_state_locked(receipt)
+            with reuse_history_locked(order, {receipt.pk}):
+                isolated_allocation_state_locked(receipt)
     except DjangoValidationError as exc:
         raise ValidationError('积分订单到账用途凭证异常') from exc
     from club_accounts.models import ClubAccount
@@ -1123,6 +1155,9 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
         raise ValidationError('积分订单尚未完成，不能结算')
     with _bind(phase=phase, kind='addon' if addon else 'service', order_id=order.pk,
                account_id=buyer.pk, service_id=order.service_id):
+        if returned:
+            from .points_returned_addon_refund import verify_funding
+            verify_funding(order, returned)
         if team_invalidations:
             from .points_handover_refund_invalidation import _verify_facts
             witness = OrderPointsFundingAllocation.objects.filter(

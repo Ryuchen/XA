@@ -4,6 +4,7 @@ import time
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
@@ -36,8 +37,12 @@ class GrabSingleFlowTest(APITransactionTestCase):
         response = self.create(dispatch_mode='AUTO_GRAB')
         self.assertEqual(response.data['code'], 0, response.data)
         order = Order.objects.get(pk=response.data['data']['id'])
+        self.auth(self.accounts[0])
+        pool = self.client.get('/api/orders/orders/?status=pending')
+        self.assertEqual({row['id']: row['allowed_actions'] for row in pool.data['data']}, {order.pk: ['GRAB']})
         with self.settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False):
-            self.auth(self.accounts[0])
+            pool = self.client.get('/api/orders/orders/?status=pending')
+            self.assertNotIn(order.pk, {row['id'] for row in pool.data['data']})
             grab = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
             self.assertEqual(grab.status_code, 503, grab.data)
             self.auth(self.boss_account)
@@ -46,6 +51,28 @@ class GrabSingleFlowTest(APITransactionTestCase):
             self.assertEqual(auto_cancel_pending_order.run(order.pk), 'disabled')
         order.refresh_from_db()
         self.assertEqual((order.status, order.provider_account_id, order.payment_status), ('PENDING', None, 'PAID'))
+
+    def test_latest_round_requires_admitting_state_even_if_older_state_is_open(self):
+        self.prepare()
+        self.auth(self.boss_account)
+        response = self.create(dispatch_mode='AUTO_GRAB')
+        self.assertEqual(response.data['code'], 0, response.data)
+        order_id = response.data['data']['id']
+        first = OrderGrabRound.objects.get(pool__order_id=order_id)
+        self.assertEqual(first.single_state.status, 'OPEN')
+        self.auth(self.accounts[0])
+        self.assertEqual(self.client.get(f'/api/orders/orders/{order_id}/').status_code, 200)
+
+        review = OrderGrabRound.objects.create(pool=first.pool, number=first.number + 1,
+            opened_at=first.opened_at, deadline=first.deadline, total_deadline=first.total_deadline)
+        for state in (None, 'REVIEW', 'PARKED'):
+            with self.subTest(state=state):
+                if state:
+                    OrderGrabSingleRoundState.objects.update_or_create(round=review, defaults={'status': state})
+                pool = self.client.get('/api/orders/orders/?status=pending')
+                self.assertEqual(order_id in {row['id'] for row in pool.data['data']}, state == 'PARKED')
+                self.assertEqual(self.client.get(f'/api/orders/orders/{order_id}/').status_code,
+                                 200 if state == 'PARKED' else 404)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
@@ -72,7 +99,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
             assigned = self.client.post(f'/api/admin/orders/{order.pk}/assign/',
                                         {'provider_id': self.accounts[0].pk}, format='json')
             self.assertNotEqual(assigned.data['code'], 0, assigned.data)
-            self.assertIn('抢单池自动分配', assigned.data['msg'])
+            self.assertIn('抢单池自动分发', assigned.data['msg'])
             order.refresh_from_db()
             self.assertEqual((order.status, order.provider_account_id), ('PENDING', None))
             self.auth(self.boss_account)
@@ -103,7 +130,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
         with self.settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False):
             selected = self.create(provider_id=self.accounts[0].pk, client_request_id='selected-unavailable-window')
             self.assertEqual(selected.data['code'], 0, selected.data)
-            audition = self.create(client_request_id='audition-unavailable-window')
+            audition = self.create(dispatch_mode='BOSS_SELECT', client_request_id='audition-unavailable-window')
             self.assertEqual(audition.data['code'], 0, audition.data)
         order = Order.objects.get(pk=audition.data['data']['id'])
         self.assertTrue(order.requires_boss_selection)
@@ -132,7 +159,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         from orders.tests.factories import make_console_user
         self.prepare()
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         staff = make_console_user(['order:view', 'order:dispatch'])
         staff_account = self.link(staff)
         staff.admin_membership.account = staff_account
@@ -140,12 +168,14 @@ class GrabSingleFlowTest(APITransactionTestCase):
         with self.settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False):
             self.auth(self.boss_account)
             boss = self.create(dispatch_mode='AUTO_GRAB')
-            self.assertNotEqual(boss.data['code'], 0, boss.data)
+            self.assertEqual((boss.status_code, boss.data.get('errorCode')),
+                             (503, 'GRAB_WINDOW_UNAVAILABLE'), boss.data)
             self.auth(staff_account)
             staff_result = self.client.post('/api/admin/orders/dispatch/', {
                 'customer_id': self.boss_account.pk, 'service_id': self.service.pk,
                 'escort_mode': 'DOUBLE', 'client_request_id': 'staff-double-disabled'}, format='json')
-            self.assertEqual(staff_result.status_code, 503, staff_result.data)
+            self.assertEqual((staff_result.status_code, staff_result.data.get('errorCode')),
+                             (503, 'GRAB_WINDOW_UNAVAILABLE'), staff_result.data)
         self.wallet.refresh_from_db()
         self.assertEqual(self.wallet.balance, 100000)
         self.assertFalse(Order.objects.exists())
@@ -156,10 +186,6 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.service.save(update_fields=['game_category'])
         save_grab_window(1, 0, lambda *args: None)
         save_capacity(3, 0, lambda *args: None)
-        from engagement.models import ClubOperationConfig, PointFundingLot
-        ClubOperationConfig.objects.get_or_create(pk=1)
-        PointFundingLot.objects.get_or_create(account=self.boss_account, source_key='grab-single-principal',
-            kind=PointFundingLot.Kind.PREPAID, defaults={'remaining': self.wallet.balance})
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
             SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_' + tier,
                                                   defaults={'value': '0'})
@@ -175,6 +201,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_first_window_ranks_committed_candidates_and_leaves_unawarded_pending(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -209,6 +236,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_empty_first_window_parks_then_first_eligible_grab_assigns(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -226,6 +254,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_due_window_is_advanced_on_late_grab_and_replay_returns_result(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -242,7 +271,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual((replay.status_code, replay.data['data']['status']), (200, 'WON'), replay.data)
         self.assertEqual(order.providers.count(), 1)
 
-    def test_due_window_is_advanced_before_boss_cancel(self):
+    def test_boss_cancel_after_first_window_uses_total_deadline(self):
         self.prepare()
         self.auth(self.boss_account)
         response = self.create(dispatch_mode='AUTO_GRAB')
@@ -258,9 +287,12 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual(result.status_code, 200, result.data)
         order.refresh_from_db(); self.wallet.refresh_from_db()
         self.assertEqual((order.status, self.wallet.balance), ('CANCELLED', 100000))
+        receipt = order.grab_pool_snapshot.rounds.get().receipt_probes.get(kind='BOSS_CANCEL')
+        self.assertEqual((receipt.round_phase, receipt.state), ('PARKED', 'BEFORE'))
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_due_window_resolves_earlier_candidate_before_late_grab(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -294,6 +326,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_highest_candidate_loses_eligibility_reopens_to_everyone(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -318,6 +351,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_equal_deadlines_prioritize_cancel_then_assignment_then_timeout_refund(self):
         from orders.tasks import auto_cancel_pending_order
         self.prepare()
@@ -371,6 +405,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_parked_ineligible_candidate_allows_later_grab_and_preserves_timeout(self):
         from orders.tasks import auto_cancel_pending_order
         self.prepare()

@@ -18,7 +18,8 @@ from stores.platform_points_funding import (PlatformOrderFundingQueueView, Platf
 from stores.platform_pass_repayment_read import PlatformPassRepaymentReconciliationView
 from stores.platform_pass_repayment_recovery import PlatformPassRepaymentRecoveryView, PlatformPassRepaymentVoidView
 from stores.platform_store_management import PlatformStoreManagementView, PlatformStoreManagementDetailView, PlatformStoreManagementResumeView
-from stores.platform_media import PlatformStoreLogoUploadView
+from stores.platform_media import PlatformStoreBackgroundUploadView, PlatformStoreLogoUploadView
+from stores.business_certificates import PlatformBusinessCertificateDocumentView, PlatformBusinessCertificatesView
 from stores.platform_domains import PlatformStoreDomainsView
 from stores.platform_license_refund_vip import PlatformLicenseRefundVipReviewView, PlatformLicenseRefundVipResolutionView
 from stores.platform_store_payroll import StorePayrollView
@@ -269,6 +270,10 @@ urlpatterns = [
     path('platform/ledger', PlatformLedgerView.as_view()),
     path('platform/store-management', PlatformStoreManagementView.as_view()),
     path('platform/store-management/<int:pk>', PlatformStoreManagementDetailView.as_view()),
+    path('platform/store-management/<int:pk>/background-upload', PlatformStoreBackgroundUploadView.as_view()),
+    path('platform/store-management/<int:pk>/business-certificates', PlatformBusinessCertificatesView.as_view()),
+    path('platform/store-management/<int:pk>/business-certificates/<int:certificate_id>/document',
+         PlatformBusinessCertificateDocumentView.as_view()),
     path('platform/store-management/<int:pk>/domains', PlatformStoreDomainsView.as_view()),
     path('platform/store-management/<int:pk>/initial-otp', PlatformInitialOtpGrantView.as_view()),
     path('platform/store-management/<int:pk>/licenses', PlatformStoreLicensesView.as_view()),

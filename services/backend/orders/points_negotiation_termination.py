@@ -108,15 +108,19 @@ def available_for_order(order):
     from .points_business_access import permits as service_permits
     formal_addon = service_permits(order, phase='refund', kind='addon')
     if has_paid_addons(order) and not formal_addon and not getattr(settings, 'SERVICE_POINTS_REFUND_ADDON_RELEASE_TESTING', False):
-        return False
+        from .points_transfer_refund_access import permits as transfer_permits
+        from .points_returned_addon_refund import before_first_main_refund
+        if not transfer_permits(order, phase='refund') or not before_first_main_refund(order):
+            return False
     from .models import OrderOriginalShareTransfer
     if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
         if not transfer_endpoint_enabled():
             return False
         from .models import OrderSegmentSettlementManifest
         from .points_transfer_refund_access import permits as transfer_permits
+        formal_transfer = transfer_permits(order, phase='refund')
         if ((OrderSegmentSettlementManifest.objects.filter(order=order).exists()
-                and not (transfer_permits(order, phase='refund')
+                and not (formal_transfer
                          or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_PRIOR_SETTLEMENT_TESTING', False)))
                 or OrderParticipationSegment.objects.filter(attribution__order=order,
                     started_at__isnull=True, original_share__gt=0).exists()):
@@ -128,13 +132,24 @@ def available_for_order(order):
                 if not case or not case.client_request_id:
                     return False
                 from .points_transfer_refund_preview import preview_locked
-                preview_locked(case.pk, refund_equivalent_units=10)
-            return True
+                preview = preview_locked(case.pk, refund_equivalent_units=10)
+            return not formal_transfer or 1 <= len(preview['provider_terms']) <= 2
         except (ValidationError, Order.DoesNotExist):
             return False
     return (formal_addon or service_permits(order, phase='refund', kind='service')
             or not OrderPointsFundingAllocation.objects.filter(redemption__order=order).exists()
             or bool(getattr(settings, 'SERVICE_POINTS_FUNDING_RELEASE_TESTING', False)))
+
+
+def main_refund_preview_capability(order, case):
+    """Return whether the formal funding check applies and the path is enabled."""
+    from .points_business_access import permits
+    check_required = (permits(order, phase='refund', kind='service')
+                      or (case.addon_payment_id is None
+                          and any(permits(order, phase='refund', kind=kind) for kind in ('addon', 'transfer'))
+                          and not order.refund_records.exists()))
+    available = bool(check_required and case.client_request_id and available_for_order(order))
+    return check_required, available
 
 
 def _verify_transfer_termination_segments(order, posting, shares):
@@ -164,8 +179,8 @@ def _verify_transfer_termination_segments(order, posting, shares):
                 raise ValidationError('积分转单历史履约终止时间不一致')
 
 
-def verify_termination_locked(posting, *, allow_verified_later_final=False):
-    """Reconcile completion and scoped closure even after a later case opens."""
+def verify_termination_locked(posting, *, allow_verified_later_final=False, include_release=False):
+    """Verify closure and optionally return its verified release evidence and plan."""
     from .points_transfer_refund_access import require_refund_or_isolated
     from .points_business_access import permits as service_permits
     if not (service_permits(posting.proposal.case.order, phase='payment', kind='addon') or any(service_permits(posting.proposal.case.order, phase=phase, kind=kind)
@@ -175,10 +190,11 @@ def verify_termination_locked(posting, *, allow_verified_later_final=False):
         raise ValidationError('积分协商终止凭证必须在门店事务内核对')
     posting = verify_posting_locked(posting)
     return _verify_termination_from_verified_posting(posting,
-        allow_verified_later_final=allow_verified_later_final)
+        allow_verified_later_final=allow_verified_later_final, include_release=include_release)
 
 
-def _verify_termination_from_verified_posting(posting, *, allow_verified_later_final=False, facts_only=False):
+def _verify_termination_from_verified_posting(posting, *, allow_verified_later_final=False, facts_only=False,
+                                              include_release=False):
     """Check the recorded closure; caller must first verify the posting."""
     from .points_transfer_refund_access import permits
     if facts_only and not (permits(phase='refund') or permits(phase='settlement')
@@ -295,7 +311,7 @@ def _verify_termination_from_verified_posting(posting, *, allow_verified_later_f
     if (len(audits) != 1 or audits[0].request_body != expected or audits[0].operator_account_id != posting.operator_id
             or audits[0].operator_id != refund.operator_id or audits[0].method != 'POST' or audits[0].status_code != 200):
         raise ValidationError('积分协商退款审计凭证不一致')
-    if OrderPointsFundingAllocation.objects.filter(redemption__order=order).exists():
+    if include_release or OrderPointsFundingAllocation.objects.filter(redemption__order=order).exists():
         evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
         if not evidence:
             raise ValidationError('积分协商退款补资释放凭证缺失')
@@ -304,7 +320,9 @@ def _verify_termination_from_verified_posting(posting, *, allow_verified_later_f
             _verify_release_facts_locked(evidence)
         else:
             from .points_funding_release import verify_release_locked
-            verify_release_locked(evidence)
+            release_plan = verify_release_locked(evidence)
+            if include_release:
+                return posting, evidence, release_plan
     return posting
 
 
@@ -474,7 +492,10 @@ def execute_and_terminate(case_id, proposal_id, *, operator, legacy_operator, re
             'client_request_id': request_id}, status_code=200)
     verify_termination_locked(posting)
     from .notifier import notify_order_update
-    transaction.on_commit(lambda: notify_order_update(order))
+    refresh_providers = (termination_in_service and (permits(order, phase='refund')
+                         or (not transferred and any(service_permits(order, phase='refund', kind=kind)
+                                                    for kind in ('service', 'addon')))))
+    transaction.on_commit(lambda: notify_order_update(order, refresh_providers=refresh_providers))
     transaction.on_commit(lambda: notify_aftersale_reports(order))
     schedule_aftersale_notices(order, case, resolved=True)
     return posting

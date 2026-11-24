@@ -33,12 +33,19 @@ def followup_eligible(order):
         return False
     if not formal:
         require_isolated_checkout()
+    if (not order or order.is_gift_snapshot or order.source_order_id
+            or (not formal and order.addon_intents.exists())
+            or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
+            or order.refund_records.count() > 2):
+        return False
     from .models import OrderPrestartHandoff
-    return bool(order and not order.is_gift_snapshot and not order.source_order_id
-        and order.providers.count() == 2 and (formal or not order.addon_intents.exists())
-        and not OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
-        and not OrderPrestartHandoff.objects.filter(order=order).exists()
-        and order.refund_records.count() <= 2)
+    if not OrderPrestartHandoff.objects.filter(order=order).exists():
+        return order.providers.count() == 2
+    if not formal or order.required_provider_count != 2:
+        return False
+    from .points_service_participation import service_snapshots
+    snapshots = service_snapshots(order)
+    return len(snapshots) == 2 and len({row.segment.provider_account_id for row in snapshots}) == 2
 
 
 def transfer_refund_eligible(order):
@@ -58,7 +65,8 @@ def transfer_refund_eligible(order):
         slot = item.previous_segment.slot
         counts[slot] = counts.get(slot, 0) + 1
     from .points_transfer_refund_access import _supported_addon
-    if (not order or order.is_gift_snapshot or order.source_order_id or not _supported_addon(order, transfers)
+    if (not order or order.is_gift_snapshot or order.source_order_id
+            or not _supported_addon(order, transfers, allow_main_after_addon=formal)
             or order.refund_records.count() > (2 if formal and not order.addon_intents.exists() else 1)
             or not transfers or any(count > 2 for count in counts.values())
             or OrderPrestartHandoff.objects.filter(order=order).exists()):

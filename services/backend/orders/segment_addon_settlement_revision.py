@@ -110,6 +110,7 @@ def verify_revisions(manifest):
             raise SettlementError('主单退款与加购结算版本不连续')
 
     revisions = list(manifest.addon_revisions.select_for_update().order_by('version'))
+    covered_refunds = set()
     previous = None
     previous_at = None
     for index, revision in enumerate(revisions, start=1):
@@ -148,6 +149,16 @@ def verify_revisions(manifest):
                         raise ValidationError('已付人员的主单收益发生变化')
             except (ValidationError, KeyError, TypeError) as exc:
                 raise SettlementError('已付退款结算版本流水异常') from exc
+        else:
+            from .models import OrderAddonFundingReleaseRun
+            from .points_voluntary_paid_evidence import verify_standard_refund_current_read
+            runs = OrderAddonFundingReleaseRun.objects.filter(refund_id__in=revision.refund_ids,
+                points_addon_snapshot__isnull=False).select_related('refund')
+            try:
+                for run in runs:
+                    verify_standard_refund_current_read(run, in_revision=True)
+            except ValidationError as exc:
+                raise SettlementError('已付退款结算版本凭证不完整') from exc
         from .models import OrdinaryPaidAddonRefundEvidence
         ordinary_evidence = list(OrdinaryPaidAddonRefundEvidence.objects.filter(
             manifest=manifest, refund_id__in=revision.refund_ids).select_related('refund__proposal', 'refund__order'))
@@ -164,10 +175,24 @@ def verify_revisions(manifest):
                 raise SettlementError('普通已付退款结算版本流水异常') from exc
         previous = after
         previous_at = revision.created_at
+        covered_refunds.update(revision.refund_ids)
     if previous is not None and (manifest.plan != previous or manifest.plan_hash != _hash(previous)):
         bridge(previous, manifest.plan, after=previous_at)
         if manifest.plan_hash != _hash(manifest.plan):
             raise SettlementError('加购退款结算版本与当前方案不一致')
+    funding = manifest.plan.get('points_funding') if isinstance(manifest.plan, dict) else None
+    refund_ids = funding.get('addon_refund_ids', []) if isinstance(funding, dict) else []
+    if not isinstance(refund_ids, list) or any(type(pk) is not int or pk <= 0 for pk in refund_ids):
+        raise SettlementError('加购退款凭证列表不一致')
+    if uncovered := set(refund_ids) - covered_refunds:
+        from .models import OrderAddonFundingReleaseRun
+        from .points_voluntary_paid_evidence import verify_standard_refund_current_read
+        try:
+            for run in OrderAddonFundingReleaseRun.objects.filter(refund__order_id=manifest.order_id,
+                    refund_id__in=uncovered, points_addon_snapshot__isnull=False).select_related('refund'):
+                verify_standard_refund_current_read(run)
+        except ValidationError as exc:
+            raise SettlementError('已付退款结算版本凭证不完整') from exc
 
 
 def transition_locked(order, manifest, plan, terms):
@@ -176,16 +201,19 @@ def transition_locked(order, manifest, plan, terms):
 
     from .points_service_payment import needs_integrated_processing
     from .ordinary_transfer_capability import permits as ordinary_transfer_permits
+    from .points_transfer_refund_access import permits as points_transfer_permits
     formal_ordinary = bool(not needs_integrated_processing(order) and not order.refund_records.exists()
         and ordinary_transfer_permits(order)
         and manifest.ordinary_paid_addon_refunds.exists())
-    if not formal_ordinary:
+    formal_points = points_transfer_permits(order, phase='settlement') and not order.refund_records.exists()
+    if not (formal_ordinary or formal_points):
         try:
             require_isolated_checkout()
         except ValidationError as exc:
             raise SettlementError('加购退款后的逐段结算尚未开放') from exc
     if (not transaction.get_connection().in_atomic_block
-            or (not formal_ordinary and not getattr(settings, 'ADDON_SEGMENT_REFUND_REVISION_INTERNAL_TESTING', False))
+            or (not (formal_ordinary or formal_points)
+                and not getattr(settings, 'ADDON_SEGMENT_REFUND_REVISION_INTERNAL_TESTING', False))
             or manifest.order_id != order.pk or manifest.finalized_at or order.settled_at):
         raise SettlementError('加购退款后的逐段结算尚未开放')
     verify_revisions(manifest)
@@ -229,6 +257,16 @@ def transition_locked(order, manifest, plan, terms):
     _validate_records(order, manifest, plan)
     version = manifest.addon_revisions.count() + 1
     with transaction.atomic():
+        if formal_points:
+            from .points_transfer_paid_addons import unchanged
+            from .points_voluntary_paid_evidence import recover_standard_refunds_locked
+            try:
+                paid = recover_standard_refunds_locked(order, manifest, added)
+                unchanged(paid, terms['points_funding'].get('addons', []))
+                if any(before_people[item['account_id']] != after_people[item['account_id']] for item in paid['people']):
+                    raise ValidationError('加购退款改变了已付主单收益')
+            except ValidationError as exc:
+                raise SettlementError('已付加购退款来源待核对') from exc
         OrderSegmentAddonSettlementRevision.objects.create(manifest=manifest, version=version,
             refund_ids=added, before_plan=before, before_plan_hash=manifest.plan_hash,
             after_plan=terms, after_plan_hash=_hash(terms))

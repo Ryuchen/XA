@@ -13,6 +13,7 @@ from rest_framework import serializers as rest_serializers
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
@@ -284,8 +285,8 @@ class RankingView(APIView):
     def get(self, request):
         # Only the public leaderboards are optional; dispatch ranking and
         # personal order statistics are core business and remain available.
-        from stores.license_benefits import check_new_benefits
-        admission, _ = check_new_benefits('ACHIEVEMENTS_RANKINGS')
+        from stores.license_benefits import check_license_benefits
+        admission, _ = check_license_benefits('ACHIEVEMENTS_RANKINGS')
         if admission == 'UNKNOWN':
             return Response({'code': 503, 'msg': '暂时无法核验门店授权，请联系平台后重试'}, status=503)
         if admission != 'ALLOW':
@@ -394,11 +395,15 @@ class OrderListView(APIView):
             if status_filter == 'pending':
                 # 待接单池：返回尚未被接单的 PENDING 订单，供陪玩抢单
                 context['_provider_pool_view'] = True
-                from .pool_visibility import visible_provider_pool
+                from .pool_visibility import visible_provider_pool, with_pool_display_evidence
                 orders, read_state = visible_provider_pool(account)
+                orders = with_pool_display_evidence(orders, account.pk)
                 if read_state is not None:
                     context['_provider_read_state'] = read_state[:4]
-                    context['_provider_capacity_limit'] = read_state[4]
+                    context['_provider_capacity_limit'] = read_state.capacity_limit
+                    context['_provider_pool_visibility'] = read_state.visibility_times
+                    context['_provider_pool_deadlines'] = read_state.deadline_states
+                    context['_provider_pool_refund_deficits'] = read_state.refund_deficits
 
             else:
                 # A rejected assignment is retained for history but has no
@@ -476,6 +481,10 @@ class OrderListView(APIView):
         rejection_actor = Q(operator_account=account)
         if account.account_type == ClubAccount.AccountType.PROVIDER and request.legacy_user:
             rejection_actor |= Q(operator_account__isnull=True, operator=request.legacy_user)
+        application_fetch = Prefetch('applications', queryset=OrderApplication.objects.select_related(
+            'applicant__escort_profile__level', 'partner__escort_profile__level').prefetch_related('voices__recording'),
+            to_attr='application_list')
+        is_pool = context.get('_provider_pool_view', False)
         orders = orders.select_related(
             'customer', 'customer__boss_type', 'provider', 'service', 'source_order',
             'service__service_category', 'service__gameplay', 'service__game_category',
@@ -484,7 +493,9 @@ class OrderListView(APIView):
             'providers', queryset=OrderProvider.objects.filter(
                 requester_assignments | Q(released_at__isnull=True)).order_by('pk'),
             to_attr='_visible_participants',
-        ), Prefetch('applications', queryset=OrderApplication.objects.select_related('applicant__escort_profile__level','partner__escort_profile__level').prefetch_related('voices__recording'), to_attr='application_list')).order_by('-created_at', '-pk')
+        )).order_by('-created_at', '-pk')
+        if not is_pool:
+            orders = orders.prefetch_related(application_fetch)
         from .paid_service_scope import enabled as paid_scope_enabled
         if paid_scope_enabled():
             orders = orders.select_related('paid_service_scope')
@@ -492,7 +503,15 @@ class OrderListView(APIView):
             total = orders.count()
             page = min(page, max(1, (total + page_size - 1) // page_size))
             orders = orders[(page - 1) * page_size:page * page_size]
+        if account.account_type == ClubAccount.AccountType.PROVIDER and not is_pool:
+            from .pool_visibility import with_provider_list_evidence
+            orders = with_provider_list_evidence(orders, account.pk)
         orders = list(orders)
+        if is_pool:
+            prefetch_related_objects([order for order in orders if order._pool_has_applications], application_fetch)
+            for order in orders:
+                if not order._pool_has_applications:
+                    order.application_list = []
         legacy_id = getattr(request.legacy_user, 'pk', None) if account.account_type == ClubAccount.AccountType.PROVIDER else None
         for order in orders:
             order.requester_assignments = [row for row in order._visible_participants
@@ -541,12 +560,16 @@ class OrderDetailView(APIView):
             # Deep links must show exactly the same public facts as the pool;
             # never turn knowledge of an ID into access to an invisible order.
             from .pool_visibility import visible_provider_pool
-            pool, read_state = visible_provider_pool(account)
-            order = pool.select_related('customer', 'customer__boss_type', 'provider', 'service',
+            pool, read_state = visible_provider_pool(account, order_id=order_id)
+            order = pool.annotate(_pool_snapshot_exists=Q(grab_pool_snapshot__isnull=False)).select_related(
+                'customer', 'customer__boss_type', 'provider', 'service',
                 'source_order', 'service__service_category', 'support_contact').prefetch_related('evaluations').filter(pk=order_id).first()
             if order is not None and read_state is not None:
                 context.update(_provider_pool_view=True, _provider_read_state=read_state[:4],
-                               _provider_capacity_limit=read_state[4])
+                               _provider_capacity_limit=read_state.capacity_limit,
+                               _provider_pool_visibility=read_state.visibility_times,
+                               _provider_pool_deadlines=read_state.deadline_states,
+                               _provider_pool_refund_deficits=read_state.refund_deficits)
         if order is None:
             return Response({'code': 404, 'msg': '订单不存在或无权查看'}, status=404)
         return Response({'code': 0, 'data': OrderSerializer(
@@ -624,7 +647,12 @@ class CreateOrderView(APIView):
                              'msg': '积分支付尚未开放，请移除积分试算后重新确认'}, status=400)
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
         if not serializer.is_valid():
-            return Response({'code': 400, 'msg': _format_serializer_errors(serializer.errors)})
+            errors = serializer.errors
+            if any(getattr(error, 'code', None) == 'GRAB_WINDOW_UNAVAILABLE'
+                   for error in errors.get(api_settings.NON_FIELD_ERRORS_KEY, ())):
+                return Response({'code': 503, 'msg': '抢单暂不可用，请稍后下单或联系客服',
+                                 'errorCode': 'GRAB_WINDOW_UNAVAILABLE'}, status=503)
+            return Response({'code': 400, 'msg': _format_serializer_errors(errors)})
 
         data = serializer.validated_data
         # Do not take payment for an order that must enter an automatic pool
@@ -790,6 +818,25 @@ class CreateOrderView(APIView):
             locked_service = ServiceItem.objects.select_for_update().get(pk=service.pk)
             if locked_service.game_category_id != service.game_category_id:
                 return Response({'code': 409, 'errorCode': 'SERVICE_CHANGED', 'msg': '服务资料规则已变化，请重新核对'}, status=409)
+
+            def service_terms(item):
+                return {'name': item.name, 'price_unit': item.price_unit,
+                        'service_type': item.service_type, 'game_category': item.game_category_id,
+                        'billing_provider_count': item.billing_provider_count,
+                        'fulfillment_provider_count': item.fulfillment_provider_count, 'unit_price': item.price,
+                        'gameplay': item.gameplay_id, 'platform': item.platform,
+                        'security_level': item.security_level, 'provider_kind': item.provider_kind,
+                        'provider_grade': item.provider_grade, 'required_level': item.required_level_id,
+                        'service_category': item.service_category_id, 'purchase_mode': item.purchase_mode,
+                        'is_addon': item.is_addon, 'experience_kind': item.experience_kind,
+                        'allows_discount_coupons': item.allows_discount_coupons}
+
+            current_terms = service_terms(locked_service)
+            expected_service = serializer.validated_data.get('expected_service', {})
+            if (not locked_service.is_active or current_terms != service_terms(service)
+                    or any(current_terms[key] != value for key, value in expected_service.items())):
+                return Response({'code': 400, 'errorCode': 'SERVICE_CHANGED',
+                                 'msg': '商品信息已变化，请刷新报价后重新确认'})
             from .account_fields import lock_and_validate
             try:
                 lock_and_validate(locked_service, {'game_region': game_region, 'game_nickname': game_nickname, 'game_uid': game_uid})
@@ -805,26 +852,6 @@ class CreateOrderView(APIView):
                 # Keep the same service -> provider -> game rule lock order as
                 # reservation conversion and staff dispatch.
                 ServiceItem.objects.select_for_update().get(pk=service.pk)
-            expected_service = serializer.validated_data.get('expected_service')
-            if expected_service is not None:
-                # Serialize admin edits with the final snapshot check and debit.
-                locked_service = ServiceItem.objects.select_for_update().get(pk=service.pk)
-                def snapshot(item):
-                    return {'name': item.name, 'price_unit': item.price_unit,
-                            'service_type': item.service_type, 'game_category': item.game_category_id,
-                            'billing_provider_count': item.billing_provider_count, 'fulfillment_provider_count': item.fulfillment_provider_count, 'unit_price': item.price,
-                            'gameplay': item.gameplay_id, 'platform': item.platform,
-                            'security_level': item.security_level, 'provider_kind': item.provider_kind,
-                            'provider_grade': item.provider_grade, 'required_level': item.required_level_id,
-                            'service_category': item.service_category_id, 'purchase_mode': item.purchase_mode,
-                            'is_addon': item.is_addon, 'experience_kind': item.experience_kind,
-                            'allows_discount_coupons': item.allows_discount_coupons}
-                current = snapshot(locked_service)
-                if (not locked_service.is_active
-                        or any(current[key] != value for key, value in expected_service.items())
-                        or current != snapshot(service)):
-                    return Response({'code': 400, 'errorCode': 'SERVICE_CHANGED',
-                                     'msg': '商品信息已变化，请刷新报价后重新确认'})
             expected_quote = serializer.validated_data.get('expected_quote')
             if expected_quote is not None and any(
                     serializer.validated_data[key] != value for key, value in expected_quote.items()):
@@ -923,9 +950,6 @@ class CreateOrderView(APIView):
                     request.account, service, game_rounds, locked_coupon,
                     serializer.validated_data['pricing']) != safe_box_subsidy_basis:
                 raise rest_serializers.ValidationError('安全箱券或补贴条件已变化，请重新报价')
-            if service.fulfillment_provider_count != serializer.validated_data['required_provider_count']:
-                raise rest_serializers.ValidationError('套餐人数已变化，请刷新后重新选择陪玩')
-
             # 下单是出账动作。幂等键在「校验全过、即将扣款」这一刻抢占：
             # 弱网重试的第二个请求会在这里被拦下，而不是变成两笔扣款 + 两张单。
             # 放在校验之后，是因为视图里的 `return Response(400)` 属于正常返回，
@@ -1391,8 +1415,8 @@ class TipOrderView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
     throttle_scope = 'order_write'
 
-    @recover_fund_result('order.tip')
-    def post(self, request, order_id=None):
+    @staticmethod
+    def _admission_refusal():
         from stores.license_benefits import check_new_benefits
         admission, _ = check_new_benefits('GIFTS')
         if admission == 'UNKNOWN':
@@ -1401,6 +1425,12 @@ class TipOrderView(APIView):
         if admission != 'ALLOW':
             return Response({'code': 403, 'errorCode': 'LICENSE_GIFTS_UNAVAILABLE',
                              'msg': '本店当前授权暂不支持新增赠礼，请联系门店管理员'}, status=403)
+
+    @recover_fund_result('order.tip')
+    def post(self, request, order_id=None):
+        denied = self._admission_refusal()
+        if denied is not None:
+            return denied
         if 'items' in request.data:
             from .gift_basket import send_basket
             return send_basket(self, request, order_id=order_id)
@@ -1559,11 +1589,17 @@ class TipOrderView(APIView):
                 )
                 return Response({'code': 409, 'msg': reason})
 
-            now = timezone.now()
             from engagement.models import ClubOperationConfig
             from engagement.services import config as operation_config
             operation_config()
             gift_vip_enabled = ClubOperationConfig.objects.select_for_update().get(pk=1).vip_enabled
+            from stores.certificate_admission import enabled as certificate_enforcement_enabled
+            if certificate_enforcement_enabled():
+                denied = self._admission_refusal()
+                if denied is not None:
+                    transaction.set_rollback(True)
+                    return denied
+            now = timezone.now()
             # 礼物单必须和普通订单一样写全 account 维度。
             # 历史实现只写了 legacy user 外键，导致后台按 account 统计
             # （陪玩收益榜、老板消费榜、邀请人分佣报表）整批漏掉打赏流水 ——
@@ -2056,15 +2092,26 @@ class CompleteOrderView(APIView):
                     transaction.on_commit(lambda: notify_order_update(order))
                 return Response({'code': 0, 'msg': '结单凭证已保存，请继续提交房间结单申请',
                     'data': OrderSerializer(order, context={'request': request}).data})
-            order = transition(
-                order_id,
-                Order.Status.COMPLETED,
-                operator=request.legacy_user,
-                operator_account=request.account,
-                pre_check=pre_check,
-                side_effect=finish_order,
-                customer_completion_notice=True,
-            )
+            with transaction.atomic(), ExitStack() as scopes:
+                def check_completion(order):
+                    pre_check(order)
+                    if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True:
+                        from .models import OrderOriginalShareTransfer
+                        from .points_service_payment import needs_integrated_processing
+                        if needs_integrated_processing(order) and OrderOriginalShareTransfer.objects.filter(
+                                previous_segment__attribution__order=order).exists():
+                            from .points_transfer_refund_access import after_transfer
+                            scopes.enter_context(after_transfer(order.pk, phase='report'))
+
+                order = transition(
+                    order_id,
+                    Order.Status.COMPLETED,
+                    operator=request.legacy_user,
+                    operator_account=request.account,
+                    pre_check=check_completion,
+                    side_effect=finish_order,
+                    customer_completion_notice=True,
+                )
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
         except IllegalTransitionError as exc:
@@ -2089,17 +2136,20 @@ class CancelOrderView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
+        from .grab_customer_review import replay_cancellation, request_cancellation
+        replay = replay_cancellation(request, order_id)
+        if replay is not None:
+            return replay
         from .grab_single_flow import applies, cancel
         if applies(order_id):
             return cancel(request, order_id)
         from .grab_team_flow import applies as team_applies, cancel as team_cancel
         if team_applies(order_id):
             return team_cancel(request, order_id)
-        from .models import OrderGrabPoolOpeningIntent
+        from .models import OrderGrabPoolOpeningIntent, OrderGrabReviewCancellation
         if OrderGrabPoolOpeningIntent.objects.filter(order_id=order_id, state='REVIEW',
                                                       order__grab_pool_snapshot__isnull=True).exists():
-            from .grab_customer_review import request_cancellation
-            return request_cancellation(request, order_id)
+            return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'))
         from .direct_payment import DirectPaymentCancellationUnconfirmed, require_cancel_channel_confirmation
         reason = (request.data.get('reason') or '').strip()[:255]
         refund_fact = {}
@@ -2116,11 +2166,12 @@ class CancelOrderView(APIView):
                 raise IllegalTransitionError('订单已被接单，无法取消')
             # The opening worker uses this same order lock. Its round may have
             # committed after the initial unlocked route check above.
-            from .models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
-            if OrderGrabSingleRoundState.objects.filter(round__pool__order=order).exists():
+            if applies(order.pk):
                 raise GrabCancellationReroute('single')
-            if OrderGrabTeamRoundState.objects.filter(round__pool__order=order).exists():
+            if team_applies(order.pk):
                 raise GrabCancellationReroute('team')
+            if OrderGrabReviewCancellation.objects.select_for_update().filter(order=order, status='PENDING').exists():
+                raise GrabCancellationReroute('review')
             if OrderGrabPoolOpeningIntent.objects.filter(
                     order=order, state='REVIEW', order__grab_pool_snapshot__isnull=True).exists():
                 raise GrabCancellationReroute('review')
@@ -2169,8 +2220,7 @@ class CancelOrderView(APIView):
                 return cancel(request, order_id)
             if exc.route == 'team':
                 return team_cancel(request, order_id)
-            from .grab_customer_review import request_cancellation
-            return request_cancellation(request, order_id)
+            return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'))
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
         except DirectPaymentCancellationUnconfirmed as exc:

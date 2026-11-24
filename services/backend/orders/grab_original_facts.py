@@ -8,7 +8,7 @@ revalidate the facts with its order/round and provider admission locks.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, Sum, Value
 
 from users.models import EscortProfile
 from .models import Order, OrderParticipationSegment, OrderProvider
@@ -58,7 +58,7 @@ def _verified_unstarted_transfers(account_ids, order_ids, *, as_of):
     return result
 
 
-def original_amount_facts(account_ids, *, as_of, since=None):
+def original_amount_facts(account_ids, *, as_of, since=None, loaded_profiles=None):
     """Calculate 30-day started segments, preserving incomplete evidence.
 
     Acceptance time determines the 30-day window; a segment contributes only
@@ -67,13 +67,23 @@ def original_amount_facts(account_ids, *, as_of, since=None):
     Complete ordinary-wallet refunds, single-player partial refunds, and
     multi-player negotiated refunds use their actual posted refund facts.
     Refunds without individual allocation remain unresolved.
+    A caller that just loaded the profiles from this store can reuse them.
     """
     if not isinstance(as_of, datetime) or as_of.utcoffset() is None:
         raise ValueError('接单额统计时间必须包含时区')
     ids = set(account_ids)
     if any(type(pk) is not int or pk <= 0 for pk in ids):
         raise ValueError('陪玩账号无效')
-    profiles = dict(EscortProfile.objects.filter(account_id__in=ids).values_list('account_id', 'user_id'))
+    if loaded_profiles is None:
+        profiles = dict(EscortProfile.objects.filter(account_id__in=ids).values_list('account_id', 'user_id'))
+    else:
+        from stores.context import current_database
+        database = current_database()
+        profiles = {}
+        for profile in loaded_profiles:
+            if profile._state.db != database or profile._state.adding:
+                raise ValueError('陪玩账号或本店资料不存在')
+            profiles[profile.account_id] = profile.user_id
     if set(profiles) != ids:
         raise ValueError('陪玩账号或本店资料不存在')
     if not ids:
@@ -229,52 +239,54 @@ def original_amount_facts(account_ids, *, as_of, since=None):
                    | Q(order__cancelled_at__gte=since) | Q(released_at__gte=since)
                    | Q(order__status__in=('GRABBED', 'IN_SERVICE'))
                    | Q(order__completed_at__isnull=True, order__cancelled_at__isnull=True))
-    assignments = list(OrderProvider.objects.filter(
+    assignments = OrderProvider.objects.filter(
         Q(provider_account_id__in=ids) | Q(provider_account__isnull=True, provider_id__in=legacy),
         overlapping, order__is_gift_snapshot=False,
         order__in_service_at__isnull=False, order__in_service_at__lte=as_of, created_at__lte=as_of,
-    ).values_list('order_id', 'provider_account_id', 'provider_id', 'order__original_attribution__status'))
+    ).order_by().values_list('order_id', 'provider_account_id', 'provider_id',
+                             'order__original_attribution__status', Value(False))
     primary_overlap = (Q(in_service_at__gte=since) | Q(completed_at__gte=since) | Q(cancelled_at__gte=since)
                        | Q(status__in=('GRABBED', 'IN_SERVICE'))
                        | Q(completed_at__isnull=True, cancelled_at__isnull=True))
-    primary = list(Order.objects.filter(
+    primary = Order.objects.filter(
         Q(provider_account_id__in=ids) | Q(provider_account__isnull=True, provider_id__in=legacy),
         primary_overlap, is_gift_snapshot=False,
         in_service_at__isnull=False, in_service_at__lte=as_of, created_at__lte=as_of,
-    ).values_list('pk', 'provider_account_id', 'provider_id', 'original_attribution__status'))
+    ).order_by().values_list('pk', 'provider_account_id', 'provider_id',
+                             'original_attribution__status', Value(False))
     # Team entry can be real before the overall order reaches IN_SERVICE.
     # A legacy report has no trustworthy per-entry timestamp, so unresolved
     # report evidence must trigger review rather than being treated as zero.
     from wallet.models import ProviderReport
-    reports = list(ProviderReport.objects.filter(
+    reports = ProviderReport.objects.filter(
         Q(provider_account_id__in=ids) | Q(provider_account__isnull=True, provider_id__in=legacy),
         Q(created_at__gte=since) | Q(order__in_service_at__gte=since) | Q(order__completed_at__gte=since)
         | Q(order__cancelled_at__gte=since) | Q(order__status__in=('GRABBED', 'IN_SERVICE')),
         order__isnull=False, order__is_gift_snapshot=False, created_at__lte=as_of,
-    ).exclude(entry_image='').exclude(entry_image__isnull=True)
-        .values_list('order_id', 'provider_account_id', 'provider_id', 'order__original_attribution__status'))
-    observed_orders = {row[0] for row in assignments + primary + reports}
+    ).exclude(entry_image='').exclude(entry_image__isnull=True).order_by().values_list(
+        'order_id', 'provider_account_id', 'provider_id', 'order__original_attribution__status', Value(True))
+    observations = list(assignments.union(primary, reports, all=True))
+    observed_orders = {row[0] for row in observations}
     from .work_original_facts import verified_amounts
     independent_amounts, independent_pairs = verified_amounts(ids, since=since, as_of=as_of)
     for account_id, amount in independent_amounts.items():
         subtotals[account_id] += amount
-    recorded_pairs = set(OrderParticipationSegment.objects.filter(
+    pairs = OrderParticipationSegment.objects.filter(
         attribution__order_id__in=observed_orders, provider_account_id__in=ids,
-    ).values_list('attribution__order_id', 'provider_account_id'))
+    ).values_list('attribution__order_id', 'provider_account_id', 'started_at')
+    recorded_pairs, started_pairs = set(), set()
+    for order_id, account_id, started_at in pairs:
+        pair = (order_id, account_id)
+        recorded_pairs.add(pair)
+        if started_at is not None and started_at <= as_of:
+            started_pairs.add(pair)
     unstarted_pairs = _verified_unstarted_transfers(ids, observed_orders, as_of=as_of)
-    for order_id, account_id, user_id, status in assignments + primary:
+    for order_id, account_id, user_id, status, is_report in observations:
         account_id = account_id or legacy.get(user_id)
-        if account_id in reviews and (order_id, account_id) not in unstarted_pairs and (order_id, account_id) not in independent_pairs and ((status != 'ACTIVE' and order_id not in verified_refunds)
-                                      or (order_id, account_id) not in recorded_pairs):
-            reviews[account_id].add(order_id)
-    started_pairs = set(OrderParticipationSegment.objects.filter(
-        attribution__order_id__in=observed_orders, provider_account_id__in=ids,
-        started_at__isnull=False, started_at__lte=as_of,
-    ).values_list('attribution__order_id', 'provider_account_id'))
-    for order_id, account_id, user_id, status in reports:
-        account_id = account_id or legacy.get(user_id)
-        if account_id in reviews and (order_id, account_id) not in unstarted_pairs and (order_id, account_id) not in independent_pairs and ((status != 'ACTIVE' and order_id not in verified_refunds)
-                                      or (order_id, account_id) not in started_pairs):
+        pair = (order_id, account_id)
+        evidence = started_pairs if is_report else recorded_pairs
+        if (account_id in reviews and pair not in unstarted_pairs and pair not in independent_pairs
+                and ((status != 'ACTIVE' and order_id not in verified_refunds) or pair not in evidence)):
             reviews[account_id].add(order_id)
     # An accepted handover is a complete responsibility snapshot: only the
     # latest snapshot effective at as_of contributes, never all its versions.

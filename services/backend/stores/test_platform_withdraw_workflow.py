@@ -1,9 +1,12 @@
 import os
+from datetime import timedelta, timezone as fixed_timezone
 from unittest import skipUnless
 from unittest.mock import patch
 
-from django.db import DatabaseError, connections
-from django.test import TestCase, override_settings
+from django.db import DatabaseError, InterfaceError, OperationalError, connections
+from django.db import transaction as directory_transaction
+from django.test import TestCase, TransactionTestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -15,7 +18,8 @@ from stores.db import transaction
 from stores.models import PlatformAccount, PlatformRoleGrant
 from stores.platform_auth import issue_tokens
 from stores.tests_hosts import xinan_store
-from wallet.models import SystemConfig, Transaction, WithdrawalPlatformEvent, WithdrawRequest, get_platform_wallet
+from wallet.models import (IdempotencyKey, SystemConfig, Transaction, WithdrawalPlatformEvent, WithdrawalRelease,
+                           WithdrawRequest, get_platform_wallet)
 from wallet.services import get_wallet
 from site_messages.models import Message
 
@@ -95,12 +99,14 @@ class PlatformWithdrawalWorkflowTest(TestCase):
             down = self.action(pk, 'approve', client_request_id='offline-approve')
         self.assertEqual(down.status_code, 503, down.data)
         self.assertIn('平台身份服务暂不可用', str(down.data))
-        with patch('stores.platform_withdrawals._authorized_store', side_effect=DatabaseError('control outage')):
-            initial = self.action(pk, 'approve', client_request_id='offline-approve')
-        self.assertEqual(initial.status_code, 503, initial.data)
-        with patch('stores.platform_withdrawals.account_for_token', side_effect=DatabaseError('control outage')):
-            recheck = self.action(pk, 'approve', client_request_id='offline-approve')
-        self.assertEqual(recheck.status_code, 503, recheck.data)
+        for error in (DatabaseError, InterfaceError):
+            for boundary in ('_authorized_store', '_store_ready', 'account_for_token'):
+                with self.subTest(error=error.__name__, boundary=boundary):
+                    with patch(f'stores.platform_withdrawals.{boundary}', side_effect=error('control outage')):
+                        unavailable = self.action(pk, 'approve', client_request_id='offline-approve')
+                    self.assertEqual(unavailable.status_code, 503, unavailable.data)
+                    self.assertEqual(unavailable.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+                    self.assertNotIn('data', unavailable.data)
         with store_context(self.second):
             row = WithdrawRequest.objects.get(pk=pk)
             wallet = get_wallet(account=self.account)
@@ -110,6 +116,41 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         restored = self.action(pk, 'approve', client_request_id='offline-approve')
         self.assertEqual(restored.status_code, 200, restored.data)
         self.assertEqual(restored.data['code'], 0, restored.data)
+
+    def test_platform_approval_store_write_failure_can_retry_original_request(self):
+        pk = self.apply()
+        self.initial(pk)
+        key = 'approve-store-write-retry'
+        for error in (DatabaseError, InterfaceError):
+            def disconnect_event_insert(execute, sql, params, many, context):
+                if sql.lstrip().upper().startswith('INSERT') and 'wallet_withdrawalplatformevent' in sql.lower():
+                    raise error('isolated store write failure')
+                return execute(sql, params, many, context)
+
+            with self.subTest(error=error.__name__):
+                with connections[self.second.database_alias].execute_wrapper(disconnect_event_insert):
+                    unavailable = self.action(pk, 'approve', client_request_id=key)
+                self.assertEqual(unavailable.status_code, 503, unavailable.data)
+                self.assertEqual(unavailable.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
+                self.assertNotIn('data', unavailable.data)
+                with store_context(self.second):
+                    row = WithdrawRequest.objects.select_related('transaction').get(pk=pk)
+                    wallet = get_wallet(account=self.account)
+                    self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
+                                     ('STORE_APPROVED', 'PENDING', 80000, 20000))
+                    self.assertFalse(WithdrawalPlatformEvent.objects.filter(withdrawal=row).exists())
+        restored = self.action(pk, 'approve', client_request_id=key)
+        self.assertEqual(restored.status_code, 200, restored.data)
+        self.assertFalse(restored.data['data']['replayed'])
+        replay = self.action(pk, 'approve', client_request_id=key)
+        self.assertEqual(replay.status_code, 200, replay.data)
+        self.assertTrue(replay.data['data']['replayed'])
+        with store_context(self.second):
+            row.refresh_from_db()
+            wallet.refresh_from_db()
+            self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
+                             ('PLATFORM_APPROVED', 'PENDING', 80000, 20000))
+            self.assertEqual(WithdrawalPlatformEvent.objects.filter(withdrawal=row, request_id=key).count(), 1)
 
     def test_committed_event_audit_is_recovered_by_original_request_retry(self):
         from stores.models import PlatformAuditEvent, PlatformWithdrawalAuditReceipt
@@ -141,6 +182,159 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         with store_context(self.second):
             self.assertEqual(WithdrawalPlatformEvent.objects.filter(withdrawal_id=pk).count(), 1)
             wallet.refresh_from_db(); self.assertEqual((wallet.balance, wallet.frozen_amount), (80000, 20000))
+
+    def test_manual_audit_disconnect_is_retryable_with_the_same_event(self):
+        from stores.models import PlatformAuditEvent, PlatformWithdrawalAuditReceipt
+
+        pk = self.apply()
+        self.initial(pk)
+        key = 'audit-disconnect-approve'
+        approved = self.action(pk, 'approve', client_request_id=key)
+        self.assertEqual(approved.status_code, 200, approved.data)
+        with store_context(self.second):
+            event = WithdrawalPlatformEvent.objects.get(withdrawal_id=pk, action='approve')
+        path = f'/api/admin/platform/withdrawals/xinan/{pk}/audit-recover'
+        data = {'event_id': event.pk, 'client_request_id': key}
+
+        for alias, table in (
+            ('default', 'stores_platformwithdrawalauditreceipt'),
+            (self.second.database_alias, 'wallet_withdrawalplatformevent'),
+        ):
+            def disconnect(execute, sql, params, many, context):
+                if sql.lstrip().upper().startswith('SELECT') and table in sql.lower():
+                    raise InterfaceError('isolated audit connection lost')
+                return execute(sql, params, many, context)
+
+            with self.subTest(alias=alias), connections[alias].execute_wrapper(disconnect):
+                for response in (self.f.get(path), self.f.post(path, data, format='json')):
+                    self.assertEqual(response.status_code, 503, response.data)
+                    self.assertEqual(response.data['errorCode'], 'AUDIT_UNAVAILABLE')
+                    self.assertNotIn('data', response.data)
+        self.assertFalse(PlatformWithdrawalAuditReceipt.objects.filter(store=self.second).exists())
+
+        with self.captureOnCommitCallbacks(using='default', execute=True):
+            recovered = self.f.post(path, data, format='json')
+        self.assertEqual(recovered.status_code, 200, recovered.data)
+        self.assertTrue(recovered.data['data']['recovered'])
+        with self.captureOnCommitCallbacks(using='default', execute=True):
+            replay = self.f.post(path, data, format='json')
+        self.assertFalse(replay.data['data']['recovered'])
+        self.assertEqual(replay.data['data']['audit_id'], recovered.data['data']['audit_id'])
+        self.assertEqual(PlatformWithdrawalAuditReceipt.objects.filter(store=self.second).count(), 1)
+        self.assertEqual(PlatformAuditEvent.objects.filter(
+            target_store_slug=self.second.slug, action='withdraw.approve', target_id=str(pk)).count(), 1)
+
+    def test_manual_audit_read_rechecks_store_scope_after_reading_events(self):
+        from stores.platform_withdrawal_audit import read_event
+
+        pk = self.apply()
+        self.initial(pk)
+        approved = self.action(pk, 'approve', client_request_id='audit-scope-approve')
+        self.assertEqual(approved.status_code, 200, approved.data)
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+        path = f'/api/admin/platform/withdrawals/xinan/{pk}/audit-recover'
+        self.assertEqual(self.f.get(path).status_code, 200)
+
+        def read_then_revoke(store, withdrawal_id, event_id):
+            facts = read_event(store, withdrawal_id, event_id)
+            PlatformRoleGrant.objects.filter(account=self.finance, scope_slug=store.slug).update(is_active=False)
+            return facts
+
+        with patch('stores.platform_withdrawal_audit.read_event', side_effect=read_then_revoke):
+            response = self.f.get(path)
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn('data', response.data)
+        self.assertEqual(self.f.get(path).status_code, 404)
+
+    def test_withdrawal_queue_discards_payee_details_if_store_access_is_revoked(self):
+        from stores.models import PlatformAuditEvent
+
+        pk = self.apply()
+        self.initial(pk)
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+        path = '/api/admin/platform/withdrawals/xinan'
+        allowed = self.f.get(path)
+        self.assertEqual(allowed.status_code, 200, allowed.data)
+        self.assertEqual((allowed.data['data']['results'][0]['id'], allowed['Cache-Control']), (pk, 'no-store'))
+        self.assertEqual(allowed.data['data']['results'][0]['payee_account'], 'qa-only')
+        reads = []
+
+        def revoke_after_read(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if sql.lstrip().upper().startswith('SELECT') and 'payee_account' in sql.lower():
+                reads.append(True)
+                PlatformRoleGrant.objects.filter(account=self.finance, scope_slug=self.second.slug).update(is_active=False)
+            return result
+
+        with connections[self.second.database_alias].execute_wrapper(revoke_after_read):
+            response = self.f.get(path)
+        self.assertEqual(reads, [True])
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn('data', response.data)
+        self.assertEqual(PlatformAuditEvent.objects.filter(
+            account=self.finance, action='withdraw.view_queue', target_store_slug=self.second.slug).count(), 1)
+
+    def test_withdrawal_stores_discards_revoked_store_from_final_scope(self):
+        from stores.platform_withdrawals import _read_store
+
+        pk = self.apply()
+        self.initial(pk)
+        self.first.initialized_at = timezone.now()
+        self.first.save(update_fields=['initialized_at'])
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+
+        def revoke_after_read(store):
+            facts = _read_store(store)
+            if store.pk == self.second.pk:
+                self.assertEqual(facts[0], {'STORE_APPROVED': 1})
+                PlatformRoleGrant.objects.filter(account=self.finance, scope_slug=store.slug).update(is_active=False)
+            return facts
+
+        with patch('stores.platform_withdrawals._read_store', side_effect=revoke_after_read):
+            response = self.f.get('/api/admin/platform/withdrawals')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual([item['slug'] for item in response.data['data']['stores']], [self.first.slug])
+
+    def test_withdrawal_list_results_preserve_known_stores_and_require_audit(self):
+        pk = self.apply()
+        self.initial(pk)
+        self.first.initialized_at = timezone.now()
+        self.first.save(update_fields=['initialized_at'])
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+        summary_path = '/api/admin/platform/withdrawals'
+        queue_path = f'{summary_path}/xinan'
+
+        def disconnect(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('SELECT') and 'wallet_withdrawrequest' in sql.lower():
+                raise InterfaceError('isolated store connection lost')
+            return execute(sql, params, many, context)
+
+        with connections[self.second.database_alias].execute_wrapper(disconnect):
+            summary = self.f.get(summary_path)
+            queue = self.f.get(queue_path)
+        self.assertEqual(summary.status_code, 200, summary.data)
+        rows = {row['slug']: row for row in summary.data['data']['stores']}
+        self.assertEqual((rows[self.first.slug]['status'], rows[self.first.slug]['counts']), ('OK', {}))
+        self.assertEqual((rows[self.second.slug]['status'], rows[self.second.slug]['counts'],
+                          rows[self.second.slug]['legacy_pending']), ('UNAVAILABLE', None, None))
+        self.assertEqual(queue.status_code, 503, queue.data)
+        self.assertNotIn('data', queue.data)
+
+        def fail_audit(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('INSERT') and 'stores_platformauditevent' in sql.lower():
+                raise InterfaceError('isolated control audit write failure')
+            return execute(sql, params, many, context)
+
+        for path in (summary_path, queue_path):
+            with (self.subTest(path=path), directory_transaction.atomic(using='default'),
+                  connections['default'].execute_wrapper(fail_audit)):
+                response = self.f.get(path)
+                self.assertEqual(response.status_code, 503, response.data)
+                self.assertEqual(response.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+                self.assertNotIn('data', response.data)
+        restored = self.f.get(queue_path)
+        self.assertEqual(restored.status_code, 200, restored.data)
+        self.assertEqual(restored.data['data']['results'][0]['id'], pk)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
@@ -210,6 +404,139 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         with store_context(self.second):
             wallet = get_wallet(account=self.account)
             self.assertEqual((wallet.balance, wallet.frozen_amount), (100000, 0))
+
+    def dashboard_client(self):
+        actor = PlatformAccount(username='qa-dashboard-admin', phone='13800003333')
+        actor.set_password('test-only-dashboard-password')
+        actor.save()
+        PlatformRoleGrant.objects.create(account=actor, role='SUPER_ADMIN', scope_slug='*')
+        dashboard = APIClient(HTTP_HOST='admin.esports.club')
+        credentials = {'username': actor.username, 'password': 'test-only-dashboard-password'}
+        delivered = []
+        login = '/api/admin/platform/auth/login'
+        with patch('stores.platform_auth.send_verification_code',
+                   side_effect=lambda phone, code: delivered.append(code)):
+            challenge = dashboard.post(login, credentials, format='json')
+            self.assertEqual(challenge.status_code, 200, challenge.data)
+            signed = dashboard.post(login, {**credentials, 'smsChallenge': challenge.data['data']['smsChallenge'],
+                                            'smsCode': delivered[0]}, format='json')
+            self.assertEqual(signed.status_code, 200, signed.data)
+        dashboard.credentials(HTTP_AUTHORIZATION='Bearer ' + signed.data['data']['token'])
+        return dashboard
+
+    def test_dashboard_keeps_unconfirmed_payouts_out_of_a_complete_total(self):
+        pk = self.apply()
+        self.initial(pk)
+        self.assertEqual(self.action(pk, 'approve', client_request_id='dashboard-approve').status_code, 200)
+        dashboard = self.dashboard_client()
+        path = '/api/admin/platform/dashboard'
+        zero = {'count': 0, 'actual_amount_fen': 0}
+        approved = dashboard.get(path).data['data']
+        self.assertTrue(approved['complete'])
+        self.assertEqual(approved['partial_paid_withdrawals'], zero)
+
+        unknown = self.action(pk, 'mark-unknown', client_request_id='dashboard-unknown', reason='等待核实')
+        self.assertEqual(unknown.status_code, 200, unknown.data)
+        with CaptureQueriesContext(connections[self.second.database_alias]) as queries:
+            pending = dashboard.get(path)
+        self.assertEqual(pending.status_code, 200, pending.data)
+        data = pending.data['data']
+        rows = {row['slug']: row for row in data['stores']}
+        self.assertFalse(data['complete'])
+        self.assertEqual(data['partial_paid_withdrawals'], zero)
+        self.assertEqual(rows[self.first.slug]['counts']['paid_withdrawals'],
+                         {**zero, 'status': 'OK', 'actual_amount': 0})
+        self.assertEqual(rows[self.second.slug]['status'], 'OK')
+        self.assertIsNotNone(rows[self.second.slug]['read_at'])
+        self.assertEqual(rows[self.second.slug]['counts']['paid_withdrawals'],
+                         {'status': 'REVIEW', 'count': None, 'actual_amount': None, 'actual_amount_fen': None})
+        payout_queries = [query for query in queries if query['sql'].lstrip().upper().startswith('SELECT')
+                          and 'wallet_withdrawrequest' in query['sql'].lower()]
+        self.assertEqual(len(payout_queries), 1)
+
+        with store_context(self.second):
+            row = WithdrawRequest.objects.select_related('transaction').get(pk=pk)
+            wallet = get_wallet(account=self.account)
+            self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
+                             ('PAYMENT_UNKNOWN', 'PENDING', 80000, 20000))
+            self.assertEqual((row.actual_amount, row.tax_amount), (19000, 1000))
+            self.assertFalse(WithdrawalPlatformEvent.objects.filter(withdrawal=row, action='paid').exists())
+        rejected = self.action(pk, 'reject', client_request_id='dashboard-rejected',
+                               reason='确认未付', confirmed_unpaid=True)
+        self.assertEqual(rejected.status_code, 200, rejected.data)
+        resolved = dashboard.get(path).data['data']
+        self.assertTrue(resolved['complete'])
+        self.assertEqual(resolved['partial_paid_withdrawals'], zero)
+        with store_context(self.second):
+            row.refresh_from_db()
+            wallet.refresh_from_db()
+            self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
+                             ('REJECTED', 'FAILED', 100000, 0))
+
+    def test_dashboard_requires_matching_paid_event_and_wallet_posting(self):
+        pk = self.apply()
+        self.initial(pk)
+        self.assertEqual(self.action(pk, 'approve', client_request_id='dashboard-event-approve').status_code, 200)
+        paid_at = timezone.now().astimezone(fixed_timezone(timedelta(hours=8)))
+        paid = self.action(pk, 'paid', client_request_id='dashboard-event-paid', payout_reference='QA-PAID-DASHBOARD',
+                           paid_amount_fen=19000, paid_at=paid_at.isoformat())
+        self.assertEqual(paid.status_code, 200, paid.data)
+        dashboard = self.dashboard_client()
+
+        def totals():
+            response = dashboard.get('/api/admin/platform/dashboard')
+            self.assertEqual(response.status_code, 200, response.data)
+            return response.data['data']
+
+        def assert_needs_review():
+            data = totals()
+            stores = {row['slug']: row['counts']['paid_withdrawals'] for row in data['stores']}
+            self.assertEqual(stores[self.second.slug],
+                             {'status': 'REVIEW', 'count': None, 'actual_amount': None, 'actual_amount_fen': None})
+            self.assertFalse(data['complete'])
+            self.assertEqual(data['partial_paid_withdrawals'], {'count': 0, 'actual_amount_fen': 0})
+
+        with CaptureQueriesContext(connections[self.second.database_alias]) as queries:
+            valid = totals()
+        self.assertEqual(sum(query['sql'].lstrip().upper().startswith('SELECT')
+                             and 'wallet_withdrawrequest' in query['sql'].lower() for query in queries), 1)
+        self.assertTrue(valid['complete'])
+        self.assertEqual(valid['partial_paid_withdrawals'], {'count': 1, 'actual_amount_fen': 19000})
+
+        with store_context(self.second):
+            event = WithdrawalPlatformEvent.objects.get(withdrawal_id=pk, action='paid')
+            event.action = 'approve'
+            event.save(update_fields=['action'])
+        assert_needs_review()
+
+        for changes in ({'paid_amount_fen': 19001}, {'paid_amount_fen': '19000'},
+                        {'payout_reference': 'QA-WRONG'}, {'paid_at': (paid_at + timedelta(microseconds=1)).isoformat()}):
+            with self.subTest(changes=changes):
+                with store_context(self.second):
+                    WithdrawalPlatformEvent.objects.filter(pk=event.pk).update(action='paid', detail={**event.detail, **changes})
+                assert_needs_review()
+
+        with store_context(self.second):
+            legacy_detail = {key: value for key, value in event.detail.items() if key != 'paid_amount_fen'}
+            WithdrawalPlatformEvent.objects.filter(pk=event.pk).update(detail=legacy_detail)
+        assert_needs_review()
+
+        with store_context(self.second):
+            WithdrawalPlatformEvent.objects.filter(pk=event.pk).update(detail=event.detail)
+            row = WithdrawRequest.objects.get(pk=pk)
+            original_balance = row.transaction.balance_after
+            Transaction.objects.filter(pk=row.transaction_id).update(balance_after=original_balance + 1)
+        assert_needs_review()
+        with store_context(self.second):
+            Transaction.objects.filter(pk=row.transaction_id).update(balance_after=original_balance)
+        restored = totals()
+        self.assertEqual(restored['partial_paid_withdrawals'], valid['partial_paid_withdrawals'])
+
+        with store_context(self.second):
+            WithdrawalPlatformEvent.objects.create(withdrawal_id=pk, action='paid', from_status=event.from_status,
+                to_status=event.to_status, platform_actor_id=event.platform_actor_id, actor_name=event.actor_name,
+                request_id='duplicate-paid-event-test', request_fingerprint=event.request_fingerprint, detail=event.detail)
+        assert_needs_review()
 
     def test_old_pending_record_cannot_be_mistaken_for_unpaid(self):
         pk = self.apply()
@@ -340,3 +667,127 @@ class PlatformWithdrawalWorkflowTest(TestCase):
                     self.assertEqual(WithdrawRequest.objects.get(pk=pk).status, 'PLATFORM_APPROVED')
                 result = self.action(pk, 'paid', **payload, acknowledge_duplicate_reference=True)
             self.assertEqual(result.data['code'], 0, result.data)
+
+
+@override_settings(ALLOWED_HOSTS=['*'], LEGACY_FORCE_AUTH_COMPAT=False, LOGIN_OTP_REQUIRED=False,
+                   PLATFORM_IDENTITY_ENABLED=True, WITHDRAWAL_NOTICE_RECOVERY_ENABLED=True)
+class PlatformWithdrawalCommitRecoveryTest(TransactionTestCase):
+    databases = {'default', 'store_b'}
+    apply = PlatformWithdrawalWorkflowTest.apply
+    initial = PlatformWithdrawalWorkflowTest.initial
+    action = PlatformWithdrawalWorkflowTest.action
+
+    def setUp(self):
+        PlatformWithdrawalWorkflowTest.setUp(self)
+
+    def lose_commit_confirmation(self, operation):
+        store_db = connections[self.second.database_alias]
+        commit = store_db._commit
+
+        def lose_confirmation():
+            commit()
+            raise OperationalError('isolated confirmation loss after commit')
+
+        with patch.object(store_db, '_commit', side_effect=lose_confirmation):
+            return operation()
+
+    def test_owner_submit_and_cancel_replay_after_commit_confirmation_is_lost(self):
+        apply_path = '/api/wallet/withdraw/'
+        apply_payload = {'client_request_id': 'owner-apply-commit-retry', 'amount': 20000,
+                         'payee_method': 'WECHAT', 'payee_account': 'qa-only', 'payee_name': '隔离测试'}
+
+        def submit(payload):
+            return self.p.post(apply_path, payload, format='json')
+
+        unavailable = self.lose_commit_confirmation(lambda: submit(apply_payload))
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertEqual(unavailable.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
+        self.assertNotIn('fundResult', unavailable.data)
+        with store_context(self.second):
+            row = WithdrawRequest.objects.select_related('transaction').get(account=self.account)
+            wallet = get_wallet(account=self.account)
+            self.assertEqual((wallet.balance, wallet.frozen_amount, row.status, row.transaction.status),
+                             (80000, 20000, 'PENDING', 'PENDING'))
+        applied = submit(apply_payload).data
+        self.assertEqual(applied['errorCode'], 'FUND_ALREADY_PROCESSED')
+        self.assertEqual(applied['fundResult']['data']['request']['id'], row.pk)
+        self.assertEqual(submit({**apply_payload, 'amount': 19000}).data['errorCode'], 'REQUEST_ID_CONFLICT')
+
+        cancel_path = f'{apply_path}{row.pk}/cancel/'
+        cancel_payload = {'client_request_id': 'owner-cancel-commit-retry'}
+
+        def cancel():
+            return self.p.post(cancel_path, cancel_payload, format='json')
+
+        unavailable = self.lose_commit_confirmation(cancel)
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertEqual(unavailable.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
+        cancelled = cancel().data
+        self.assertEqual(cancelled['errorCode'], 'FUND_ALREADY_PROCESSED')
+        self.assertEqual(cancelled['fundResult']['data'], {'id': row.pk, 'status': 'CANCELLED', 'balance': 100000})
+        with store_context(self.second):
+            row.refresh_from_db()
+            wallet.refresh_from_db()
+            release = WithdrawalRelease.objects.get(withdrawal=row)
+            self.assertEqual((wallet.balance, wallet.frozen_amount, row.status, row.transaction.status),
+                             (100000, 0, 'CANCELLED', 'FAILED'))
+            self.assertEqual((release.amount, release.original_transaction_id), (20000, row.transaction_id))
+            self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type=Transaction.TxType.WITHDRAW).count(), 1)
+            self.assertEqual(IdempotencyKey.objects.filter(account=self.account, scope__in=('withdraw', 'withdraw.cancel')).count(), 2)
+            titles = Message.objects.filter(recipient_account=self.account,
+                action_url=f'/pages/wallet/index?withdraw_id={row.pk}').values_list('title', flat=True)
+            self.assertCountEqual(titles, ('提现申请已提交', '提现申请已取消'))
+
+    def test_owner_withdrawal_retries_only_with_an_original_receipt_key(self):
+        def disconnect_on_read(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('SELECT') and 'wallet_idempotencykey' in sql.lower():
+                raise InterfaceError('isolated withdrawal receipt lookup interrupted')
+            return execute(sql, params, many, context)
+
+        payload = {'amount': 20000, 'payee_method': 'WECHAT', 'payee_account': 'qa-only', 'payee_name': '隔离测试'}
+        with connections[self.second.database_alias].execute_wrapper(disconnect_on_read):
+            unavailable = self.p.post('/api/wallet/withdraw/', {**payload, 'client_request_id': 'owner-original-key'},
+                                      format='json')
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertIn('原操作编号', unavailable.data['msg'])
+        with patch('wallet.withdraw_rules.lock_withdraw_rules', side_effect=InterfaceError('isolated disconnect')):
+            unavailable = self.p.post('/api/wallet/withdraw/', payload, format='json')
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertIn('请先核对提现记录', unavailable.data['msg'])
+        self.assertNotIn('原操作编号', unavailable.data['msg'])
+        with store_context(self.second):
+            self.assertFalse(WithdrawRequest.objects.filter(account=self.account).exists())
+            wallet = get_wallet(account=self.account)
+            self.assertEqual((wallet.balance, wallet.frozen_amount), (100000, 0))
+
+    def test_unpaid_rejection_replays_after_commit_confirmation_is_lost(self):
+        from stores.models import PlatformWithdrawalAuditReceipt
+
+        pk = self.apply()
+        self.initial(pk)
+        key = 'reject-commit-retry'
+        payload = {'client_request_id': key, 'reason': '已核实未打款', 'confirmed_unpaid': True}
+        unavailable = self.lose_commit_confirmation(lambda: self.action(pk, 'reject', **payload))
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertEqual(unavailable.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
+        self.assertFalse(PlatformWithdrawalAuditReceipt.objects.filter(store=self.second).exists())
+        with store_context(self.second):
+            event = WithdrawalPlatformEvent.objects.get(withdrawal_id=pk, request_id=key)
+            release = WithdrawalRelease.objects.get(withdrawal_id=pk)
+            self.assertEqual((release.balance_before, release.balance_after, release.frozen_before,
+                              release.frozen_after, release.amount), (80000, 100000, 20000, 0, 20000))
+
+        replay = self.action(pk, 'reject', **payload)
+        self.assertEqual(replay.data['data'], {'id': pk, 'status': 'REJECTED', 'replayed': True,
+                                               'audit_status': 'RECORDED'})
+        self.assertTrue(PlatformWithdrawalAuditReceipt.objects.filter(store=self.second,
+                                                                    tenant_event_id=event.pk).exists())
+        with store_context(self.second):
+            row = WithdrawRequest.objects.select_related('transaction').get(pk=pk)
+            wallet = get_wallet(account=self.account)
+            self.assertEqual((row.transaction_id, row.transaction.status, wallet.balance, wallet.frozen_amount),
+                             (release.original_transaction_id, 'FAILED', 100000, 0))
+            self.assertEqual(WithdrawalRelease.objects.get(withdrawal=row).pk, release.pk)
+            self.assertEqual(WithdrawalPlatformEvent.objects.filter(withdrawal=row).count(), 1)
+            self.assertEqual(Message.objects.filter(recipient_account=self.account, title='提现审核未通过',
+                action_url=f'/pages/wallet/index?withdraw_id={pk}').count(), 1)

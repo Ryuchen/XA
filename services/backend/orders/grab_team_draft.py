@@ -175,6 +175,35 @@ def withdraw(round_id, team_id, account_id):
     return team
 
 
+def team_commit_order_proven(invitation, confirmation, *, withdrawal=None):
+    """Prove order for already validated receipts of the same team."""
+    from .grab_clock_contract import production_enabled
+    from .grab_receipt_probe import actor_membership_evidence_present
+
+    if not production_enabled() or not actor_membership_evidence_present(invitation) or not invitation.cutoff_at:
+        return False
+    if type(invitation.invitee_business_cycle) is not int or invitation.invitee_business_cycle <= 0:
+        return False
+    if confirmation is not None and (not actor_membership_evidence_present(confirmation)
+            or confirmation.actor_business_cycle != invitation.invitee_business_cycle):
+        return False
+    previous = invitation
+    earliest = invitation.lower_at - timedelta(microseconds=invitation.precision_us)
+    for current in (confirmation, withdrawal):
+        if current is None:
+            continue
+        if not (current.cutoff_at and current.round_id == invitation.round_id and current.pk > previous.pk):
+            return False
+        if previous.round_phase == 'PARKED' and current.round_phase == 'OPEN':
+            return False
+        current_upper = current.upper_observed_at + timedelta(microseconds=current.precision_us)
+        if current_upper < earliest:
+            return False
+        earliest = max(earliest, current.lower_at - timedelta(microseconds=current.precision_us))
+        previous = current
+    return True
+
+
 def verified_withdrawal(team, members, receipt, actor_id):
     """Verify the stored withdrawal and its order after all joined members.
 
@@ -212,10 +241,7 @@ def verified_withdrawal(team, members, receipt, actor_id):
     # The confirmation reads the persisted invitation, and a later receipt
     # ID proves the prior transaction released that lock before this one.
     # This proves only this team's command order, not candidate ranking.
-    from stores.db import connection
-    causal_order = (connection.vendor == 'mysql' and invitation.pk < receipt.pk
-                    and (not confirmation or invitation.pk < confirmation.pk < receipt.pk))
-    if causal_order:
+    if team_commit_order_proven(invitation, confirmation, withdrawal=receipt):
         return True
     if (confirmation and invitation.upper_observed_at + timedelta(microseconds=invitation.precision_us)
             >= confirmation.lower_at - timedelta(microseconds=confirmation.precision_us)):

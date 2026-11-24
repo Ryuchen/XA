@@ -103,6 +103,27 @@ class SetupStageTests(TestCase):
         self.branch.refresh_from_db()
         self.assertEqual(self.branch.status, Store.Status.CONFIGURING)
 
+    def test_setup_owner_can_publish_order_rules_without_managing_other_content(self):
+        from engagement.models import ClubContent
+
+        client, response = self.login('setup-owner')
+        self.assertEqual(response.status_code, 200, response.data)
+        with store_context(self.branch):
+            activity = ClubContent.objects.create(code='closed-activity', kind='HOT', title='未开放活动')
+        url = '/api/admin/club-content/'
+        data = {'code': 'order-notice', 'title': '点单须知', 'kind': 'ORDER_RULES', 'content': '请先核对预约时间。'}
+        created = client.post(url, data, format='json')
+        self.assertEqual(created.status_code, 201, created.content)
+        notice_id = created.data['data']['id']
+        self.assertEqual(client.get(f'{url}{notice_id}/').status_code, 200)
+        self.assertEqual(client.get(f'{url}{activity.pk}/').status_code, 404)
+        self.assertEqual(client.post(url, {**data, 'code': 'new-activity', 'kind': 'HOT'}, format='json').status_code, 403)
+        self.assertEqual(client.patch(f'{url}{notice_id}/', {'kind': 'HOT'}, format='json').status_code, 403)
+        self.assertEqual(client.patch(f'{url}{notice_id}/', {'content': '请确认下单时间。'}, format='json').status_code, 200)
+        self.assertEqual(APIClient(HTTP_HOST='xa.esports.club').get('/api/club/content/').status_code, 403)
+        with store_context(self.original):
+            self.assertFalse(ClubContent.objects.filter(code='order-notice').exists())
+
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_setup_owner_can_configure_catalog_and_timeout_only_in_own_store(self):

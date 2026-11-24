@@ -3,9 +3,12 @@ import logging
 
 from celery import Task, shared_task
 from django.conf import settings
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, InterfaceError, transaction
+from kombu.exceptions import OperationalError as BrokerOperationalError
+from redis.exceptions import RedisError
 
 from .context import store_context
+from .dynamic_database import discover_store_connection
 from .models import (PlatformWithdrawalAuditDispatchCursor, PlatformWithdrawalAuditScanCursor, Store)
 from .platform_withdrawal_audit import read_event, record_committed_event
 
@@ -34,13 +37,17 @@ def scan_store(store_id):
             cursor, _ = PlatformWithdrawalAuditScanCursor.objects.get_or_create(store=store)
             cursor = PlatformWithdrawalAuditScanCursor.objects.select_for_update().get(pk=cursor.pk)
             try:
+                # Dynamic routing claims live in the control database.
+                if not discover_store_connection(store):
+                    raise StoreReadUnavailable()
+            except ValueError as exc:
+                raise StoreReadUnavailable() from exc
+            try:
                 with store_context(store):
-                    if store.database_alias not in settings.DATABASES:
-                        raise StoreReadUnavailable()
                     from wallet.models import WithdrawalPlatformEvent
                     events = list(WithdrawalPlatformEvent.objects.filter(pk__gt=cursor.last_event_id)
                                   .order_by('pk').values_list('pk', 'withdrawal_id')[:MAX_EVENTS + 1])
-            except (DatabaseError, ValueError) as exc:
+            except (DatabaseError, InterfaceError, ValueError) as exc:
                 raise StoreReadUnavailable() from exc
             selected = events[:MAX_EVENTS]
             created = already = 0
@@ -49,7 +56,7 @@ def scan_store(store_id):
                 try:
                     try:
                         facts = read_event(store, withdrawal_id, event_id)
-                    except DatabaseError as exc:
+                    except (DatabaseError, InterfaceError) as exc:
                         raise StoreReadUnavailable() from exc
                     _, was_created = record_committed_event(store, facts)
                     if was_created:
@@ -70,7 +77,7 @@ def scan_store(store_id):
     except StoreReadUnavailable:
         logger.warning('Withdrawal audit scan could not read store %s', store_id)
         return {'status': 'STORE_UNAVAILABLE', 'store_id': store_id}
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         logger.warning('Withdrawal audit scan could not reach platform control for store %s', store_id)
         return {'status': 'CONTROL_UNAVAILABLE', 'store_id': store_id}
 
@@ -79,6 +86,7 @@ def scan_store(store_id):
 def dispatch():
     if not getattr(settings, 'WITHDRAW_AUDIT_AUTO_RECOVERY_ENABLED', False):
         return {'status': 'DISABLED', 'queued': 0}
+    queued = 0
     try:
         with transaction.atomic(using='default'):
             from .database_identity import lock_store_registration
@@ -89,10 +97,19 @@ def dispatch():
                        .order_by('pk').values_list('pk', flat=True)[:MAX_STORES + 1])
             selected = ids[:MAX_STORES]
             for store_id in selected:
-                scan_store.apply_async(args=[store_id])
+                try:
+                    scan_store.apply_async(args=[store_id])
+                except (BrokerOperationalError, RedisError, OSError):
+                    # Redis may already have accepted the message. Revisit this
+                    # page on the next dispatch; the tenant scan deduplicates.
+                    transaction.set_rollback(True, using='default')
+                    logger.warning('Withdrawal audit enqueue unconfirmed for store %s after %s confirmed sends',
+                                   store_id, queued)
+                    return {'status': 'ENQUEUE_UNCONFIRMED', 'queued': queued, 'enqueue_unknown': [store_id]}
+                queued += 1
             cursor.last_store_id = selected[-1] if len(ids) > MAX_STORES else 0
             cursor.save(update_fields=['last_store_id', 'updated_at'])
-        return {'status': 'OK', 'queued': len(selected), 'next_after': cursor.last_store_id}
-    except DatabaseError:
-        logger.warning('Withdrawal audit dispatcher could not reach platform control')
-        return {'status': 'CONTROL_UNAVAILABLE', 'queued': 0}
+        return {'status': 'OK', 'queued': queued, 'next_after': cursor.last_store_id}
+    except (DatabaseError, InterfaceError):
+        logger.warning('Withdrawal audit dispatcher could not reach platform control after %s confirmed sends', queued)
+        return {'status': 'CONTROL_UNAVAILABLE', 'queued': queued}

@@ -5,10 +5,9 @@ from rest_framework.test import APIClient
 
 from club_accounts.tokens import issue_account_tokens
 from coupons.models import Coupon, UserCoupon
-from engagement.services import config
 from orders.models import Order, Reservation
 from orders.tests.factories import make_boss_type, make_promotion
-from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase, iso, slot
+from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase, iso, prepare_reservation_payment, slot
 from wallet.models import Wallet
 
 
@@ -21,7 +20,7 @@ class ReservationHourlyPricingTest(ReservationApiTestBase):
         self.service.price_unit = '小时'
         self.service.price = 10100  # 1010 store coins per hour
         self.service.save(update_fields=['price_unit', 'price'])
-        config()
+        prepare_reservation_payment(self.boss_account)
         self.boss_client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
         self.provider_client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.provider_account)[0])
 

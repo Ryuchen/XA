@@ -2,10 +2,11 @@
 import hashlib
 import json
 from django.conf import settings
-from django.db import DatabaseError, IntegrityError
+from django.db import DatabaseError, IntegrityError, InterfaceError
 from django.db.models import Count
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
@@ -59,6 +60,12 @@ def _store_ready(store):
     return store_connection_ready(store)
 
 
+def _can_view_original_store(actor, store):
+    return platform_stores_for(actor, 'withdraw:view').filter(
+        pk=store.pk, slug=store.slug, database_alias=store.database_alias, initialized_at__isnull=False,
+    ).exists()
+
+
 class PlatformWithdrawalStoresView(APIView):
     authentication_classes = [PlatformAuthentication]
     permission_classes = [IsPlatformAuthenticated]
@@ -66,21 +73,34 @@ class PlatformWithdrawalStoresView(APIView):
     def get(self, request):
         if not admin_origin(request):
             return fail('平台账号请从管理后台入口访问', 403)
-        stores = platform_stores_for(request.platform_account, 'withdraw:view').order_by('id')
-        if not stores.exists():
-            return fail('无平台提现查看权限', 403)
-        rows = []
-        for store in stores:
-            item = {'slug': store.slug, 'name': store.name, 'currency_name': store.currency_name,
-                    'status': 'UNAVAILABLE', 'counts': None, 'legacy_pending': None}
-            if _store_ready(store):
-                try:
-                    item['counts'], item['legacy_pending'] = _read_store(store)
-                    item['status'] = 'OK'
-                except DatabaseError:
-                    pass
-            rows.append(item)
-        PlatformAuditEvent.objects.create(account=request.platform_account, action='withdraw.view_stores')
+        try:
+            stores = list(platform_stores_for(request.platform_account, 'withdraw:view').order_by('id'))
+            if not stores:
+                return fail('无平台提现查看权限', 403)
+            rows = []
+            for store in stores:
+                row = {'slug': store.slug, 'name': store.name, 'currency_name': store.currency_name,
+                       'status': 'UNAVAILABLE', 'counts': None, 'legacy_pending': None}
+                if _store_ready(store):
+                    try:
+                        row['counts'], row['legacy_pending'] = _read_store(store)
+                        row['status'] = 'OK'
+                    except (DatabaseError, InterfaceError):
+                        pass
+                rows.append(row)
+            actor = account_for_token(request.auth)
+            visible = set(platform_stores_for(actor, 'withdraw:view').values_list(
+                'pk', 'slug', 'database_alias', 'initialized_at',
+            ))
+            if not visible:
+                return fail('无平台提现查看权限', 403)
+            rows = [row for store, row in zip(stores, rows, strict=True)
+                    if (store.pk, store.slug, store.database_alias, store.initialized_at) in visible]
+            PlatformAuditEvent.objects.create(account=actor, action='withdraw.view_stores')
+        except TokenError as error:
+            raise AuthenticationFailed('平台登录已失效，请重新登录') from error
+        except (DatabaseError, InterfaceError):
+            return fail('平台提现服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
         response = Response({'code': 0, 'data': {'stores': rows, 'read_at': timezone.now().isoformat()}})
         response['Cache-Control'] = 'no-store'
         return response
@@ -93,11 +113,14 @@ class PlatformWithdrawalListView(APIView):
     def get(self, request, slug):
         if not admin_origin(request):
             return fail('平台账号请从管理后台入口访问', 403)
-        store = _authorized_store(request, slug, 'withdraw:view')
-        if store is None:
-            return fail('门店不存在或无权查看', 404)
-        if not _store_ready(store):
-            return fail('门店数据暂不可用', 503)
+        try:
+            store = _authorized_store(request, slug, 'withdraw:view')
+            if store is None:
+                return fail('门店不存在或无权查看', 404)
+            if not _store_ready(store):
+                return fail('门店数据暂不可用', 503)
+        except (DatabaseError, InterfaceError):
+            return fail('平台提现服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
         try:
             page = int(request.query_params.get('page', '1'))
             if not 1 <= page <= 100000:
@@ -135,10 +158,18 @@ class PlatformWithdrawalListView(APIView):
                          'workflow_version': row.workflow_version,
                          'legacy_ledger': _legacy_ledger(row) if scope == 'legacy' else None}
                         for row in rows]
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return fail('门店数据暂不可用', 503)
-        PlatformAuditEvent.objects.create(account=request.platform_account, action='withdraw.view_queue', target_store_slug=slug,
-                                          detail={'page': page, 'scope': scope})
+        try:
+            actor = account_for_token(request.auth)
+            if not _can_view_original_store(actor, store):
+                return fail('门店不存在或无权查看', 404)
+            PlatformAuditEvent.objects.create(account=actor, action='withdraw.view_queue', target_store_slug=slug,
+                                              detail={'page': page, 'scope': scope})
+        except TokenError as error:
+            raise AuthenticationFailed('平台登录已失效，请重新登录') from error
+        except (DatabaseError, InterfaceError):
+            return fail('平台提现服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
         response = Response({'code': 0, 'data': {'name': store.name, 'currency_name': store.currency_name,
                             'page': page, 'page_size': 30, 'total': total, 'results': data}})
         response['Cache-Control'] = 'no-store'
@@ -183,10 +214,15 @@ class PlatformWithdrawalActionView(APIView):
                 rows.append({'event_id': event.pk, 'request_id': event.request_id, 'action': event.action,
                     'actor_id': str(event.platform_actor_id), 'actor_name': event.actor_name,
                     'from_status': event.from_status, 'to_status': event.to_status, 'audit_status': audit_status})
+            actor = account_for_token(request.auth)
+            if not _can_view_original_store(actor, store):
+                return fail('门店不存在或无权查看', 404)
             response = Response({'code': 0, 'data': {'events': rows}})
             response['Cache-Control'] = 'no-store'
             return response
-        except DatabaseError:
+        except TokenError as error:
+            raise AuthenticationFailed('平台登录已失效，请重新登录') from error
+        except (DatabaseError, InterfaceError):
             return fail('平台或门店审计服务暂不可用，请稍后重试', 503, 'AUDIT_UNAVAILABLE')
 
     def post(self, request, slug, pk, action):
@@ -199,18 +235,23 @@ class PlatformWithdrawalActionView(APIView):
             return fail('操作无效', 404)
         try:
             store = _authorized_store(request, slug, required)
-        except DatabaseError:
+            if store is None:
+                return fail('门店不存在或无权操作', 404)
+            if not _store_ready(store):
+                return fail('门店数据暂不可用', 503)
+        except (DatabaseError, InterfaceError):
             return fail('平台授权服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
-        if store is None:
-            return fail('门店不存在或无权操作', 404)
-        if not _store_ready(store):
-            return fail('门店数据暂不可用', 503)
         if not isinstance(request.data, dict):
             return fail('请求格式无效', 400)
         key = request.data.get('client_request_id')
         if not isinstance(key, str) or not key.strip() or len(key) > 64:
             return fail('请提供有效的操作编号', 400)
-        key = key.strip()
+        try:
+            return self._apply_action(request, store, pk, action, required, key.strip())
+        except (DatabaseError, InterfaceError):
+            return fail('提现操作结果暂不可核验，请使用原操作编号重试', 503, 'WITHDRAWAL_UNAVAILABLE')
+
+    def _apply_action(self, request, store, pk, action, required, key):
         fingerprint = _fingerprint(action, request.data)
         with store_context(store), transaction.atomic():
             provider = None
@@ -232,10 +273,10 @@ class PlatformWithdrawalActionView(APIView):
                 return fail('提现所属陪玩已变化，请重新核对', 409)
             try:
                 actor = account_for_token(request.auth)
-                authorized = platform_may(actor, required, store_slug=slug)
+                authorized = platform_may(actor, required, store_slug=store.slug)
             except TokenError:
                 return fail('平台登录已失效', 401)
-            except DatabaseError:
+            except (DatabaseError, InterfaceError):
                 return fail('平台授权服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
             if not authorized:
                 return fail('门店授权已变化', 403)
@@ -424,7 +465,7 @@ class PlatformWithdrawalActionView(APIView):
             return fail('无权补记该提现事件', 403)
         except ValueError as exc:
             return fail(str(exc), 409, 'AUDIT_REVIEW_REQUIRED')
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return fail('审计结果暂不可核验，请稍后以原事件重试', 503, 'AUDIT_UNAVAILABLE')
 
 

@@ -9,7 +9,7 @@ x-backend: &backend
     DJANGO_DEBUG: "false"
     XA_ISOLATED_CONTROL_PLANE: "false"
     DJANGO_SECRET_KEY: ${ROUND_SECRET:?required}
-    DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost,web
+    DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost,web,sl.esports.club,xa.esports.club,admin.esports.club
     DJANGO_TRUST_PROXY: "false"
     DJANGO_MEDIA_BASE_URL: http://127.0.0.1:28080
     CORS_ALLOW_ALL_ORIGINS: "false"

@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.db import DatabaseError, InterfaceError
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 DISPLAY_MAX_WIDTH = 1080
@@ -63,7 +64,15 @@ def _catalog_path(value):
         if base_host:
             hosts.add(base_host)
         if parts.scheme != 'https' or parts.hostname not in hosts:
-            return ''
+            from stores.context import StoreNotFound, current_store
+            from stores.hosts import host_store_slug
+            store = current_store()
+            try:
+                if (not store or parts.scheme not in ('http', 'https')
+                        or host_store_slug(parts.netloc) != store.slug):
+                    return ''
+            except (StoreNotFound, DatabaseError, InterfaceError, ValueError):
+                return ''
     elif parts.scheme:
         return ''
     path = unquote(parts.path)
@@ -74,6 +83,29 @@ def _catalog_path(value):
     if any(p in ('', '.', '..') for p in path.split('/')) or '\\' in path:
         return ''
     return path if path.startswith(CATALOG_PREFIXES) else ''
+
+
+def readable_image(source):
+    """Inspect an uploaded image without generating a display derivative."""
+    try:
+        with Image.open(source) as image:
+            if image.format not in {'PNG', 'JPEG', 'WEBP', 'GIF'}:
+                return False
+            image.load()
+        return True
+    except (OSError, ValueError, Image.DecompressionBombError, SyntaxError):
+        return False
+
+
+def readable_catalog_image(value):
+    path = _catalog_path(value)
+    if not path:
+        return False
+    try:
+        with default_storage.open(path, 'rb') as source:
+            return readable_image(source)
+    except (OSError, ValueError):
+        return False
 
 
 def catalog_display_url(value):

@@ -36,14 +36,14 @@ def record(order, scope):
 
 
 def acceptance_error(profile, order, *, club_rules_enabled=None, allow_refund_recovery=False, refund_recovery_order_id=None,
-                     deposit_required_override=None, lock_refund_recovery=False):
+                     deposit_required_override=None, lock_refund_recovery=False, refund_deficits=None):
     """Use captured payment facts for new orders, preserving legacy behavior."""
     if not enabled():
         return profile.order_acceptance_error(order, provider_gender=order.provider_gender,
                                               club_rules_enabled=club_rules_enabled, allow_refund_recovery=allow_refund_recovery,
                                               refund_recovery_order_id=refund_recovery_order_id,
                                               deposit_required_override=deposit_required_override,
-                                              lock_refund_recovery=lock_refund_recovery)
+                                              lock_refund_recovery=lock_refund_recovery, refund_deficits=refund_deficits)
     from django.core.exceptions import ObjectDoesNotExist
     try:
         order.paid_service_scope
@@ -52,7 +52,7 @@ def acceptance_error(profile, order, *, club_rules_enabled=None, allow_refund_re
                                               club_rules_enabled=club_rules_enabled, allow_refund_recovery=allow_refund_recovery,
                                               refund_recovery_order_id=refund_recovery_order_id,
                                               deposit_required_override=deposit_required_override,
-                                              lock_refund_recovery=lock_refund_recovery)
+                                              lock_refund_recovery=lock_refund_recovery, refund_deficits=refund_deficits)
     from copy import copy
     from .prestart_handoff import _purchased_service
     from .state_machine import IllegalTransitionError
@@ -67,7 +67,7 @@ def acceptance_error(profile, order, *, club_rules_enabled=None, allow_refund_re
                                              club_rules_enabled=club_rules_enabled, allow_refund_recovery=allow_refund_recovery,
                                              refund_recovery_order_id=refund_recovery_order_id,
                                              deposit_required_override=deposit_required_override,
-                                             lock_refund_recovery=lock_refund_recovery)
+                                             lock_refund_recovery=lock_refund_recovery, refund_deficits=refund_deficits)
     if reason:
         return reason
     fields = ('game_category_id', 'provider_kind', 'platform', 'security_level',

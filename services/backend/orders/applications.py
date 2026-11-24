@@ -1,7 +1,7 @@
 from datetime import timedelta
 from contextlib import ExitStack
 from stores.db import transaction
-from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Value, prefetch_related_objects
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework.response import Response
@@ -74,9 +74,12 @@ def audition_recordings_required(order):
     # The same flag also enables two-person evidence after automatic or
     # directly specified assignment. Those assignments are not auditions.
     from .models import OrderGrabPoolOpeningIntent, OrderGrabPoolSnapshot
-    if (OrderGrabPoolOpeningIntent.objects.filter(order=order).exists()
+    other_assignment = getattr(order, '_pool_other_assignment', None)
+    if other_assignment is None:
+        other_assignment = (OrderGrabPoolOpeningIntent.objects.filter(order=order).exists()
             or OrderGrabPoolSnapshot.objects.filter(order=order).exists()
-            or order.status_logs.filter(action='ASSIGN', reason='老板指定陪玩').exists()):
+            or order.status_logs.filter(action='ASSIGN', reason='老板指定陪玩').exists())
+    if other_assignment:
         return False
     if order.status == Order.Status.PENDING:
         # In a newly created public order this saved flag represents the
@@ -124,14 +127,14 @@ def public_order(order):
         raise ApplicationError('订单已结束报名，请刷新订单')
 
 def eligible(order, account, *, visibility=True, profile=None, active_count=None, club_rules_enabled=None, visibility_delay=None, capacity_limit=None,
-             deposit_required_override=None):
+             deposit_required_override=None, refund_deficits=None):
     if profile is None:
         profile = EscortProfile.objects.select_related('account','user','level').prefetch_related('qualifications__game_category','service_items__game_category').filter(account=account).first()
     if account.account_type != ClubAccount.AccountType.PROVIDER or not profile:
         raise ApplicationError('陪玩资料不存在')
     from .paid_service_scope import acceptance_error
     reason = acceptance_error(profile, order, club_rules_enabled=club_rules_enabled,
-                              deposit_required_override=deposit_required_override)
+                              deposit_required_override=deposit_required_override, refund_deficits=refund_deficits)
     if reason:
         raise ApplicationError(reason)
     if (order.game_commission_snapshot or {}).get('personal_rules'):
@@ -176,7 +179,7 @@ def application_data(row,order=None, *, profiles=None, request=None):
             voice = voices.get(member['id'])
             if voice and not recording_available(voice.recording):
                 unavailable.add(member['id'])
-            url = private_media_url(request, voice.recording.audio) if voice else ''
+            url = private_media_url(request, voice.recording.audio) if voice and member['id'] not in unavailable else ''
             member['recording'] = ({'id': voice.recording_id, 'title': voice.recording.title,
                 'duration_ms': voice.recording.duration_ms, 'audio_url': url} if url else None)
     if audition_recordings_required(order or row.order):
@@ -217,7 +220,7 @@ def attach_voice(row, account, recording_id):
     if recording is None:
         raise ApplicationError('录音不存在或已移除，请重新选择')
     from users.voice_availability import recording_available
-    if not recording_available(recording):
+    if not recording_available(recording, verify_content=True):
         raise ApplicationError('录音暂不可用，请选择其他录音或重新上传')
     OrderApplicationVoice.objects.create(application=row, owner=account, recording=recording)
     return True
@@ -844,7 +847,7 @@ class SelectApplicationView(APIView):
                     voices = {voice.owner_id: voice for voice in row.voices.select_related('recording')}
                     if not expected.issubset(voices):
                         raise ApplicationError('报名录音不完整，请等待陪玩提交')
-                    if any(not recording_available(voices[owner].recording) for owner in expected):
+                    if any(not recording_available(voices[owner].recording, verify_content=True) for owner in expected):
                         raise ApplicationError('报名录音暂不可用，请联系陪玩撤回后重新报名')
                 accounts = [row.applicant] + ([row.partner] if row.partner_id else [])
                 error = team_size_error(order, len(accounts))
@@ -948,18 +951,26 @@ class SelectApplicationView(APIView):
 
 class TeammateListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
+
     def get(self, request, order_id):
         if request.account.account_type != 'PROVIDER':
-            return Response({'code':403,'msg':'仅陪玩可选择队友'})
+            return Response({'code': 403, 'msg': '仅陪玩可选择队友'})
         try:
-            order=Order.objects.get(pk=order_id);public_order(order);eligible(order,request.account)
+            from .paid_service_scope import enabled as paid_scope_enabled
+            orders = Order.objects.select_related('service__game_category', 'service__required_level')
+            if paid_scope_enabled():
+                orders = orders.select_related('paid_service_scope')
+            order = orders.get(pk=order_id)
+            public_order(order)
             if required_team_size(order) != 2:
                 raise ApplicationError('单陪套餐不支持选择队友')
+            eligible(order, request.account)
         except (Order.DoesNotExist, ApplicationError):
-            return Response({'code':404,'msg':'订单不可报名'})
+            return Response({'code': 404, 'msg': '订单不可报名'})
         from .services import capacity_orders_for
-        from wallet.club_rules import club_income_rules_enabled
+        from wallet.club_rules import club_income_rules_enabled, deposit_target
         from wallet.models import get_pass_delay_seconds
+        from wallet.refund_deposit import protection_enabled
         # Reuse the same active-order predicate as the final acceptance check,
         # but calculate it for the whole roster rather than querying per person.
         active = (capacity_orders_for(account_id=OuterRef('account_id')).order_by()
@@ -969,17 +980,37 @@ class TeammateListView(APIView):
             .filter(account__account_type='PROVIDER', account__is_active=True, account__can_login=True, is_verified=True)
             .exclude(account=request.account)
             .annotate(picker_active_count=Coalesce(Subquery(active, output_field=IntegerField()), 0)))
+        if settings.PROVIDER_WECHAT_GATE_ENABLED:
+            prefetch_related_objects([profile for profile in profiles
+                                      if profile.account.is_openid_bound and not profile.account.openid],
+                                     'account__wechat_identities')
+        deficits = None
+        if protection_enabled():
+            from wallet.models import RefundDepositDeficit
+            deficits = {profile.account_id: [] for profile in profiles}
+            for row in RefundDepositDeficit.objects.filter(account_id__in=deficits, remaining__gt=0).values(
+                    'account_id', 'profile_id', 'remaining', 'created_at'):
+                deficits[row['account_id']].append(row)
+        cash_target = None
+        if any(profile.deposit_mode != 'EARNINGS' for profile in profiles):
+            try:
+                cash_target = deposit_target('CASH')
+            except ValueError:
+                # Eligibility will consult the malformed target only for candidates that reach the cash check.
+                pass
         rules_enabled = club_income_rules_enabled()
         capacity_limit = current_capacity_limit()
         tiers = {profile.account_id: profile.active_pass_tier for profile in profiles}
         delays = {tier: get_pass_delay_seconds(tier) for tier in set(tiers.values())}
-        members=[]
+        members = []
         for profile in profiles:
             try:
                 eligible(order, profile.account, profile=profile, active_count=profile.picker_active_count,
                          club_rules_enabled=rules_enabled, visibility_delay=delays[tiers[profile.account_id]],
-                         capacity_limit=capacity_limit)
-            except ApplicationError: continue
+                         capacity_limit=capacity_limit, deposit_required_override=cash_target,
+                         refund_deficits=deficits[profile.account_id] if deficits is not None else None)
+            except ApplicationError:
+                continue
             members.append(member_data(profile.account, order, profiles={profile.account_id: profile}))
-        members.sort(key=lambda item:(-item['level_rank'],item['id']))
-        return Response({'code':0,'data':members})
+        members.sort(key=lambda item: (-item['level_rank'], item['id']))
+        return Response({'code': 0, 'data': members})

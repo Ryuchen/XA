@@ -1,6 +1,9 @@
 import os
 from unittest import skipUnless
 from datetime import timedelta
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.db import DatabaseError
@@ -120,3 +123,76 @@ class OpeningReadinessTests(TransactionTestCase):
             self.assertEqual(self.client.get(self.url).status_code, 503)
         self.store.refresh_from_db()
         self.assertEqual(self.store.status, Store.Status.CONFIGURING)
+
+    def test_opening_materials_are_read_from_the_actual_target_store(self):
+        from engagement.models import ClubContent
+        from support.models import SupportContactCard
+        from PIL import Image
+
+        keys = {'store_logo', 'price_list', 'order_notice', 'support_contact'}
+
+        def materials():
+            result = self.client.get(self.url)
+            self.assertEqual(result.status_code, 200, result.data)
+            return {row['key']: row['status'] for row in result.data['data']['checks'] if row['key'] in keys}
+
+        with store_context(self.other):
+            ClubContent.objects.create(code='other-order-rules', kind='ORDER_RULES', title='其他门店下单须知',
+                                       content='请先确认服务时间。')
+            SupportContactCard.objects.create(name='其他门店客服', staff_account=admin('other-support'))
+            ServiceItem.objects.create(name='其他门店陪玩', price=1000)
+        with TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media, MEDIA_URL='/media/'):
+            self.store.logo_url = '/media/platform/logos/check.png'
+            self.store.save(update_fields=['logo_url'])
+            self.assertEqual(materials(), dict.fromkeys(keys, 'BLOCKED'))
+            path = Path(media) / 'platform' / 'logos' / 'check.png'
+            path.parent.mkdir(parents=True)
+            path.write_text('不是图片的开业材料')
+            self.assertEqual(materials()['store_logo'], 'BLOCKED')
+            incomplete = BytesIO()
+            Image.new('RGB', (32, 32)).save(incomplete, format='JPEG')
+            path.write_bytes(incomplete.getvalue()[:-10])
+            self.assertEqual(materials()['store_logo'], 'BLOCKED')
+            Image.new('RGB', (16, 16)).save(path)
+            with store_context(self.store):
+                notice = ClubContent.objects.create(code='order-guide', kind='ORDER_RULES', title='下单须知',
+                    content='<p>请先确认预约时间。</p>', starts_at=timezone.now()+timedelta(days=1))
+                SupportContactCard.objects.create(name='未绑定客服')
+                staff = admin('valid-support')
+                card = SupportContactCard.objects.create(name='本店客服', staff_account=staff, is_active=False)
+                ServiceItem.objects.create(name='本店陪玩', price=1000)
+            self.assertEqual(materials(), {'store_logo': 'READY', 'price_list': 'READY',
+                                          'order_notice': 'BLOCKED', 'support_contact': 'BLOCKED'})
+            with store_context(self.store):
+                notice.starts_at = None
+                notice.save(update_fields=['starts_at'])
+                card.is_active = True
+                card.save(update_fields=['is_active'])
+            self.assertEqual(materials(), dict.fromkeys(keys, 'READY'))
+            poster = Path(media) / 'stores' / self.store.slug / 'club-catalog' / 'notice.png'
+            poster.parent.mkdir(parents=True)
+            Image.new('RGB', (16, 16)).save(poster)
+            with store_context(self.store):
+                notice.content = ''
+                notice.image_url = 'https://xa.esports.club/media/club-catalog/notice.png'
+                notice.save(update_fields=['content', 'image_url'])
+            self.assertEqual(materials()['order_notice'], 'BLOCKED')
+            with store_context(self.store):
+                notice.image_url = '/media/club-catalog/notice.png'
+                notice.save(update_fields=['image_url'])
+            self.assertEqual(materials()['order_notice'], 'READY')
+            with store_context(self.store):
+                ClubContent.objects.bulk_create([ClubContent(code=f'other-content-{index}', kind='HOT',
+                    title='其他内容', sort_order=1) for index in range(50)])
+            self.assertEqual(materials()['order_notice'], 'BLOCKED')
+            with store_context(self.store):
+                notice.sort_order = 2
+                notice.save(update_fields=['sort_order'])
+            self.assertEqual(materials()['order_notice'], 'READY')
+            with store_context(self.store):
+                notice.ends_at = timezone.now()
+                notice.save(update_fields=['ends_at'])
+                staff.can_login = False
+                staff.save(update_fields=['can_login'])
+            self.assertEqual(materials(), {'store_logo': 'READY', 'price_list': 'READY',
+                                          'order_notice': 'BLOCKED', 'support_contact': 'BLOCKED'})

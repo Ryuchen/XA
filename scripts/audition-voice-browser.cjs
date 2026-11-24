@@ -3,6 +3,9 @@ const fs = require('node:fs')
 const assert = require('node:assert/strict')
 const { chromium } = require('playwright')
 const x = JSON.parse(fs.readFileSync(0, 'utf8'))
+const frontend = new URL(process.env.XA_AUDITION_FRONTEND_ORIGIN || 'http://sl.esports.club')
+assert.equal(frontend.protocol, 'http:')
+assert.equal(frontend.hostname, 'sl.esports.club')
 
 async function open(browser, role, identity) {
   const context = await browser.newContext({viewport:{width:390,height:844}, isMobile:true, hasTouch:true})
@@ -14,7 +17,7 @@ async function open(browser, role, identity) {
   await context.routeWebSocket('**/*', ws => ws.close())
   await context.route('**/*', async route => {
     const url = new URL(route.request().url())
-    if (url.hostname !== 'sl.esports.club') return route.abort()
+    if (url.hostname !== frontend.hostname) return route.abort()
     if (!url.pathname.startsWith('/api/')) return route.continue()
     if (url.pathname.startsWith('/api/media/private/') && state.failNextAudio) {
       state.failNextAudio = false
@@ -22,7 +25,7 @@ async function open(browser, role, identity) {
     }
     if (url.pathname === '/api/media/renew/') state.renewals++
     const response = await route.fetch({url:x.api + url.pathname + url.search,
-      headers:{...route.request().headers(), host:'sl.esports.club'}})
+      headers:{...route.request().headers(), host:frontend.host}})
     if (state.loseUpload && url.pathname === '/api/users/recordings/' && route.request().method() === 'POST') {
       state.loseUpload = false
       return route.abort('failed')
@@ -35,10 +38,11 @@ async function open(browser, role, identity) {
 }
 
 ;(async () => {
-  const browser = await chromium.launch({headless:true, args:['--no-proxy-server']})
+  const browser = await chromium.launch({headless:true, channel:process.env.XA_AUDITION_BROWSER_CHANNEL,
+    args:['--no-proxy-server', `--host-resolver-rules=MAP ${frontend.hostname} 127.0.0.1`]})
   try {
     const provider = await open(browser, 'provider', x.provider)
-    await provider.page.goto(`http://sl.esports.club/player/#/orders?order=${x.order}`)
+    await provider.page.goto(`${frontend.origin}/player/#/orders?order=${x.order}`)
     try {
       await provider.page.getByRole('button', {name:'报名抢单'}).waitFor({timeout:15000})
     } catch (error) {
@@ -58,7 +62,7 @@ async function open(browser, role, identity) {
       await provider.page.close()
       provider.page = await provider.context.newPage()
       provider.page.on('pageerror', error => provider.errors.push(error.message))
-      await provider.page.goto(`http://sl.esports.club/player/#/orders?order=${x.order}`)
+      await provider.page.goto(`${frontend.origin}/player/#/orders?order=${x.order}`)
       await provider.page.getByRole('button', {name:'报名抢单'}).click({timeout:20000})
       dialog = provider.page.getByRole('dialog')
       await dialog.getByRole('button', {name:'核对上传结果'}).click({timeout:20000})
@@ -74,7 +78,7 @@ async function open(browser, role, identity) {
     let partner
     if (x.partner) {
       partner = await open(browser, 'provider', x.partner)
-      await partner.page.goto('http://sl.esports.club/player/#/orders')
+      await partner.page.goto(`${frontend.origin}/player/#/orders`)
       await partner.page.getByRole('button', {name:'确认组队'}).first().click({timeout:20000})
       const invitation = partner.page.getByRole('dialog')
       await invitation.getByLabel('选择本人试音录音').waitFor()
@@ -88,7 +92,7 @@ async function open(browser, role, identity) {
     }
 
     const boss = await open(browser, 'boss', x.boss)
-    await boss.page.goto(`http://sl.esports.club/boss/#/order-detail?id=${x.order}`)
+    await boss.page.goto(`${frontend.origin}/boss/#/order-detail?id=${x.order}`)
     const audio = boss.page.locator('audio[aria-label*="报名录音"]').first()
     await audio.waitFor({timeout:30000})
     assert.equal(await boss.page.locator('audio[aria-label*="报名录音"]').count(), x.partner ? 2 : 1)

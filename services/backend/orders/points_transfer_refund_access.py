@@ -583,8 +583,98 @@ def _followup_transfer_handover_scope(order, *, pending_payment_id=None):
                     and any(row[0] == item.payment_id for row in frozen) for item in pending))
 
 
+def _successive_addon_handovers(order, payment, transfers, *, allow_waiting=False, check_refund_times=True, at_refund=None):
+    """The handovers without main refunds must follow actual same-seat transfers."""
+    main_refunds = order.refund_records.all()
+    if (not 1 <= len(transfers) <= 2 or order.room_required_snapshot
+            or (main_refunds if at_refund is None else main_refunds.filter(created_at__lte=at_refund)).exists()
+            or order.prestart_handoffs.exists()):
+        return []
+    accepted = list(payment.handovers.filter(status='ACCEPTED').order_by('version'))
+    waiting = (allow_waiting and len(accepted) == 1 and len(transfers) == 2
+               and accepted[0].accepted_at and accepted[0].accepted_at < transfers[1].created_at
+               and accepted[0].target_segment_id == transfers[1].previous_segment_id)
+    if len(accepted) != len(transfers) and not waiting:
+        return []
+    previous = None
+    for handover, event in zip(accepted, transfers):
+        if (handover.kind != 'STANDARD' or not handover.accepted_at
+                or handover.previous_id != (previous.pk if previous else None)
+                or event.previous_segment_id != (previous.target_segment_id if previous else payment.intent.segment_id)
+                or (previous and previous.accepted_at >= event.created_at)
+                or not payment.buyer_transaction.created_at < event.created_at < handover.created_at <= handover.accepted_at
+                or (handover.source_segment_id, handover.target_segment_id) !=
+                    (event.previous_segment_id, event.next_segment_id)):
+            return []
+        previous = handover
+    if not check_refund_times:
+        return accepted
+    refund_times = list(payment.refund_records.order_by('created_at', 'pk').values_list('created_at', flat=True))
+    if refund_times and (refund_times[0] <= accepted[0].accepted_at
+                        or len(set(refund_times)) != len(refund_times)
+                        or (len(transfers) == 2 and refund_times[-1] >= transfers[1].created_at)):
+        return []
+    return accepted
+
+
+def unaffected_addon_for_return(order, payment, payments, first_transfer, *, boundary=None):
+    """Prove the other paid add-on stays with the original teammate."""
+    from .models import OrderOriginalShareTransfer
+
+    if len(payments) != 2 or order.required_provider_count != 2 or order.room_required_snapshot:
+        return False
+    other = next(item for item in payments if item.pk != payment.pk)
+    segment = other.intent.segment
+    origin = first_transfer.previous_segment
+    paid_at = other.buyer_transaction.created_at
+    if (other.intent.order_id != order.pk or segment.attribution_id != origin.attribution_id or segment.slot == origin.slot
+            or other.intent.provider_id != segment.provider_account_id
+            or segment.provider_account_id in (origin.provider_account_id, first_transfer.next_segment.provider_account_id)
+            or other.intent.buyer_id != order.customer_account_id
+            or not segment.provider_business_cycle or not segment.started_at
+            or (segment.released_at and (boundary is None or segment.released_at <= boundary))
+            or not segment.started_at < paid_at < first_transfer.created_at):
+        return False
+    transfers = OrderOriginalShareTransfer.objects.filter(previous_segment=segment)
+    handovers, refunds, deductions = other.handovers.all(), other.refund_records.all(), other.refund_earning_deductions.all()
+    if boundary is not None:
+        transfers = transfers.filter(created_at__lte=boundary)
+        handovers = handovers.filter(created_at__lte=boundary)
+        refunds = refunds.filter(created_at__lte=boundary)
+        deductions = deductions.filter(refund__created_at__lte=boundary)
+    return not (transfers.exists() or handovers.exists() or refunds.exists() or deductions.exists())
+
+
+def same_seat_addon_payments(order, payments, first_transfer):
+    """Each original payment belonged to the service segment that transferred."""
+    origin = first_transfer.previous_segment
+    return (len(payments) >= 2 and order.required_provider_count == 2 and not order.room_required_snapshot
+            and origin.started_at and origin.provider_business_cycle
+            and all(payment.intent.order_id == order.pk and payment.intent.buyer_id == order.customer_account_id
+                    and payment.intent.segment_id == origin.pk and payment.intent.provider_id == origin.provider_account_id
+                    and origin.started_at < payment.buyer_transaction.created_at < first_transfer.created_at
+                    for payment in payments))
+
+
+def _multi_addon_return_chains(order, payments, transfers, *, allow_waiting=False):
+    if len(payments) < 2 or not 1 <= len(transfers) <= 2:
+        return []
+    if len(transfers) == 2 and (transfers[1].next_segment.provider_account_id !=
+                                transfers[0].previous_segment.provider_account_id):
+        return []
+    chains = [_successive_addon_handovers(order, payment, transfers, allow_waiting=allow_waiting) for payment in payments]
+    if all(chains) and same_seat_addon_payments(order, payments, transfers[0]):
+        return chains
+    if len(payments) == 2:
+        for payment, chain in zip(payments, chains):
+            if chain and unaffected_addon_for_return(order, payment, payments, transfers[0]):
+                return [chain]
+    return []
+
+
 def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pending_payment_id=None,
-                     pending_intent_id=None, allow_voluntary=False):
+                     pending_intent_id=None, allow_voluntary=False, allow_successive=False, allocation_replay=False,
+                     allow_main_after_addon=False):
     """Admit verified add-on histories with explicit transfer boundaries."""
     from django.db.models import Q
     from .models import OrderAddonPayment
@@ -671,6 +761,49 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
     origin_history = _origin_addon_history(order, pending_payment_id=pending_payment_id,
                                           pending_intent_id=pending_intent_id, allow_voluntary=allow_voluntary)
     if len(payments) > 1:
+        if len(transfers) == 2:
+            if len(payments) == 2 and (allow_successive or allow_main_after_addon) and pending_intent_id is None:
+                from .points_returned_addon_refund import other_returned_handover, returned_handover, verify_funding
+                returned = returned_handover(order, transfers=transfers) if allow_successive else None
+                if not returned and allow_main_after_addon:
+                    from .points_returned_addon_refund import before_first_main_refund
+                    returned = before_first_main_refund(order, transfers=transfers)
+                if returned and returned.payment.refund_records.exists():
+                    if pending_payment_id and not _pending_allowed(returned.payment_id, pending_payment_id):
+                        other = other_returned_handover(order, returned)
+                        if not other or not _pending_allowed(other.payment_id, pending_payment_id):
+                            return False
+                    if verify:
+                        from .addon_payment import verify_receipt
+                        for payment in payments:
+                            verify_receipt(payment)
+                        verify_funding(order, returned)
+                    return True
+            chains = _multi_addon_return_chains(order, payments, transfers, allow_waiting=True)
+            if len(chains) == 1 and not (allow_handover or (allow_successive and len(chains[0]) == 2)):
+                chains = []  # Keep the existing entry for the unrelated add-on.
+            if chains:
+                affected = {chain[0].payment_id for chain in chains}
+                if allow_handover and not any(_pending_allowed(pk, pending_payment_id) for pk in affected):
+                    return False
+                if len(chains) > 1:
+                    complete = all(len(chain) == 2 for chain in chains)
+                    if not (allow_handover or allocation_replay or (allow_successive and complete)):
+                        return False
+                    pending = list(OrderAddonHandover.objects.filter(payment__intent__order=order, status='PENDING')
+                                   .values_list('payment_id', flat=True)[:2])
+                    if pending and (not allow_handover or len(pending) != 1 or pending[0] not in affected
+                                    or (not allow_successive and not _pending_allowed(pending[0], pending_payment_id))):
+                        return False
+                if verify:
+                    from .addon_payment import verify_receipt
+                    from .addon_handover import verify_transferred_handover_funding
+                    for payment in payments:
+                        verify_receipt(payment)
+                    for chain in chains:
+                        for handover in chain:
+                            verify_transferred_handover_funding(order, handover.payment, handover)
+                return True
         has_handover = any(payment.handovers.filter(status='ACCEPTED').exists() for payment in payments)
         from .models import PointsPostRefundTransferRevision
         initial = (order.refund_records.count() == 1
@@ -693,6 +826,23 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
             for payment in payments:
                 verify_receipt(payment)
         return True
+    successive = []
+    returned = None
+    if len(payments) == 1 and not post_history and payments[0].handovers.filter(status='ACCEPTED').count() > 1:
+        successive = _successive_addon_handovers(order, payments[0], transfers) if allow_successive else []
+        if not successive:
+            from .points_returned_addon_refund import returned_handover
+            returned = (returned_handover(order, payment_id=payments[0].pk, transfers=transfers)
+                        if allow_successive and payments[0].refund_records.exists() else None)
+            if not returned:
+                return False
+    elif (len(payments) == 1 and len(transfers) == 2 and allow_handover
+            and _pending_allowed(payments[0].pk, pending_payment_id) and not order.refund_records.exists()
+            and payments[0].refund_records.exists()
+            and payments[0].handovers.filter(status='ACCEPTED', target_segment_id=transfers[1].previous_segment_id).exists()):
+        successive = _successive_addon_handovers(order, payments[0], transfers, allow_waiting=True)
+        if not successive:
+            return False
     if (len(payments) != 1 or (intent_count != 1 and not post_history)
             or (payments[0].refund_records.count() > 1 and order.refund_records.exists()
                 and payments[0].refund_records.filter(created_at__lt=order.refund_records.order_by('created_at').first().created_at).exists()
@@ -703,24 +853,27 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
             or (payments[0].refund_records.exists() and payments[0].handovers.filter(status='ACCEPTED').exists()
                 and not first_handover_refund(order, transfers)
                 and not single_post_refund_handover(order, pending_payment_id=pending_payment_id)
-                and not post_history and not origin_history)
-            or (not allow_handover and (payments[0].handovers.filter(status='PENDING').exists()
-                                        or (payments[0].handovers.filter(status='ACCEPTED').count() > 1
-                                            and not post_history)))
-            or (allow_handover and payments[0].handovers.filter(status='ACCEPTED').count() > 1
-                and not post_history)
+                and not post_history and not origin_history and not successive and not returned)
+            or (not allow_handover and payments[0].handovers.filter(status='PENDING').exists())
             or not payments[0].buyer_transaction.created_at
             or any(payments[0].buyer_transaction.created_at == event.created_at for event in transfers)):
         return False
     if verify:
         from .addon_payment import verify_receipt
         verify_receipt(payments[0])
+        if successive:
+            from .addon_handover import verify_transferred_handover_funding
+            for handover in successive:
+                verify_transferred_handover_funding(order, payments[0], handover)
+        if returned:
+            from .points_returned_addon_refund import verify_funding
+            verify_funding(order, returned)
     return True
 
 
 @contextmanager
-def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None):
-    """Hold the exact order and money mutex for one unallocated transfer.
+def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None, outgoing_accounts=()):
+    """Lock this order, the money mutex and its existing funding receipts.
 
     Outer endpoint authorization, transfer proposal/acceptance, payment
     evidence and all actual mutations remain the responsibility of their
@@ -766,19 +919,29 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None)
             or OrderSegmentSettlementManifest.objects.filter(order=order).exists()
             or not isinstance(order.funding_terms, dict)
             or order.funding_terms.get(MARKER) != {'receipt_id': redemption.pk}):
-        raise ValidationError('订单不在首次无补资积分转单范围')
+        raise ValidationError('订单不在未退款的积分转单范围')
     transfers = list(OrderOriginalShareTransfer.objects.filter(
         previous_segment__attribution__order=order).select_related('previous_segment').order_by('pk'))
     _verify_prestart_history(order, transfers)
     if (addon_handover and not transfers) or not _supported_addon(order, transfers, verify=True,
             allow_handover=addon_handover, pending_payment_id=pending_payment_id):
         raise ValidationError('积分转单加购资金范围尚未接通')
+    preceding_handovers = []
+    return_to = None
     if not addon_handover:
         from .models import OrderAddonHandover
-        if OrderAddonHandover.objects.filter(payment__intent__order=order, status='ACCEPTED').exists():
-            raise ValidationError('加购接替后的再次转单资金尚待核对')
         from .models import OrderAddonPayment, OrderParticipationSegment
         payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('intent'))
+        if OrderAddonHandover.objects.filter(payment__intent__order=order, status='ACCEPTED').exists():
+            if len(transfers) == 1:
+                if len(payments) == 1:
+                    preceding_handovers = _successive_addon_handovers(order, payments[0], transfers)
+                else:
+                    preceding_handovers = [chain[0] for chain in _multi_addon_return_chains(order, payments, transfers)]
+            if not preceding_handovers or set(outgoing_accounts) != {transfers[0].next_segment.provider_account_id}:
+                raise ValidationError('加购接替后的再次转单资金尚待核对')
+            if len(payments) > 1:
+                return_to = transfers[0].previous_segment.provider_account_id
         if len(payments) > 1:
             from .addon_handover import current_responsibilities
             for payment in payments:
@@ -796,6 +959,18 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None)
     from .points_business_access import _bind
     with _bind(phase='transfer', kind='transfer', order_id=order.pk,
                account_id=order.customer_account_id, service_id=order.service_id):
+        for preceding_handover in preceding_handovers:
+            from .addon_handover import verify_transferred_handover_funding
+            verify_transferred_handover_funding(order, preceding_handover.payment, preceding_handover)
+            refunds = list(preceding_handover.payment.refund_records.order_by('created_at', 'pk'))
+            if refunds:
+                from django.utils import timezone
+                from .points_addon_handover_refund_facts import verify_refunds_before_second_handover
+                try:
+                    verify_refunds_before_second_handover(refunds, preceding_handover, before=timezone.now(),
+                        receipt_id=receipts[0].pk if receipts else None)
+                except DjangoValidationError as exc:
+                    raise ValidationError('再次转单前的加购退款凭证待核对') from exc
         if transfers:
             from .points_transfer_funding import plan_points_transfer
             from .points_funding_plan import PointsFundingPlanError
@@ -804,19 +979,24 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None)
             except PointsFundingPlanError as exc:
                 raise ValidationError('既有积分转单履约及资金凭证待核对') from exc
         yield order
+        if return_to and not OrderOriginalShareTransfer.objects.filter(
+                previous_segment_id=transfers[0].next_segment_id,
+                next_segment__provider_account_id=return_to).exists():
+            raise ValidationError('多项加购的第二次转单须转回原席陪玩')
 
 
 @contextmanager
 def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_payment_id=None, pending_intent_id=None,
-                   extra_receipt_id=None, allow_voluntary_history=False):
+                   extra_receipt_id=None, allow_voluntary_history=False, read_only=False, allocation_request_key=None):
     """Prepare one independently authorized report, refund, or settlement.
 
     This only establishes tenant, order and receipt locks and a phase-scoped
     capability. The calling endpoint must still authorize the actor and run
     the existing financial and lifecycle verifiers before any write.
+    Read-only reporting locks an existing mutex without initializing one.
     """
     connection, store = transaction.get_connection(), current_store()
-    if (phase not in ('report', 'refund', 'settlement')
+    if (phase not in ('report', 'refund', 'settlement') or (read_only and phase != 'report')
             or getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is not True or connection.vendor != 'mysql'
             or not connection.in_atomic_block or not store or store.database_alias != connection.alias
             or type(order_id) is not int or order_id <= 0
@@ -826,7 +1006,7 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
     from django.core.exceptions import ValidationError as DjangoValidationError
     from users.models import PassRefundRepaymentReceipt
     from users.receipt_usage_guard import isolated_allocation_state_locked
-    from .financial_lock import lock_order_money
+    from .financial_lock import lock_existing_order_money, lock_order_money
     from .models import (Order, OrderOriginalShareTransfer, OrderPointsFundingAllocation,
         OrderPointsTransferFundingRelease, OrderPointsTransferFundingRevision, OrderPrestartHandoff,
         OrderSegmentSettlementManifest, OrderPointsRedemption)
@@ -839,7 +1019,14 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
         with round_scope(order.pk, phase=phase) as locked_order:
             yield locked_order
         return
-    lock_order_money()
+    if read_only:
+        from .settlement import SettlementError
+        try:
+            lock_existing_order_money()
+        except SettlementError as exc:
+            raise ValidationError(str(exc)) from exc
+    else:
+        lock_order_money()
     transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
                      .select_related('previous_segment').order_by('pk'))
     counts = {}
@@ -883,9 +1070,15 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
     from .points_voluntary_handover_event import entry_matches
     voluntary_entry = entry_matches(order)
     voluntary_read = voluntary_entry or allow_voluntary_history or phase in ('report', 'settlement')
+    allocation_replay = False
+    if phase == 'settlement' and allocation_request_key:
+        from .points_funding_write import has_allocation_replay
+        allocation_replay = has_allocation_replay(order, extra_receipt_id, allocation_request_key)
     addon_supported = _supported_addon(order, transfers, allow_handover=bool(pending_payment_id),
                                        pending_payment_id=pending_payment_id, pending_intent_id=pending_intent_id,
-                                       allow_voluntary=voluntary_read)
+                                       allow_voluntary=voluntary_read, allow_successive=phase in ('report', 'settlement'),
+                                       allocation_replay=allocation_replay,
+                                       allow_main_after_addon=phase != 'refund' or pending_payment_id is None)
     has_addon_event = (order.addon_intents.filter(payment__isnull=False).exists()
                        or pending_intent_id is not None)
     refund_count = order.refund_records.count()
@@ -942,17 +1135,24 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
     receipts = list(PassRefundRepaymentReceipt.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
     if len(receipts) != len(ids):
         raise ValidationError('积分转单到账凭证缺失')
-    try:
-        for receipt in receipts:
-            if receipt.usage_version is None:
-                raise ValidationError('积分转单到账用途账本缺失')
-            isolated_allocation_state_locked(receipt)
-    except DjangoValidationError as exc:
-        raise ValidationError('积分转单到账用途凭证异常') from exc
-    if not _supported_addon(order, transfers, verify=True, allow_handover=bool(pending_payment_id),
-                            pending_payment_id=pending_payment_id, pending_intent_id=pending_intent_id,
-                            allow_voluntary=voluntary_read):
-        raise ValidationError('积分转单加购资金范围尚未接通')
+    from .points_addon_receipt_usage import reuse_history_locked
+    from .points_business_access import _bind
+    with (_bind(phase=phase, kind='transfer', order_id=order.pk,
+                account_id=order.customer_account_id, service_id=order.service_id),
+          reuse_history_locked(order, ids)):
+        try:
+            for receipt in receipts:
+                if receipt.usage_version is None:
+                    raise ValidationError('积分转单到账用途账本缺失')
+                isolated_allocation_state_locked(receipt)
+        except DjangoValidationError as exc:
+            raise ValidationError('积分转单到账用途凭证异常') from exc
+        if not _supported_addon(order, transfers, verify=True, allow_handover=bool(pending_payment_id),
+                                pending_payment_id=pending_payment_id, pending_intent_id=pending_intent_id,
+                                allow_voluntary=voluntary_read, allow_successive=phase in ('report', 'settlement'),
+                                allocation_replay=allocation_replay,
+                                allow_main_after_addon=phase != 'refund' or pending_payment_id is None):
+            raise ValidationError('积分转单加购资金范围尚未接通')
     redemption = OrderPointsRedemption.objects.filter(order=order).first()
     from .points_service_payment import MARKER
     if (not redemption or not isinstance(order.funding_terms, dict)
@@ -988,7 +1188,6 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
             or any(row.account_id not in expected or row.user_id != expected[row.account_id] or not row.is_active
                    for row in wallets) or (len(members) > 1 and len(wallets) != len(members))):
         raise ValidationError('积分转单陪玩钱包或账号待核对')
-    from .points_business_access import _bind
     with _bind(phase=phase, kind='transfer', order_id=order.pk,
                account_id=order.customer_account_id, service_id=order.service_id):
         if refund_count == 1:

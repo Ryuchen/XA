@@ -37,7 +37,10 @@ def _facts(source):
 def _validated(facts):
     integer_keys = ('account_id', 'business_cycle', 'online_milliseconds', 'previous_online_base',
                     'previous_awarded_points', 'cycle_awarded_base')
-    if (facts.get('evidence_version') != 2 or any(type(facts.get(k)) is not int or facts[k] < 0 for k in integer_keys)
+    version = facts.get('evidence_version')
+    has_certificate = 'business_certificate_interval' in facts or 'business_certificate' in facts
+    if (version not in (2, 3) or (version == 3 and not has_certificate)
+            or any(type(facts.get(k)) is not int or facts[k] < 0 for k in integer_keys)
             or facts.get('account_type') not in ('BOSS', 'PROVIDER')
             or not isinstance(facts.get('channel_id'), str) or not facts.get('channel_id')
             or facts.get('membership_active') is not True
@@ -127,7 +130,8 @@ def _verify_recorded_interval(source, facts):
         raise ValidationError('原始事件类型无效')
 
 
-def _resolve_versioned_interval(source, facts, evidence_digest, context, *, request_id, actor_id, outcome, reason):
+def _resolve_versioned_interval(source, facts, evidence_digest, context, *, request_id, actor_id, outcome, reason,
+                                eligible_ms):
     """Resolve one original UNKNOWN interval against its recorded rule."""
     from django.utils import timezone
     from .kook_online_queue import align_rule, replay_waiting
@@ -154,7 +158,7 @@ def _resolve_versioned_interval(source, facts, evidence_digest, context, *, requ
         _validated(facts)
         from .kook_review_lifecycle import require as require_provider_lifecycle
         require_provider_lifecycle(binding.account)
-        milliseconds = interval.elapsed_ms
+        milliseconds = interval.elapsed_ms if eligible_ms is None else eligible_ms
         accrue_interval(cursor, rule, milliseconds)
         binding.online_milliseconds += milliseconds
         pending = sum(row.pending_points for row in locked_pending(cursor))
@@ -204,6 +208,15 @@ def resolve_locked(source_id, *, request_id, actor_id, outcome, reason):
     # holds account and binding before its per-cycle cursor and interval.
     from .models import KookOnlineInterval, KookOnlineProcessing
     source_interval = KookOnlineInterval.objects.filter(decision_source_id=source.pk).first()
+    eligible_ms = None
+    if outcome == 'ALLOW':
+        from stores.certificate_admission import original_interval_milliseconds, require_original_certificate
+        require_original_certificate(facts)
+        if 'business_certificate_interval' in facts:
+            if source_interval is None:
+                raise ValidationError('缺少原在线区间的证照依据')
+            eligible_ms = original_interval_milliseconds(facts['business_certificate_interval'],
+                source_interval.started_at, source_interval.ended_at, source_interval.elapsed_ms)
     queue_context = None
     if source_interval is not None:
         account_for_queue = ClubAccount.objects.select_for_update().filter(pk=source_interval.account_id).first()
@@ -228,7 +241,7 @@ def resolve_locked(source_id, *, request_id, actor_id, outcome, reason):
                              binding_for_queue.online_milliseconds, binding_for_queue.awarded_points)
     if queue_context is not None and source_interval.rule_version_id != 0:
         return _resolve_versioned_interval(source, facts, evidence_digest, queue_context,
-            request_id=request_id, actor_id=actor_id, outcome=outcome, reason=reason)
+            request_id=request_id, actor_id=actor_id, outcome=outcome, reason=reason, eligible_ms=eligible_ms)
     if outcome == 'ALLOW':
         facts = _validated(facts)
         account = ClubAccount.objects.select_for_update().filter(pk=facts['account_id']).first()
@@ -247,7 +260,10 @@ def resolve_locked(source_id, *, request_id, actor_id, outcome, reason):
         elif not facts['points_enabled']:
             skip = 'POINTS_DISABLED'
         else:
-            milliseconds = facts['elapsed_ms'] if facts['stage'] == 'INTERVAL' else facts['eligible_interval_ms']
+            if eligible_ms is None:
+                milliseconds = facts['elapsed_ms'] if facts['stage'] == 'INTERVAL' else facts['eligible_interval_ms']
+            else:
+                milliseconds = eligible_ms
             binding.online_milliseconds += milliseconds
             if (binding.cycle_online_base > binding.online_milliseconds
                     or binding.cycle_awarded_base > binding.awarded_points):

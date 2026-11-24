@@ -236,9 +236,12 @@ def confirm_due_consumption():
                         points_redemption__refunds__negotiation_posting__termination_processed_at__isnull=False)
     pending_addon = OrderAddonPayment.objects.filter(intent__order_id=OuterRef('pk'), consumption__isnull=True)
     payment_filter |= Q(payment_status='REFUNDED', settled_at__isnull=False, _pending_addon=True)
+    # A final benefits decision can leave consumption unconfirmed. Only
+    # revisit the main order until both settlement and that decision exist.
     ids = (Order.objects.annotate(_pending_addon=Exists(pending_addon)).filter(payment_filter, status='COMPLETED',
         customer_account__isnull=False).filter(
-            Q(is_gift_snapshot=False, consumption_confirmed_at__isnull=True)
+            (Q(is_gift_snapshot=False, consumption_confirmed_at__isnull=True)
+             & (Q(settled_at__isnull=True) | Q(funding_benefits_resolved_at__isnull=True)))
             | Q(is_gift_snapshot=False, _pending_addon=True)
             | Q(settlement_mode='REPORT_APPROVAL', settled_at__isnull=True))
         .filter(completed_at__lte=timezone.now()).filter(report_filter)

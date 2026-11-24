@@ -80,14 +80,62 @@ def facts(row):
         buyer_transaction__created_at__lt=boundary).select_related('intent', 'buyer_transaction__wallet'))
     if (OrderAddonPayment.objects.filter(intent__order=order,
             buyer_transaction__created_at=boundary).exists()
-            or any(item.refund_records.filter(created_at=boundary).exists()
-                   or item.handovers.filter(status='ACCEPTED', accepted_at__lte=boundary).exists()
-                   for item in addons)):
+            or any(item.refund_records.filter(created_at=boundary).exists() for item in addons)):
         raise ValidationError('转单时加购来源或时序尚未接入')
     addon_events = None
+    handover_events = []
+    intervening_refunds = []
     read_receipt_id = getattr(row, 'read_receipt_id', allocation.receipt_id)
     if addons:
         from .points_addon_receipt_usage import payment_facts, facts as addon_refund_facts
+        from .models import OrderAddonHandover, OrderAddonFundingReleaseRun, OrderOriginalShareTransfer
+        by_payment = {item.pk: item for item in addons}
+        handovers = list(OrderAddonHandover.objects.filter(payment_id__in=by_payment, status='ACCEPTED',
+            accepted_at__lte=boundary).order_by('accepted_at', 'pk'))
+        if handovers:
+            previous = by_id.get(revision.previous_transfer_id)
+            if (not previous or len({first.payment_id for first in handovers}) != len(handovers)
+                    or len({first.accepted_at for first in handovers}) != len(handovers)
+                    or any(first.previous_id or first.kind != 'STANDARD' or first.accepted_at >= boundary
+                           or first.source_segment_id != previous['previous_segment_id']
+                           or first.target_segment_id != previous['next_segment_id']
+                           or first.target_segment_id != last['previous_segment_id'] for first in handovers)):
+                raise ValidationError('转单时此前加购接替来源异常')
+            if len(addons) > 1:
+                from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
+                original = OrderOriginalShareTransfer.objects.select_related('previous_segment').get(
+                    pk=previous['id'], previous_segment__attribution__order=order)
+                if revision.last_transfer.next_segment.provider_account_id != original.previous_segment.provider_account_id:
+                    raise ValidationError('转单时同席原陪玩待核对')
+                if len(handovers) == 1:
+                    other_verified = unaffected_addon_for_return(order, by_payment[handovers[0].payment_id], addons,
+                                                                  original, boundary=boundary)
+                else:
+                    other_verified = (len(handovers) == len(addons)
+                                      and same_seat_addon_payments(order, addons, original))
+                if not other_verified:
+                    raise ValidationError('转单时多项加购的履约或退款范围异常')
+            from .addon_handover import verify_handover
+            from .addon_funding_release import verify_run
+            from .points_addon_handover_refund_facts import verify_refunds_before_second_handover
+            for first in handovers:
+                payment = by_payment[first.payment_id]
+                prior = OrderAddonFundingReleaseRun.objects.filter(handover=first, created_at__lt=boundary).first()
+                if (OrderPointsFundingAllocation.objects.filter(redemption=redemption,
+                        created_at__lte=first.accepted_at).exists()
+                        and (not prior or not prior.points_handover_hash or not prior.points_handover_snapshot)):
+                    raise ValidationError('转单时此前加购接替资金凭证缺失')
+                try:
+                    verify_handover(payment, first, as_of=boundary, receipt_id=read_receipt_id)
+                    if prior:
+                        verify_run(prior, _skip_usage=True, witness_receipt_id=read_receipt_id)
+                except RestValidationError as exc:
+                    raise ValidationError('转单时此前加购接替凭证异常') from exc
+                handover_events.append([first.pk, prior.pk if prior else None, prior.points_handover_hash if prior else None])
+                refunds = list(payment.refund_records.filter(created_at__lt=boundary).order_by('created_at', 'pk'))
+                if refunds:
+                    intervening_refunds.extend(verify_refunds_before_second_handover(
+                        refunds, first, before=boundary, receipt_id=read_receipt_id))
         for addon in addons:
             payment_facts(addon, read_receipt_id=read_receipt_id)
             for prior_refund in addon.refund_records.filter(created_at__lt=boundary).order_by('pk'):
@@ -145,6 +193,7 @@ def facts(row):
     preceding = max((event['id'] for event in earlier_events), default=0)
     if preceding != revision.previous_transfer_id:
         raise ValidationError('积分转单到账版本前驱异常')
+    handover_runs = {event[1] for event in handover_events if event[1] is not None}
     for item in revision.allocations:
         if not isinstance(item, list) or len(item) != 4 or any(type(value) is not int for value in item):
             raise ValidationError('积分转单到账分配快照异常')
@@ -160,7 +209,8 @@ def facts(row):
             addon_ids = {item.pk for item in addons}
             if not addon_row.run.prestart_handoff_id and (not addons or not (addon_row.run.payment_id in addon_ids
                     or (addon_row.run.refund_id and addon_row.run.refund.payment_id in addon_ids
-                        and addon_row.run.refund.created_at < boundary))):
+                        and addon_row.run.refund.created_at < boundary)
+                    or addon_row.run_id in handover_runs)):
                 raise ValidationError('积分转单此前加购释放来源异常')
             _addon_release_facts(addon_row, witness_receipt_id=read_receipt_id)
             released += addon_row.amount
@@ -224,7 +274,12 @@ def facts(row):
     if (revision.evidence_hash != revision_digest(order.pk, draft)
             or actual != [(part.allocation_id, part.amount) for part in plan.release_parts]):
         raise ValidationError('积分转单到账释放凭证异常')
+    # Existing single-handover entries retain the exact bytes in their digest.
+    handover_evidence = ([handover_events[0]] if len(handover_events) == 1 else
+                         [{'handovers': handover_events}] if handover_events else [])
     return ('RELEASE', f'order:{allocation.pk}', f'points-transfer-release:{row.pk}', row.amount,
             _digest(['points-transfer-release', row.pk, row.amount, allocation.pk, allocation.receipt_id,
                      revision.pk, revision.evidence_hash, original.pk, spent.pk]
-                    + ([addon_events] if addon_events is not None else [])))
+                    + ([addon_events] if addon_events is not None else [])
+                    + handover_evidence
+                    + intervening_refunds))

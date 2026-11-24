@@ -67,15 +67,18 @@ def preview_points_transfer_rebalance(order_id):
     return PointsTransferRebalancePreview(funding, result)
 
 
-def plan_points_transfer(order_id, *, now=None, allow_recorded=False, preview_unstarted=False):
+def plan_points_transfer(order_id, *, now=None, allow_recorded=False, preview_unstarted=False, read_only=False):
     """Rebuild segment shares and post-discount funding from locked evidence."""
     if not transaction.get_connection().in_atomic_block or type(order_id) is not int or order_id <= 0:
         raise PointsFundingPlanError('积分转单资金核对须在门店事务内执行')
     order = Order.objects.select_for_update().filter(pk=order_id).first()
     if not order:
         raise PointsFundingPlanError('订单不存在')
-    from .financial_lock import lock_order_money
-    lock_order_money()
+    from .financial_lock import lock_existing_order_money, lock_order_money
+    if read_only:
+        lock_existing_order_money()
+    else:
+        lock_order_money()
     coverage = OrderSegmentFinancialCoverage.objects.select_for_update().filter(attribution__order=order).first()
     try:
         # Existing allocations are proved separately by the funding verifier;

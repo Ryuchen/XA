@@ -112,25 +112,43 @@ def _verify_replay_order_locked(order, existing):
         raise ValidationError('订单补资凭证待核对') from exc
     return receipts[existing.receipt_id]
 
+
+def has_allocation_replay(order, receipt_id, request_key):
+    return bool(request_key and OrderPointsFundingAllocation.objects.filter(
+        request_key=request_key, redemption__order=order, receipt_id=receipt_id,
+        platform_action__request_key=request_key).exists())
+
+
+def pending_handover_for_allocation_replay(order, receipt_id, request_key):
+    """Allow a recorded allocation to be verified during its next add-on handover."""
+    from .models import OrderAddonHandover
+    if not has_allocation_replay(order, receipt_id, request_key):
+        return None
+    pending = list(OrderAddonHandover.objects.filter(payment__intent__order=order, status='PENDING',
+        kind='STANDARD', previous__status='ACCEPTED').values_list('payment_id', flat=True)[:2])
+    return pending[0] if len(pending) == 1 else None
+
+
 def allocate(*, actor, request_key, receipt_id, order_id, amount):
     from .points_service_payment import needs_integrated_processing
-    candidate = Order.objects.filter(pk=order_id).first()
-    from .models import OrderOriginalShareTransfer
-    has_transfer = bool(candidate and OrderOriginalShareTransfer.objects.filter(
-        previous_segment__attribution__order=candidate).exists())
-    if (candidate and getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
-            and needs_integrated_processing(candidate) and has_transfer):
-        from .points_transfer_refund_access import after_transfer
-        with transaction.atomic(), after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id):
-            return _allocate(actor=actor, request_key=request_key, receipt_id=receipt_id,
-                             order_id=order_id, amount=amount)
-    if (candidate and getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
-            and needs_integrated_processing(candidate)
-            and not has_transfer):
-        with transaction.atomic():
-            from .points_business_access import service_order
-            with service_order(order_id, phase='funding', addon=candidate.addon_intents.filter(payment__isnull=False).exists(), extra_receipt_id=receipt_id):
-                return _allocate(actor=actor, request_key=request_key, receipt_id=receipt_id, order_id=order_id, amount=amount)
+    if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True:
+        candidate = Order.objects.filter(pk=order_id).first()
+        if candidate and needs_integrated_processing(candidate):
+            from .models import OrderOriginalShareTransfer
+            with transaction.atomic():
+                order = Order.objects.select_for_update().get(pk=order_id)
+                if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
+                    from .points_transfer_refund_access import after_transfer
+                    pending_payment_id = pending_handover_for_allocation_replay(order, receipt_id, request_key)
+                    scope = after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id,
+                                           pending_payment_id=pending_payment_id, allocation_request_key=request_key)
+                else:
+                    from .points_business_access import service_order
+                    scope = service_order(order_id, phase='funding', extra_receipt_id=receipt_id,
+                                          addon=order.addon_intents.filter(payment__isnull=False).exists())
+                with scope:
+                    return _allocate(actor=actor, request_key=request_key, receipt_id=receipt_id,
+                                     order_id=order_id, amount=amount)
     return _allocate(actor=actor, request_key=request_key, receipt_id=receipt_id, order_id=order_id, amount=amount)
 
 

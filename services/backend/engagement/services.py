@@ -109,7 +109,8 @@ def change_points(profile, amount, key, kind, remark, *, order=None, operator=No
 def _award_license_checked_points(profile, points, key, remark, order):
     """Persist the decision alongside the ledger, so renewal cannot back-award."""
     from django.conf import settings
-    if not getattr(settings, 'LICENSE_BENEFIT_ENFORCEMENT_ENABLED', True):
+    from stores.certificate_admission import enabled as certificate_enforcement_enabled
+    if not getattr(settings, 'LICENSE_BENEFIT_ENFORCEMENT_ENABLED', True) and not certificate_enforcement_enabled():
         return change_points(profile, points, key, 'CONSUMPTION', remark, order=order)
     existing = PointLedger.objects.filter(event_key=key).first()
     if existing:
@@ -1510,6 +1511,8 @@ def record_external_points(account, *, kind, source_id, day, units, operator, ob
         points, revision = points_for_manual_day(day, observed_at)
         amount = points * 100
     else:
+        from stores.certificate_admission import require_interval_admission
+        require_interval_admission(observed_start, observed_end)
         pending, manual_cursor = defer_if_needed(current, operator, source_id, observed_start, observed_end, units)
         if pending:
             return pending

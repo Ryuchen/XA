@@ -1,9 +1,10 @@
 import os
 from unittest import skipUnless
-from django.db import DatabaseError, connections, transaction
+from django.db import DatabaseError, InterfaceError, connections, transaction
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from datetime import timedelta
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 from django.test import SimpleTestCase, TransactionTestCase, override_settings
@@ -21,20 +22,40 @@ from stores.platform_auth import issue_tokens, start_challenge, verify_challenge
 
 
 class StoreSocketOutageTests(SimpleTestCase):
-    async def test_directory_failure_closes_with_retryable_status(self):
+    async def test_host_directory_failure_closes_with_retryable_status(self):
         from club_accounts.channels_middleware import ClubAccountTokenAuthMiddleware
         downstream, send = AsyncMock(), AsyncMock()
         scope = {'type': 'websocket', 'path': '/ws/orders/', 'query_string': b'token=temporary',
                  'headers': [(b'host', b'xa.esports.club')], 'server': ('xa.esports.club', 80)}
-        with patch('club_accounts.channels_middleware.get_account_context',
-                   new=AsyncMock(side_effect=DatabaseError('simulated directory outage'))):
-            await ClubAccountTokenAuthMiddleware(downstream)(scope, AsyncMock(), send)
-        send.assert_awaited_once_with({'type': 'websocket.close', 'code': 1013})
-        downstream.assert_not_awaited()
+        for error in (DatabaseError, InterfaceError):
+            with self.subTest(error=error), patch('club_accounts.channels_middleware.websocket_store_slug',
+                                                 side_effect=error('simulated directory outage')):
+                await ClubAccountTokenAuthMiddleware(downstream)(scope, AsyncMock(), send)
+                send.assert_awaited_once_with({'type': 'websocket.close', 'code': 4503})
+                downstream.assert_not_awaited()
+                send.reset_mock()
 
 
 class StoreRoutingSnapshotTests(TransactionTestCase):
     databases = {'default', 'store_a', 'store_b'}
+
+    @override_settings(DYNAMIC_STORE_DATABASE_ENABLED=True, ISOLATED_CONTROL_PLANE=True,
+                       STORE_DATABASE_ALIASES=('store_a',))
+    def test_signed_domain_routes_static_store_when_dynamic_stores_are_enabled(self):
+        from stores.domain_index import read
+        from stores.models import StoreDomain
+        from stores.routing_snapshot import lookup_domain
+
+        hostname = 'static-one.test'
+        store = Store.objects.create(slug='static-one', name='测试门店', database_alias='store_a',
+                                     status=Store.Status.ACTIVE, initialized_at=timezone.now())
+        StoreDomain.objects.create(store=store, hostname=hostname, active=True, revision=1)
+        with TemporaryDirectory() as directory, override_settings(STORE_DOMAIN_INDEX_DIR=directory):
+            resolve_store(store.slug)
+            self.assertTrue(read(hostname)['active'])
+            resolved = lookup_domain(hostname)
+            self.assertIsNotNone(resolved)
+            self.assertEqual((resolved.pk, resolved.database_alias), (store.pk, 'store_a'))
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
@@ -49,7 +70,9 @@ class StoreRoutingSnapshotTests(TransactionTestCase):
             row = StoreRoutingSnapshot.objects.get(pk=1)
             original = {'payload': row.payload, 'signature': row.signature}
             old_payload = capture(store, 0)
-        StoreRoutingSnapshot.objects.using('store_b').update_or_create(pk=1, defaults=original)
+        neighbor = Store.objects.create(slug='snapshot-neighbor', name='快照隔离测试店', database_alias='store_b')
+        with store_context(neighbor):
+            StoreRoutingSnapshot.objects.using('store_b').update_or_create(pk=1, defaults=original)
         self.assertEqual(lookup('shenglang').database_alias, 'store_a')
         with override_settings(SECRET_KEY='new-routing-secret', SECRET_KEY_FALLBACKS=[settings.SECRET_KEY]):
             self.assertIsNotNone(lookup('shenglang'))
@@ -306,10 +329,12 @@ class IsolatedControlPlaneTests(TransactionTestCase):
             task.apply_async = Mock(return_value=SimpleNamespace(id='periodic-job'))
             result = task()
             self.assertEqual({item['store'] for item in result['stores']}, {'shenglang', 'xinan'})
-            with patch('stores.context.active_stores', side_effect=DatabaseError('simulated directory outage')):
-                offline_result = task()
-            self.assertEqual({item['store'] for item in offline_result['stores']}, {'shenglang', 'xinan'})
-            self.assertTrue(offline_result['directory_fallback'])
+            for disconnected in (DatabaseError('directory unreachable'), InterfaceError(0, 'closed connection')):
+                with self.subTest(driver_error=type(disconnected).__name__):
+                    with patch('stores.context.active_stores', side_effect=disconnected):
+                        offline_result = task()
+                    self.assertEqual({item['store'] for item in offline_result['stores']}, {'shenglang', 'xinan'})
+                    self.assertTrue(offline_result['directory_fallback'])
             task.run.assert_not_called()
         finally:
             task.pop_request()

@@ -1,4 +1,6 @@
 """Return excess order allocations to the shared receipt after an add-on refund."""
+import json
+
 from django.conf import settings
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
@@ -10,7 +12,16 @@ from .points_funding_allocation import PointsFundingAllocationError, plan_releas
 from .points_funding_plan import PointsFundingPlanError
 
 
-def verify_run(run, *, _skip_usage=False, witness_receipt_id=None):
+def _same_funding_record(current, verified):
+    if type(current) is not type(verified) or current._state.db != verified._state.db:
+        return False
+    fields = current._meta.concrete_fields
+    return json.dumps([getattr(current, field.attname) for field in fields], sort_keys=True, default=str) == json.dumps(
+        [getattr(verified, field.attname) for field in fields], sort_keys=True, default=str)
+
+
+def verify_run(run, *, _skip_usage=False, witness_receipt_id=None, _verified_first_release=None, _verified_rows=None):
+    reuse_first_release = witness_receipt_id is None and _verified_first_release is not None
     from .models import PointsThirdAddonFundingRevision
     if PointsThirdAddonFundingRevision.objects.filter(run=run).exists():
         from .points_third_addon_receipt_usage import _verify, verify_run_locked
@@ -95,8 +106,9 @@ def verify_run(run, *, _skip_usage=False, witness_receipt_id=None):
         expected = plan_release(allocations=normalized, amount=expected_amount)
     except (TypeError, IndexError, PointsFundingAllocationError) as exc:
         raise ValidationError('加购补资释放依据不完整') from exc
+    releases = list(run.releases.order_by('-allocation_id').values_list('pk', 'allocation_id', 'amount'))
     if (before != run.allocated_before or run.released_amount != expected_amount
-            or [(row.allocation_id, row.amount) for row in run.releases.order_by('-allocation_id')]
+            or [(allocation_id, amount) for _, allocation_id, amount in releases]
             != [(row.allocation_id, row.amount) for row in expected]):
         raise ValidationError('加购补资释放金额不一致')
     for item in snapshot:
@@ -133,7 +145,9 @@ def verify_run(run, *, _skip_usage=False, witness_receipt_id=None):
                     allocation=original, pk=0, amount=0, read_receipt_id=witness_receipt_id))
             except DjangoValidationError as exc:
                 raise ValidationError('主单退款到账来源异常') from exc
-        else:
+        elif (_skip_usage or not reuse_first_release or not _same_funding_record(evidence, _verified_first_release)
+              or not isinstance(evidence.posting.participants, list)
+              or evidence.posting.proposal.case.order_id != order_id):
             verify_release_locked(evidence, _skip_usage=_skip_usage)
         allocations = {row.pk: row for row in OrderPointsFundingAllocation.objects.filter(
             pk__in=[item[0] for item in snapshot])}
@@ -256,6 +270,9 @@ def verify_run(run, *, _skip_usage=False, witness_receipt_id=None):
                 or (run.refunded_main_snapshot is None
                     and run.required_amount != run.points_addon_snapshot['required'])):
             raise ValidationError('积分加购退款补资快照异常')
+        if run.refunded_main_snapshot is None and 'handover_refund' in run.points_addon_snapshot:
+            from .points_returned_addon_refund import verify_history
+            verify_history(run.refund, [item[0] for item in normalized], receipt_id=witness_receipt_id)
     if run.points_handover_snapshot is not None or run.points_handover_hash:
         from .points_addon_receipt_usage import digest
         first = OrderPointsFundingAllocation.objects.filter(pk__in=[item[0] for item in snapshot]).first()
@@ -279,18 +296,31 @@ def verify_run(run, *, _skip_usage=False, witness_receipt_id=None):
                 or run.points_handover_hash != digest(run.points_handover_snapshot)
                 or facts != run.points_handover_snapshot):
             raise ValidationError('积分加购接替补资快照异常')
+    if _verified_rows is not None:
+        _verified_rows[run.pk] = (run, tuple(sorted(releases)))
     return run
 
 
-def addon_release_totals(allocations):
+def addon_release_totals(allocations, *, _verified_rows=None):
+    """Total current lines, reusing only exact records checked in the same locked read."""
     ids = [row.pk for row in allocations]
     rows = list(OrderAddonFundingRelease.objects.filter(allocation_id__in=ids).select_related(
         'run__refund', 'run__handover__payment__intent'))
-    for run in {row.run_id: row.run for row in rows}.values():
-        verify_run(run)
     totals = {pk: 0 for pk in ids}
+    by_run = {}
     for row in rows:
         totals[row.allocation_id] += row.amount
+        by_run.setdefault(row.run_id, []).append(row)
+    verified_rows_by_run = _verified_rows or {}
+    for run_id, (_, verified_rows) in verified_rows_by_run.items():
+        if run_id not in by_run and any(allocation_id in totals for _, allocation_id, _ in verified_rows):
+            raise ValidationError('已核验的加购补资释放记录已变化')
+    for run_id, releases in by_run.items():
+        run = releases[0].run
+        verified, verified_rows = verified_rows_by_run.get(run_id, (None, ()))
+        if (not _same_funding_record(run, verified)
+                or tuple(sorted((row.pk, row.allocation_id, row.amount) for row in releases)) != verified_rows):
+            verify_run(run)
     for allocation in allocations:
         if totals[allocation.pk] > allocation.amount:
             raise ValidationError('加购补资释放超过原分配金额')
@@ -419,6 +449,15 @@ def record_prestart_funding_release(order, handoff, plan):
     run.save(update_fields=['prestart_hash'])
     OrderAddonFundingRelease.objects.bulk_create([
         OrderAddonFundingRelease(run=run, allocation_id=part.allocation_id, amount=part.amount) for part in parts])
+    if (transaction.get_connection().vendor == 'sqlite'
+            and getattr(settings, 'SERVICE_POINTS_PRESTART_TESTING', False) is True
+            and not getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False)
+            and not getattr(settings, 'RECEIPT_USAGE_LEDGER_INTERNAL_TESTING', False)
+            and all(row.receipt.usage_version is None for row in allocations)):
+        from .points_checkout_test import require_isolated_checkout
+        require_isolated_checkout()
+        return verify_run(run)
+
     from users.receipt_usage_sources import record_first_addon_release_locked, verify_allocations_locked
     for release in run.releases.select_related('allocation__redemption', 'run__prestart_handoff').order_by('allocation__receipt_id', 'pk'):
         record_first_addon_release_locked(release)
@@ -447,8 +486,10 @@ def _record_funding_release(order, *, refund=None, handover=None, payment=None):
     )
     from .ordinary_refunded_addon_paid_revision import posting_refund_active
     ordinary_paid_refund = bool(refund is not None and posting_refund_active(refund))
+    from .points_returned_addon_refund import returned_handover
+    returned_refund = refund is not None and returned_handover(order, payment_id=refund.payment_id)
     if (not OrderPointsFundingAllocation.objects.filter(owner).exists()
-            and not team_refund and not zero_allocation_transfer_refund and not ordinary_paid_refund):
+            and not team_refund and not zero_allocation_transfer_refund and not ordinary_paid_refund and not returned_refund):
         return None
     from .ordinary_addon_production import eligible as ordinary_addon_eligible
     if (refund is not None and not needs_integrated_processing(order) and order.refund_records.count() == 1
@@ -758,13 +799,17 @@ def _record_after_main_refund(order, *, refund=None, handover=None, payment=None
     else:
         verified = verify_run(run, _skip_usage=formal)
     if formal:
-        from users.receipt_usage_sources import record_first_addon_release_locked, verify_allocations_locked
-        rows = list(run.releases.select_related('allocation__receipt', 'run').order_by('allocation__receipt_id', 'pk'))
-        touched = set()
-        for row in rows:
-            if row.allocation.receipt.usage_version is not None:
+        from users.receipt_usage_sources import (record_first_addon_release_locked,
+                                                 record_first_addon_releases_locked, verify_allocations_locked)
+        from .points_addon_receipt_usage import reuse_history_locked
+        rows = [row for row in run.releases.select_related('allocation__receipt', 'run')
+                .order_by('allocation__receipt_id', 'pk') if row.allocation.receipt.usage_version is not None]
+        if formal_refund and not transferred and len(rows) > 1:
+            record_first_addon_releases_locked(order, rows)
+        else:
+            for row in rows:
                 record_first_addon_release_locked(row)
-                touched.add(row.allocation.receipt_id)
-        for receipt_id in sorted(touched):
-            verify_allocations_locked(receipt_id)
+        for receipt_id in sorted({row.allocation.receipt_id for row in rows}):
+            with reuse_history_locked(order, {receipt_id}):
+                verify_allocations_locked(receipt_id)
     return verified

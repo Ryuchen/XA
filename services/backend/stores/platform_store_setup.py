@@ -1,11 +1,14 @@
 """Platform-super-admin setup without impersonating a store employee."""
 from collections.abc import Mapping
+from datetime import date
 import hashlib
 import json
 from uuid import uuid4
 
 from django.conf import settings
 from django.db import DatabaseError, IntegrityError, transaction as directory_transaction
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -300,6 +303,7 @@ class PlatformOpeningReadinessView(PlatformSetupBase):
         if not isinstance(request.data, Mapping) or set(request.data) != {'confirm'} or request.data['confirm'] is not True:
             return Response({'code': 400, 'msg': '请确认提交开业核验'}, status=400)
         try:
+            from .business_certificates import expired
             from .opening_readiness import opening_readiness
             from .license_status import status_for_store
             with directory_transaction.atomic(using='default'):
@@ -307,20 +311,18 @@ class PlatformOpeningReadinessView(PlatformSetupBase):
                 store = _store(pk, lock=True)
                 if store.status != Store.Status.CONFIGURING:
                     return Response({'code': 409, 'msg': '门店当前不处于待开业配置状态'}, status=409)
-                with store_context(store):
-                    result = opening_readiness(store, _VIEW_PERMISSIONS)
-                # License has a time boundary even while its row is locked.
                 license_status = status_for_store(store)
-                if not result['can_open'] or not license_status['can_open_store']:
+                with store_context(store):
+                    result = opening_readiness(store, _VIEW_PERMISSIONS, license_status=license_status)
+                if not result['can_open']:
                     return Response({'code': 409, 'errorCode': 'STORE_OPENING_BLOCKED',
                                      'msg': '开业条件尚未满足，请先核对配置和有效授权', 'data': result}, status=409)
+                current_license = license_status['current']
                 store.status = Store.Status.ACTIVE
                 store.save(update_fields=['status', 'updated_at'])
                 PlatformAuditEvent.objects.create(account=actor, action='store.first_opened',
                     target_store_slug=store.slug, target_type='store', target_id=str(store.pk),
-                    detail={'checks': result['checks'], 'license': license_status['current']})
-                if not status_for_store(store)['can_open_store']:
-                    raise SetupError('授权已到期，请重新确认后再开业', 409, 'STORE_OPENING_LICENSE_EXPIRED')
+                    detail={'checks': result['checks'], 'license': current_license})
                 if getattr(settings, 'ISOLATED_CONTROL_PLANE', False):
                     from .models import StoreRoutingRevision
                     from .routing_snapshot import latest_revision, schedule
@@ -328,6 +330,21 @@ class PlatformOpeningReadinessView(PlatformSetupBase):
                     revision.version = max(revision.version, latest_revision(store)) + 1
                     revision.save(update_fields=['version'])
                     schedule(store, revision.version)
+                # The store lock serializes license changes. Clock boundaries
+                # still move while configuration and routing evidence are read.
+                now = timezone.now()
+                scheduled = license_status['scheduled']
+                if (now < parse_datetime(current_license['effective_at'])
+                        or (scheduled and now >= parse_datetime(scheduled['effective_at']))):
+                    raise SetupError('授权已变化，请重新核对开业条件', 409, 'STORE_OPENING_LICENSE_CHANGED')
+                if now >= parse_datetime(current_license['ends_at']):
+                    raise SetupError('授权已到期，请重新确认后再开业', 409, 'STORE_OPENING_LICENSE_EXPIRED')
+                certificate = next((row['details'] for row in result['checks'] if row['key'] == 'business_certificate'), None)
+                if certificate and certificate['expires_on'] and expired(date.fromisoformat(certificate['expires_on']), now):
+                    raise SetupError('证照已到期，请重新核对开业条件', 409, 'STORE_OPENING_CERTIFICATE_EXPIRED')
+                notice = next((row['details'] for row in result['checks'] if row['key'] == 'order_notice'), None)
+                if notice and notice['recheck_at'] and now >= parse_datetime(notice['recheck_at']):
+                    raise SetupError('公开下单须知已变化，请重新核对开业条件', 409, 'STORE_OPENING_NOTICE_CHANGED')
             return Response({'code': 0, 'data': {'id': store.pk, 'status': store.status}, 'msg': '门店已开业'})
         except (SetupError, AccountChangeError) as exc:
             return Response({'code': exc.status, 'errorCode': getattr(exc, 'code', 'SETUP_UNAVAILABLE'),

@@ -11,9 +11,12 @@ from stores.conf import settings
 from stores.context import current_currency_name
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import IntegrityError
+from django.db import DatabaseError, IntegrityError, InterfaceError
 from stores.db import transaction
-from django.db.models import Case, Count, ExpressionWrapper, F, FloatField, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models import (
+    Case, Count, Exists, ExpressionWrapper, F, FloatField, IntegerField, OuterRef,
+    Prefetch, Q, Subquery, Sum, Value, When,
+)
 from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -23,7 +26,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
-from club_accounts.models import ClubAccount
+from club_accounts.authentication import ClubAccountAuthenticationUnavailable
+from club_accounts.models import ClubAccount, WechatIdentity
 from club_accounts.permissions import IsClubAccountAuthenticated, resolve_club_account
 from club_accounts.tokens import refresh_account_access_token
 from orders.models import GameCategory, Order, ServiceItem
@@ -43,7 +47,7 @@ from common.catalog_images import bounded_public_image_url
 
 from .models import (
     Achievement, CheckinGift, CheckinMonthProgress, CheckinRecord, CheckinRuleConfig,
-    CustomerGameProfile, EscortProfile, EscortSchedule, ProviderPassPurchase,
+    CustomerGameProfile, EscortProfile, EscortSchedule, ProviderPassPurchase, ProviderQualification,
     WechatPhoneLock,
 )
 
@@ -140,6 +144,8 @@ class AccountRefreshView(APIView):
             return Response({'code': 400, 'msg': '缺少 refresh token'})
         try:
             access_token = refresh_account_access_token(raw_refresh_token)
+        except (DatabaseError, InterfaceError) as exc:
+            raise ClubAccountAuthenticationUnavailable() from exc
         except TokenError:
             return Response(
                 {'code': 401, 'msg': '登录已过期，请重新登录'},
@@ -347,6 +353,35 @@ class MeAvatarView(APIView):
         return Response({'code': 0, 'data': {'avatar': account.avatar_url}})
 
 
+def _provider_display_labels(account_ids):
+    from engagement.models import MemberTag, ProviderNaming
+
+    checked_at = timezone.now()
+    names = ProviderNaming.objects.filter(
+        provider_id__in=account_ids, provider_business_cycle=F('provider__business_cycle'),
+        is_visible=True, expires_at__gt=checked_at,
+    ).order_by().values_list('provider_id', 'pk', 'title', 'expires_at', Value(False), Value(False))
+    tags = MemberTag.objects.filter(
+        account_id__in=account_ids, is_active=True, reviewed_at__isnull=False, suspended_at__isnull=True,
+    ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=checked_at)).order_by().values_list(
+        'account_id', 'pk', 'title', 'expires_at', 'highlighted', Value(True),
+    )
+    naming_map = {}
+    tag_map = {}
+    for account_id, pk, title, expires_at, highlighted, is_tag in names.union(tags, all=True):
+        label = {'id': pk, 'title': title, 'expires_at': expires_at}
+        if is_tag:
+            tag_map.setdefault(account_id, []).append(dict(label, highlighted=bool(highlighted)))
+        else:
+            naming_map.setdefault(account_id, []).append(label)
+    for rows in naming_map.values():
+        rows.sort(key=lambda row: row['expires_at'], reverse=True)
+    for rows in tag_map.values():
+        rows.sort(key=lambda row: row['id'], reverse=True)
+        del rows[3:]
+    return naming_map, tag_map
+
+
 class EscortProfileListView(APIView):
     permission_classes = [AllowAny]
 
@@ -366,7 +401,9 @@ class EscortProfileListView(APIView):
         if service_item_id:
             if not service_item_id.isascii() or not service_item_id.isdigit() or len(service_item_id) > 18:
                 return Response({'code': 400, 'msg': '服务项目参数无效'}, status=400)
-            service = ServiceItem.objects.filter(visible_service_q(), pk=int(service_item_id)).select_related('required_level').first()
+            service = ServiceItem.objects.filter(visible_service_q(), pk=int(service_item_id)).select_related(
+                'game_category', 'required_level', 'service_category',
+            ).first()
             if service is None:
                 if detail:
                     return Response({'code': 404, 'msg': '服务已下架，请返回重新选择'}, status=404)
@@ -378,9 +415,14 @@ class EscortProfileListView(APIView):
             account__is_active=True, account__can_login=True, account__can_view=True,
         ).select_related('account', 'user', 'level').prefetch_related(
             'game_categories',
-            'service_items__game_category',
-            'user__schedules', 'qualifications__game_category', 'account__wechat_identities',
+            Prefetch('service_items', queryset=ServiceItem.objects.select_related('game_category')),
+            'user__schedules',
+            Prefetch('qualifications', queryset=ProviderQualification.objects.select_related('game_category')),
         )
+        if settings.PROVIDER_WECHAT_GATE_ENABLED:
+            profiles = profiles.annotate(has_wechat_identity=Exists(
+                WechatIdentity.objects.filter(account_id=OuterRef('account_id')),
+            ))
         from .qualifications import filtered_qualifications,serialize_qualification,qualification_rows,service_requirement,scope_matches,service_skill
         if detail:
             profiles = profiles.filter(account_id=provider_id)
@@ -395,13 +437,23 @@ class EscortProfileListView(APIView):
             profiles = profiles.filter(Q(account_id__in=recent_ids) | Q(recommendation_slot__isnull=False))
         if gender != 'ANY' and not detail:
             profiles = profiles.filter(gender=gender)
-        from wallet.club_rules import club_income_rules_enabled
-        club_rules_enabled = club_income_rules_enabled()
-        from wallet.refund_recovery_order import enabled as recovery_order_enabled
+        from orders.capacity import CONFIG_KEY as CAPACITY_KEY, current_capacity_limit
+        from wallet.club_rules import DEPOSIT_TARGET_KEY, parse_deposit_targets
+        from wallet.models import SystemConfig
+        from wallet.refund_deposit import protection_enabled
+        from wallet.refund_recovery_order import RecoveryOfferRead, annotate_recovery_offer, enabled as recovery_order_enabled
         allow_refund_recovery = recovery_order_enabled()
+        read_recovery_offer = protection_enabled()
+        if read_recovery_offer:
+            profiles = annotate_recovery_offer(profiles, allow_recovery=allow_refund_recovery)
+        config_values = None
+        cash_target = None
         if not directory:
-            from wallet.club_rules import deposit_target
-            deposit_rule = Q(deposit_mode='EARNINGS') | Q(deposit_paid__gte=deposit_target('CASH'))
+            config_values = dict(SystemConfig.objects.filter(
+                key__in=(DEPOSIT_TARGET_KEY, CAPACITY_KEY),
+            ).values_list('key', 'value'))
+            cash_target = parse_deposit_targets(config_values.get(DEPOSIT_TARGET_KEY))['cash_target']
+            deposit_rule = Q(deposit_mode='EARNINGS') | Q(deposit_paid__gte=cash_target)
             if allow_refund_recovery:
                 from wallet.models import RefundDepositDeficit
                 deposit_rule |= Q(pk__in=RefundDepositDeficit.objects.filter(
@@ -431,8 +483,7 @@ class EscortProfileListView(APIView):
             ).distinct()
 
         from orders.services import capacity_orders_for
-        from orders.capacity import current_capacity_limit
-        capacity_limit = current_capacity_limit()
+        capacity_limit = current_capacity_limit(config_values=config_values)
         # Reuse the dispatch capacity predicate, including legacy IDs, double
         # providers and released shares, in one database round trip for the list.
         active_count = capacity_orders_for(
@@ -466,18 +517,6 @@ class EscortProfileListView(APIView):
             )
         ).order_by('-pass_priority', '-favorable_rate', '-rating_avg', '-rating_count', '-completed_order_count', 'id')
 
-        from engagement.models import ProviderNaming, MemberTag
-        naming_map = {}
-        for naming in ProviderNaming.objects.filter(provider_id__in=profiles.values('account_id'),
-                provider_business_cycle=F('provider__business_cycle'),
-                is_visible=True, expires_at__gt=timezone.now()).order_by('-expires_at'):
-            naming_map.setdefault(naming.provider_id, []).append({'id': naming.pk, 'title': naming.title, 'expires_at': naming.expires_at})
-        tag_map = {}
-        for tag in MemberTag.objects.filter(account_id__in=profiles.values('account_id'), is_active=True, reviewed_at__isnull=False, suspended_at__isnull=True).filter(
-                Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).order_by('-id'):
-            bucket = tag_map.setdefault(tag.account_id, [])
-            if len(bucket) < 3:
-                bucket.append({'id': tag.pk, 'title': tag.title, 'highlighted': tag.highlighted, 'expires_at': tag.expires_at})
         eligible_variants = []
         eligible_catalog = detail and not service and request.query_params.get('eligible_catalog') == '1'
         if eligible_catalog:
@@ -506,8 +545,10 @@ class EscortProfileListView(APIView):
             # Historical shortcuts may show availability, but never grant a new service qualification.
             if shortcuts and service and (not p.can_take_service(service) or not service_skill(p,service)):
                 continue
-            acceptance_error = p.order_acceptance_error(service, club_rules_enabled=club_rules_enabled,
-                                                       provider_gender=gender,
+            recovery_offer = RecoveryOfferRead.from_roster(p) if read_recovery_offer else None
+            acceptance_error = p.order_acceptance_error(service, provider_gender=gender,
+                                                       deposit_required_override=cash_target,
+                                                       recovery_offer_read=recovery_offer,
                                                        allow_refund_recovery=allow_refund_recovery)
             if not acceptance_error and p.active_order_count >= capacity_limit:
                 acceptance_error = '该陪玩当前接单已满，请稍后再约'
@@ -545,8 +586,6 @@ class EscortProfileListView(APIView):
                 'winRate': float(p.win_rate),
                 'pricePerHour': reference or 0,
                 'qualifications': [serialize_qualification(q) for q in qualified],
-                'namings': naming_map.get(p.account_id, []),
-                'display_tags': tag_map.get(p.account_id, []),
                 'hasReferenceHourlyPrice': reference is not None,
                 'bio': p.bio,
                 'city': p.city,
@@ -564,15 +603,18 @@ class EscortProfileListView(APIView):
                     item['eligible_service_item_ids'] = [variant.pk for variant in eligible_variants
                         if p.status != EscortProfile.Status.OFFLINE
                         and p.active_order_count < capacity_limit
-                        and not p.order_acceptance_error(variant, club_rules_enabled=club_rules_enabled,
-                                                         provider_gender=gender,
+                        and not p.order_acceptance_error(variant, provider_gender=gender,
+                                                         recovery_offer_read=recovery_offer,
                                                          allow_refund_recovery=allow_refund_recovery)]
             data.append(item)
             listed_profiles.append(p)
 
         from .companion_picker import companion_service_amounts, order_service_companions
+        naming_map, tag_map = _provider_display_labels([p.account_id for p in listed_profiles])
         amounts = companion_service_amounts(listed_profiles, include_recent=picker)
         for item in data:
+            item['namings'] = naming_map.get(item['id'], [])
+            item['display_tags'] = tag_map.get(item['id'], [])
             item['monthly_order_amount'] = amounts['monthly'].get(item['id'], 0)
 
         if detail:
@@ -857,11 +899,12 @@ class ProviderPassView(APIView):
             point_terms = None
             point_profile = None
             if points_token is not None:
+                from club_accounts.provider_lifecycle import lock_provider_accounts_for_read
                 from engagement.services import locked_profile as locked_points_profile
                 from .pass_points import lock_and_verify
-                locked_account = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
-                if (locked_account.account_type != ClubAccount.AccountType.PROVIDER
-                        or not locked_account.is_active or not locked_account.can_login):
+                locked_account = lock_provider_accounts_for_read([request.account.pk]).get(request.account.pk)
+                if (not locked_account or not locked_account.is_active or not locked_account.can_login
+                        or locked_account.business_cycle != request.account.business_cycle):
                     from rest_framework.exceptions import ValidationError
                     raise ValidationError('陪玩账号状态已变化，请重新登录')
                 point_profile = locked_points_profile(locked_account)
@@ -876,6 +919,12 @@ class ProviderPassView(APIView):
                 if points_token is not None:
                     transaction.set_rollback(True)
                 return Response({'code': 400, 'msg': '平台入账金额超过系统范围，请联系客服'})
+            from stores.certificate_admission import enabled as certificate_enforcement_enabled
+            if certificate_enforcement_enabled():
+                denied = refusal(pass_license_status(lock=True))
+                if denied is not None:
+                    transaction.set_rollback(True)
+                    return denied
             allowed, reason = claim_fund_write(
                 account=request.account, request_id=request.data.get('client_request_id'),
                 scope='provider.pass', fingerprint=f'{tier}:{days}:{paid_amount}',

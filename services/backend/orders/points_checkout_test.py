@@ -146,21 +146,26 @@ def require_ordinary_funding_order(order):
             from .ordinary_refunded_addon_paid_revision import pending_locked
             if pending_locked(order):
                 return
+    if not ordinary_production_enabled() or not matches_simple_ordinary_funding_order(order):
+        raise ValidationError('当前订单不在普通订单补资开放范围，请联系门店核对')
+
+
+def matches_simple_ordinary_funding_order(order):
+    """Check the order facts shared by the ordinary funding and historical read paths."""
     from .models import (NegotiationExecution, OrderOriginalShareTransfer,
                          OrderPlatformSubsidy, OrderPrestartHandoff, OrderStatusLog)
     from .points_service_payment import needs_integrated_processing
-    if (not ordinary_production_enabled() or not order or order.is_gift_snapshot
-            or order.source_order_id or not order.customer_account_id
-            or order.funding_terms is None or not order.funding_allocations.exists()
-            or needs_integrated_processing(order) or order.refund_records.exists()
-            or order.aftersales.exclude(status='RESOLVED').exists()
-            or NegotiationExecution.objects.filter(proposal__case__order=order).exists()
-            or order.status_logs.filter(action=OrderStatusLog.Action.TRANSFER).exists()
-            or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
-            or OrderPrestartHandoff.objects.filter(order=order).exists()
-            or order.addon_intents.filter(payment__isnull=False).exists()
-            or OrderPlatformSubsidy.objects.filter(order=order).exists()):
-        raise ValidationError('当前订单不在普通订单补资开放范围，请联系门店核对')
+    return not (not order or order.is_gift_snapshot
+                or order.source_order_id or not order.customer_account_id
+                or order.funding_terms is None or not order.funding_allocations.exists()
+                or needs_integrated_processing(order) or order.refund_records.exists()
+                or order.aftersales.exclude(status='RESOLVED').exists()
+                or NegotiationExecution.objects.filter(proposal__case__order=order).exists()
+                or order.status_logs.filter(action=OrderStatusLog.Action.TRANSFER).exists()
+                or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
+                or OrderPrestartHandoff.objects.filter(order=order).exists()
+                or order.addon_intents.filter(payment__isnull=False).exists()
+                or OrderPlatformSubsidy.objects.filter(order=order).exists())
 
 
 def require_order_funding_access(order):

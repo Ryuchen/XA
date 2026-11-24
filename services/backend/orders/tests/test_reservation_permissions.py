@@ -6,7 +6,7 @@ from club_accounts.services import get_or_create_account_for_legacy_user, link_l
 from club_accounts.tokens import issue_account_tokens
 from orders.models import Reservation
 from orders.tests.factories import make_console_user, make_provider
-from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase
+from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase, prepare_reservation_payment
 from datetime import timedelta
 from django.utils import timezone
 
@@ -48,6 +48,7 @@ class ReservationPermissionTest(ReservationApiTestBase):
         return self.client_for(account)
 
     def test_workbench_pending_reservations_match_real_queue_and_permission(self):
+        prepare_reservation_payment(self.boss_account)
         boss, provider = self.client_for(self.boss_account), self.client_for(self.provider_account)
         staff = self.staff_for(['dashboard:view', 'order:view'])
         limited = self.staff_for(['dashboard:view'])
@@ -102,6 +103,7 @@ class ReservationPermissionTest(ReservationApiTestBase):
         self.assertEqual(boss.get(path).data['data']['status'], 'CANCELLED')
 
     def test_no_view_staff_cannot_read_but_dispatch_authority_can_convert(self):
+        prepare_reservation_payment(self.boss_account)
         boss, provider = self.client_for(self.boss_account), self.client_for(self.provider_account)
         dispatcher = self.staff_for(['order:dispatch'])
         self.assertEqual(dispatcher.get(LIST_URL).data['code'], 403)

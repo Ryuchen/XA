@@ -1,4 +1,4 @@
-from django.db import DatabaseError, IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, InterfaceError, transaction
 from django.core.management.base import CommandError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -10,15 +10,22 @@ from rest_framework.views import APIView
 from .context import current_store
 from .models import Store
 from .permissions import IsPlatformStoreManager, may_manage_stores
+from .provision_claim import StoreAlreadyInitialized
 from .serializers import (StoreCreateSerializer, StoreResumeSerializer, StoreUpdateSerializer,
                           configured_database_aliases, public_store)
 
 
 def managed_store(store):
-    return {**public_store(store), 'database_alias': store.database_alias,
+    return {**public_store(store), 'background_url': store.background_url,
+            'database_alias': store.database_alias,
             'initialized_at': store.initialized_at,
             'updated_at': store.updated_at,
             'initialization_required': store.initialized_at is None}
+
+
+def _already_initialized(store, *, status=200):
+    return Response({'code': 0, 'msg': '门店已完成初始化，请核对现有账号',
+                     'data': managed_store(store)}, status=status)
 
 
 def _keep_uninitialized_store_closed(store):
@@ -35,7 +42,7 @@ class CurrentStoreView(APIView):
         store = current_store()
         allowed = may_manage_stores(getattr(request, 'account', None)) or is_platform_session(request)
         return Response({'code': 0, 'data': {
-            **public_store(store), 'can_manage_stores': allowed,
+            **public_store(store, request), 'can_manage_stores': allowed,
             'is_platform_admin': allowed,
         }})
 
@@ -45,18 +52,20 @@ class AvailableStoresView(APIView):
 
     def get(self, request):
         from .permissions import is_platform_session
-        from .dynamic_database import alias_for_slug, enabled, materialize
-        if enabled():
-            for candidate in Store.objects.filter(status=Store.Status.ACTIVE, initialized_at__isnull=False):
-                if candidate.database_alias == alias_for_slug(candidate.slug):
-                    materialize(candidate.slug, expected_alias=candidate.database_alias)
-        stores = Store.objects.filter(
-            status=Store.Status.ACTIVE, initialized_at__isnull=False,
-            database_alias__in=['default', *configured_database_aliases()],
-        )
+        from .dynamic_database import store_connection_ready, uses_dynamic_connection
+        stores = Store.objects.filter(status=Store.Status.ACTIVE, initialized_at__isnull=False)
         if not may_manage_stores(getattr(request, 'account', None)) and not is_platform_session(request):
             stores = stores.filter(pk=current_store().pk)
-        return Response({'code': 0, 'data': {'results': [public_store(store) for store in stores]}})
+        aliases = ('default', *configured_database_aliases())
+        results = []
+        for store in stores:
+            if uses_dynamic_connection(store):
+                available = store_connection_ready(store)
+            else:
+                available = store.database_alias in aliases
+            if available:
+                results.append(public_store(store, request))
+        return Response({'code': 0, 'data': {'results': results}})
 
 
 class StoreManageView(APIView):
@@ -95,10 +104,13 @@ class StoreManageView(APIView):
                 admin = {field: serializer.validated_data.pop(field, None) for field in
                          ('admin_username', 'admin_password', 'admin_phone', 'admin_nickname')}
                 store = serializer.save(status=Store.Status.PROVISIONING)
-        except ValueError:
-            return Response({'code': 503, 'msg': '平台门店目录暂不可用，无法安全登记'}, status=503)
+                if admin['admin_username']:
+                    from .provision_claim import reserve_claim
+                    reserve_claim(store, admin_username=admin['admin_username'])
         except IntegrityError:
             return Response({'code': 409, 'msg': '门店标识或数据库已被使用，请刷新后重试'}, status=409)
+        except (CommandError, ValueError, DatabaseError, InterfaceError):
+            return Response({'code': 503, 'msg': '平台门店目录暂不可用，无法安全登记'}, status=503)
         if admin['admin_username']:
             from .provisioning import create_database, initialize_store
             try:
@@ -106,6 +118,8 @@ class StoreManageView(APIView):
                 initialize_store(store, admin_username=admin['admin_username'],
                                  admin_password=admin['admin_password'], admin_phone=admin['admin_phone'],
                                  admin_nickname=admin['admin_nickname'], new_database_created=True)
+            except StoreAlreadyInitialized as exc:
+                return _already_initialized(exc.store, status=201)
             except CommandError as exc:
                 _keep_uninitialized_store_closed(store)
                 return Response({'code': 409, 'msg': str(exc),
@@ -179,14 +193,14 @@ class StoreResumeProvisionView(APIView):
         serializer = StoreResumeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         store = get_object_or_404(Store, pk=pk)
-        from .dynamic_database import alias_for_slug, enabled, materialize
-        if enabled() and store.database_alias == alias_for_slug(store.slug):
+        if store.initialized_at is not None:
+            return _already_initialized(store)
+        from .dynamic_database import discover_store_connection, uses_dynamic_connection
+        if store.status == Store.Status.PROVISIONING and uses_dynamic_connection(store):
             try:
-                materialize(store.slug, expected_alias=store.database_alias)
+                discover_store_connection(store)
             except ValueError:
                 return Response({'code': 409, 'msg': '门店数据库配置不可用，请联系平台运维'}, status=409)
-        if store.initialized_at is not None:
-            return Response({'code': 0, 'msg': '门店已完成初始化，请核对现有账号', 'data': managed_store(store)})
         if store.status != Store.Status.PROVISIONING or store.database_alias not in configured_database_aliases():
             return Response({'code': 409, 'msg': '门店状态或数据库配置不允许恢复初始化'}, status=409)
         from .models import StoreProvisioningClaim
@@ -200,6 +214,8 @@ class StoreResumeProvisionView(APIView):
                 admin_password=serializer.validated_data.get('admin_password'),
                 admin_phone=serializer.validated_data.get('admin_phone'),
                 admin_nickname=serializer.validated_data.get('admin_nickname'), new_database_created=True)
+        except StoreAlreadyInitialized as exc:
+            return _already_initialized(exc.store)
         except CommandError as exc:
             _keep_uninitialized_store_closed(store)
             return Response({'code': 409, 'msg': str(exc), 'errorCode': 'STORE_INITIALIZATION_REQUIRES_REVIEW'}, status=409)

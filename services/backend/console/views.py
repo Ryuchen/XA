@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from contextlib import ExitStack
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
@@ -1648,20 +1649,17 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         try:
             from orders.points_transfer_revision_scope import revision_scope, active as funding_revision_active
             from orders.transfer_lifecycle import capture as capture_transfer_lifecycle, lock as lock_transfer_lifecycle
+            from orders.transfer_lifecycle import lock_incoming_cycles
             lifecycle = capture_transfer_lifecycle([
                 (cmd['old_provider_account_id'], cmd['new_provider_account'].pk) for cmd in parsed
             ])
-            with transaction.atomic(), revision_scope(order.pk):
+            with transaction.atomic(), ExitStack() as scopes:
+                # The formal points scope already locks the order and store funds.
                 lock_transfer_lifecycle(lifecycle)
+                scopes.enter_context(revision_scope(order.pk,
+                    outgoing_accounts={cmd['old_provider_account_id'] for cmd in parsed}))
                 lifecycle_cycles = ({account.pk: account.business_cycle for account in lifecycle[0]}
                                     if lifecycle is not None else None)
-                incoming_ids = {cmd['new_provider_account'].pk for cmd in parsed}
-                incoming_cycles = (lifecycle_cycles if lifecycle_cycles is not None else dict(
-                    ClubAccount.objects.select_for_update().filter(pk__in=incoming_ids,
-                        account_type=ClubAccount.AccountType.PROVIDER).order_by('pk')
-                    .values_list('pk', 'business_cycle')))
-                if any(type(incoming_cycles.get(pk)) is not int or incoming_cycles[pk] <= 0 for pk in incoming_ids):
-                    raise IllegalTransitionError('转入陪玩业务周期待核对')
                 locked_order = Order.objects.select_for_update().get(pk=order.pk)
                 if locked_order.status != Order.Status.IN_SERVICE:
                     raise IllegalTransitionError('订单状态已变更，无法转单')
@@ -1669,6 +1667,10 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 # before using it to authorize any part of this transfer.
                 from orders.financial_lock import lock_order_money
                 lock_order_money()
+                incoming_ids = {cmd['new_provider_account'].pk for cmd in parsed}
+                incoming_cycles = lifecycle_cycles if lifecycle_cycles is not None else lock_incoming_cycles(incoming_ids)
+                if any(type(incoming_cycles.get(pk)) is not int or incoming_cycles[pk] <= 0 for pk in incoming_ids):
+                    raise IllegalTransitionError('转入陪玩业务周期待核对')
                 from orders.points_addon_receipt_usage import prelock as prelock_order_receipts
                 prelock_order_receipts(locked_order)
                 in_flight_principal = enabled_for_order(locked_order)
@@ -1839,9 +1841,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 # an old wallet first would invert that order even at zero fine.
                 profile_user_ids = {row.provider_id for row in rows.values() if row.provider_id}
                 profile_user_ids.update(cmd['new_provider'].pk for cmd in parsed)
-                list(EscortProfile.objects.select_for_update().filter(
-                    user_id__in=profile_user_ids,
-                ).order_by('user_id'))
+                locked_profiles = {profile.user_id: profile for profile in
+                    EscortProfile.objects.select_for_update().filter(user_id__in=profile_user_ids).order_by('user_id')}
 
                 # A converted reservation still owns its original time slot.
                 # Check the incoming provider while holding the same profile
@@ -1852,9 +1853,18 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 booking = Reservation.objects.filter(order_id=locked_order.pk,
                     status=Reservation.Status.CONVERTED).first()
                 if booking:
-                    from orders.reservation_services import find_conflicting_reservations
+                    from orders.reservation_services import (ReservationError, find_conflicting_reservations,
+                                                             validate_reservation_schedule)
                     for cmd in parsed:
-                        if find_conflicting_reservations(cmd['new_provider_account'], booking.start_time,
+                        account = cmd['new_provider_account']
+                        profile = locked_profiles.get(cmd['new_provider'].pk)
+                        if not profile or profile.account_id != account.pk:
+                            raise IllegalTransitionError('转入陪玩档案已变化，请刷新后重试')
+                        try:
+                            validate_reservation_schedule(profile, booking.start_time, booking.end_time)
+                        except ReservationError as exc:
+                            raise IllegalTransitionError('转入陪玩设置的接单档期未覆盖原预约时段') from exc
+                        if find_conflicting_reservations(account, booking.start_time,
                                 booking.end_time, exclude_id=booking.pk).select_for_update().exists():
                             raise IllegalTransitionError('转入陪玩在原预约时段已有其他预约')
 
@@ -1909,8 +1919,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         for cmd in parsed:
                             cmd['_segment_commission_plan'] = plans[cmd['new_provider_account'].pk]
                 from orders.transfer_limit import record_locked
-                record_locked(locked_order, [(cmd['old_provider_account_id'], cmd['new_provider_account'].pk)
-                                             for cmd in parsed])
+                seat_events = record_locked(locked_order, [(cmd['old_provider_account_id'], cmd['new_provider_account'].pk)
+                                                           for cmd in parsed])
                 last_new_provider = None
                 last_new_provider_account = None
                 transfer_at = timezone.now()
@@ -2216,65 +2226,21 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         raise IllegalTransitionError(str(exc)) from exc
                 from orders.room_completion_review import invalidate_for_transfer_locked
                 invalidate_for_transfer_locked(locked_order, request.account)
-                log_only(
+                transfer_log = log_only(
                     locked_order,
                     action=OrderStatusLog.Action.TRANSFER,
                     operator=request.legacy_user,
                     operator_account=request.account,
                     reason=reason,
                 )
+                from site_messages.service_transfer_assignment_notice import record_or_schedule
+                record_or_schedule(locked_order, transfer_log, seat_events, rows,
+                                   transferred_at=transfer_at, subsidy_segment=subsidy_segment)
                 order = locked_order
                 transaction.on_commit(lambda: notify_order_update(order))
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '转单失败'})
 
-        # A teammate who remains on a two-person service must also learn about
-        # the handoff, including when they were offline during the update.
-        if order.escort_mode == Order.EscortMode.DOUBLE:
-            for row in rows.values():
-                if row.provider_account_id in changed_accounts or row.released_at:
-                    continue
-                _push_message_safe(
-                    recipient_id=row.provider_id,
-                    recipient_account_id=row.provider_account_id,
-                    title='服务搭档已更换',
-                    preview=f'「{order.service_name_snapshot}」的服务搭档已更换，请查看订单并确认服务安排',
-                    msg_type='ORDER', related_order_id=order.id,
-                )
-        for cmd in parsed:
-            _push_message_safe(
-                recipient_id=rows[cmd['old_provider_account_id']].provider_id,
-                recipient_account_id=cmd['old_provider_account_id'],
-                title='订单已转出',
-                preview=(
-                    f'你的「{order.service_name_snapshot}」已转交其他大神，'
-                    + ('请按履约情况提交报单，收益将在整单完成后核算'
-                       if subsidy_segment else '本单无保留份额，无需提交报单'
-                       if rows[cmd['old_provider_account_id']].settlement_base <= 0 else
-                       '保留收益待整单报单通过后结算'
-                       if order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL
-                       else '本次转单份额已结算')
-                ),
-                msg_type='ORDER',
-                related_order_id=order.id,
-            )
-            _push_message_safe(
-                recipient_id=cmd['new_provider'].id,
-                recipient_account_id=cmd['new_provider_account'].pk,
-                title='客服转单给你',
-                preview=f'客服为你转入「{order.service_name_snapshot}」，请接手并继续服务，完成后提交结单截图',
-                msg_type='ORDER',
-                assignment_alert=True,
-                related_order_id=order.id,
-            )
-        _push_message_safe(
-            recipient_id=order.customer_id,
-            recipient_account_id=order.customer_account_id,
-            title='已为你更换大神',
-            preview=f'你的「{order.service_name_snapshot}」已更换服务大神',
-            msg_type='ORDER',
-            related_order_id=order.id,
-        )
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '转单成功'})
 
     @action(detail=False, methods=['get'], url_path='suggest-commission')
@@ -2326,12 +2292,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         return Response({'code': 0, 'data': data})
 
     @action(detail=False, methods=['post'], url_path='dispatch')
+    @recover_fund_result('admin.dispatch')
     def quick_dispatch(self, request):
         if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
-            replayed, replay_reason = peek_fund_write(account=request.account,
-                request_id=request.data.get('client_request_id'))
-            if replayed:
-                return Response({'code': 409, 'msg': replay_reason})
             customer = _business_account(request.data.get('customer_id'), ClubAccount.AccountType.BOSS)
             if not customer:
                 return Response({'code': 404, 'msg': '老板不存在'})
@@ -2976,6 +2939,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 enqueue_wecom_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
                 _push_message_safe(
                     recipient_id=order.customer_id,
+                    recipient_account_id=order.customer_account_id,
+                    recipient_business_cycle=order.business_cycle,
                     title='客服已为你下单',
                     preview=f'客服为你下单「{order.service_name_snapshot}」，正在为你匹配大神',
                     msg_type='ORDER',
@@ -2984,11 +2949,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
             # A rolled-back order must not be broadcast to other clients.
             transaction.on_commit(lambda order=order: notify_order_update(order))
-            return Response({
-                'code': 0,
-                'msg': '派单成功',
-                'data': self.get_serializer(order).data,
-            })
+            return fund_success(request, 'admin.dispatch', data=self.get_serializer(order).data, msg='派单成功')
 
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
@@ -3010,6 +2971,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 raise IllegalTransitionError('订单未支付或已退款，不能开始服务')
             if not o.provider_id:
                 raise IllegalTransitionError('请先指派陪玩')
+            from orders.team_fulfillment import require_staff_team_evidence
+            require_staff_team_evidence(o, '入队截图')
             if booked:
                 current_accounts = set(o.providers.filter(released_at__isnull=True)
                                        .values_list('provider_account_id', flat=True)) | {o.provider_account_id}
@@ -3063,6 +3026,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             from orders.participation_entry import pending_transfer_segments
             if pending_transfer_segments(o).exists():
                 raise IllegalTransitionError('有转入陪玩尚未确认入队，请先核对')
+            from orders.team_fulfillment import require_staff_team_evidence
+            require_staff_team_evidence(o, '结单截图')
 
         def side_effect(o):
             # 与打手端共用履约完成服务，结算时机由订单快照决定。
@@ -3117,6 +3082,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 client_request_id=request.data.get('client_request_id'),
             )
         except RefundError as exc:
+            if exc.code in ('GRAB_ROUND_REVIEW', 'GRAB_CANCEL_REVIEW_PENDING'):
+                return Response({'code': 409, 'errorCode': exc.code, 'msg': str(exc)}, status=409)
             return Response({'code':409 if exc.code in ('REFUND_PLAN_CHANGED','REFUND_REQUEST_CONFLICT') else 400,
                              'errorCode':exc.code,'msg':str(exc),'data':exc.data})
         except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
@@ -3234,6 +3201,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         from orders.direct_payment import DirectPaymentCancellationUnconfirmed
+        from orders.grab_customer_review import PendingGrabCancellationReview
+        from orders.grab_round_facts import GrabRoundReviewRequired
         order = self.get_object()
         reason = (request.data.get('reason') or '').strip()[:255]
         if order.status != Order.Status.PENDING:
@@ -3248,6 +3217,10 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             )
         except DirectPaymentCancellationUnconfirmed as exc:
             return Response({'code': 409, 'errorCode': 'DIRECT_PAYMENT_CANCELLATION_UNCONFIRMED', 'msg': str(exc)})
+        except GrabRoundReviewRequired as exc:
+            return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': str(exc)}, status=409)
+        except PendingGrabCancellationReview as exc:
+            return Response({'code': 409, 'errorCode': 'GRAB_CANCEL_REVIEW_PENDING', 'msg': str(exc)}, status=409)
         except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许取消'})
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '已取消'})
@@ -3279,6 +3252,11 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             # accepted the order before transition acquired its row lock.
             if action == OrderStatusLog.Action.CANCEL and order.status != Order.Status.PENDING:
                 raise IllegalTransitionError('仅待接单订单可直接取消，其它状态请用退款')
+            if action == OrderStatusLog.Action.CANCEL:
+                from orders.grab_customer_review import require_no_pending_review
+                from orders.grab_round_facts import latest_round_state
+                latest_round_state(order.pk, seats=order.required_provider_count, lock=True)
+                require_no_pending_review(order.pk)
             if order.status == Order.Status.CANCELLED:
                 raise IllegalTransitionError('订单已是终态，无法退款')
             from orders.direct_payment import require_cancel_channel_confirmation
@@ -4114,7 +4092,7 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             qs = qs.filter(provider_match('nickname', provider_nickname) | profile_name_match(provider_nickname) | profile_no_match(provider_nickname))
         if self.request.query_params.get('order_blocked') == '1':
             from .serializers import pending_report_order_block_q
-            qs = qs.filter(pending_report_order_block_q(qs))
+            qs = qs.filter(pending_report_order_block_q(qs, verify_formal_points=self.request.method == 'GET'))
         return qs
 
     def list(self, request, *args, **kwargs):

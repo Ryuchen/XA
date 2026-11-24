@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>门店入口 · XA 电竞</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: #f4f7fc;
+      --surface: #fff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --link: #1e40af;
+      --hover: #eff6ff;
+      --focus: #2563eb;
+      font: 100%/1.6 system-ui, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #020617;
+        --surface: #0f172a;
+        --text: #f8fafc;
+        --muted: #cbd5e1;
+        --border: #475569;
+        --link: #7dd3fc;
+        --hover: #1e293b;
+        --focus: #38bdf8;
+      }
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--background); color: var(--text); }
+    main { max-inline-size: 58rem; margin-inline: auto; padding: clamp(24px, 7vw, 88px) max(16px, 4vw); }
+    .intro { padding: clamp(24px, 5vw, 48px); border-radius: 12px; background: #0f172a; color: #f8fafc; }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: clamp(2rem, 1.5rem + 2vw, 3rem); line-height: 1.2; }
+    .intro p { margin-block-start: 12px; color: #bae6fd; }
+    .directory { container-type: inline-size; margin-block-start: 16px; }
+    .stores { display: grid; grid-template-columns: minmax(0, 1fr); padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .store + .store { border-block-start: 1px solid var(--border); }
+    .store h2 { padding: 20px 20px 12px; font-size: 1.125rem; }
+    .store a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      min-block-size: 48px;
+      padding: 10px 20px;
+      border-block-start: 1px solid var(--border);
+      font-weight: 600;
+    }
+    a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: .2em; }
+    a:hover { background: var(--hover); }
+    a:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+    a span { color: var(--muted); }
+    .admin { display: inline-flex; align-items: center; min-block-size: 48px; margin-block-start: 8px; padding-inline: 8px; }
+    @container (min-width: 32rem) {
+      .stores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .store + .store { border-block-start: 0; border-inline-start: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="intro">
+      <h1>门店入口</h1>
+      <p>请选择所属门店。门店暂未开放时，可在对应入口查看开放说明和求助方式。</p>
+    </header>
+    <nav class="directory" aria-label="门店及管理后台">
+      <div class="stores">
+        <section class="store" aria-labelledby="shenglang">
+          <h2 id="shenglang">声浪电竞</h2>
+          <a href="/entry/sl/boss/" aria-label="声浪电竞 老板服务中心">老板服务中心 <span aria-hidden="true">→</span></a>
+          <a href="/entry/sl/player/" aria-label="声浪电竞 陪玩工作台">陪玩工作台 <span aria-hidden="true">→</span></a>
+        </section>
+        <section class="store" aria-labelledby="xinan">
+          <h2 id="xinan">兴安电竞</h2>
+          <a href="/entry/xa/boss/" aria-label="兴安电竞 老板服务中心">老板服务中心 <span aria-hidden="true">→</span></a>
+          <a href="/entry/xa/player/" aria-label="兴安电竞 陪玩工作台">陪玩工作台 <span aria-hidden="true">→</span></a>
+        </section>
+      </div>
+      <a class="admin" href="/entry/admin/">管理后台</a>
+    </nav>
+  </main>
+</body>
+</html>

@@ -3,7 +3,7 @@ from datetime import timedelta
 import uuid
 
 from django.test import TestCase, override_settings
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError, connections
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -80,6 +80,84 @@ class PlatformAuthenticationTests(TestCase):
         self.account.save(update_fields=['phone'])
         response = self.client.get('/api/admin/platform/profile', HTTP_AUTHORIZATION='Bearer ' + data['token'])
         self.assertEqual(response.status_code, 401)
+
+    def test_unified_login_can_retry_if_platform_identity_discovery_disconnects(self):
+        url = '/api/admin/auth/password-login'
+        credentials = {'username': self.account.username, 'password': 'test-platform-password'}
+
+        def disconnect(execute, sql, params, many, context):
+            if table in sql.lower():
+                raise InterfaceError('test disconnected during identity discovery')
+            return execute(sql, params, many, context)
+
+        for table in ('stores_platformaccount', 'stores_store'):
+            with self.subTest(table=table):
+                with connections['default'].execute_wrapper(disconnect):
+                    response = self.client.post(url, credentials, format='json')
+                self.assertEqual(response.status_code, 503)
+                self.assertNotIn('data', response.data)
+                self.assertFalse(PlatformLoginChallenge.objects.filter(account=self.account).exists())
+                self.assertEqual(self.codes, [])
+
+        retry = self.client.post(url, credentials, format='json')
+        self.assertEqual(retry.status_code, 200)
+        self.assertEqual(retry.data['data']['identity_kind'], 'platform')
+        self.assertEqual(len(self.codes), 1)
+
+    def test_platform_challenge_can_retry_when_profile_query_disconnects(self):
+        from stores.platform_views import profile as original_profile
+
+        draft = self.login().data['data']
+        challenge_id = draft['smsChallenge']
+        code = self.codes[-1]
+        url = '/api/admin/auth/password-login'
+        data = {'username': self.account.username, 'password': 'test-platform-password',
+                'identityKind': 'platform', 'smsChallenge': challenge_id, 'smsCode': code}
+        def disconnect(execute, sql, params, many, context):
+            raise InterfaceError('test disconnected during platform profile read')
+
+        def disconnected_profile(account):
+            with connections['default'].execute_wrapper(disconnect):
+                return original_profile(account)
+
+        with patch('stores.platform_views.profile', side_effect=disconnected_profile):
+            response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+        self.assertNotIn('data', response.data)
+        challenge = PlatformLoginChallenge.objects.get(pk=challenge_id)
+        self.assertFalse(challenge.consumed)
+        self.assertEqual(challenge.attempts, 0)
+        self.assertFalse(PlatformAuditEvent.objects.filter(
+            account=self.account, action='auth.second_factor_verified').exists())
+
+        retry = self.client.post(url, data, format='json')
+        self.assertEqual(retry.status_code, 200)
+        self.assertEqual(retry.data['data']['profile']['identity_type'], 'platform')
+        challenge.refresh_from_db()
+        self.assertTrue(challenge.consumed)
+        self.assertEqual(challenge.attempts, 1)
+        self.assertEqual(self.client.post(url, data, format='json').status_code, 400)
+
+    def test_platform_refresh_can_retry_after_a_disconnected_control_database(self):
+        tokens = self.sms_login()
+        path = '/api/admin/platform/auth/refresh'
+        payload = {'refresh': tokens['refresh']}
+
+        def disconnect(execute, sql, params, many, context):
+            raise InterfaceError('test disconnected during token validation')
+
+        with connections['default'].execute_wrapper(disconnect):
+            response = self.client.post(path, payload, format='json')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+        self.assertNotIn('data', response.data)
+
+        retry = self.client.post(path, payload, format='json')
+        self.assertEqual(retry.status_code, 200)
+        fresh_access = retry.data['data']['token']
+        self.assertEqual(self.client.get('/api/admin/platform/profile',
+                        HTTP_AUTHORIZATION='Bearer ' + fresh_access).status_code, 200)
 
     def test_uncertain_delivery_does_not_erase_platform_cooldown(self):
         from users.sms_transport import SmsUnavailable
@@ -263,15 +341,109 @@ class PlatformAuthenticationTests(TestCase):
         self.assertEqual(rows['xinan']['counts']['bosses'], 1)
         self.assertEqual(rows['xinan']['counts']['providers'], 1)
         self.assertEqual(data['partial_totals']['bosses'], 2)
+        for error in (DatabaseError, InterfaceError):
+            def unavailable(execute, sql, params, many, context):
+                raise error('test unavailable tenant database')
+
+            with self.subTest(error=error.__name__):
+                with connections[self.second.database_alias].execute_wrapper(unavailable):
+                    data = self.client.get('/api/admin/platform/dashboard', **headers).data['data']
+                rows = {item['slug']: item for item in data['stores']}
+                self.assertFalse(data['complete'])
+                self.assertEqual(rows['xinan']['status'], 'UNAVAILABLE')
+                self.assertIsNone(rows['xinan']['counts'])
+                self.assertIsNone(rows['xinan']['read_at'])
+                self.assertIsNotNone(rows[self.first.slug]['read_at'])
+                self.assertEqual(data['partial_totals']['bosses'], 1)
+        recovered = self.client.get('/api/admin/platform/dashboard', **headers).data['data']
+        self.assertTrue(recovered['complete'])
+        self.assertEqual(recovered['partial_totals']['bosses'], 2)
+
+    def test_aggregate_control_failure_during_final_permission_check_is_retryable(self):
+        PlatformRoleGrant.objects.create(account=self.account, role='SUPER_ADMIN', scope_slug='*')
+        token = self.sms_login()['token']
+        path = '/api/admin/platform/dashboard'
+        headers = {'HTTP_AUTHORIZATION': 'Bearer ' + token}
+        control_offline = False
+
+        def read_tenant(execute, sql, params, many, context):
+            nonlocal control_offline
+            result = execute(sql, params, many, context)
+            if sql.lstrip().upper().startswith('SELECT'):
+                control_offline = True
+            return result
+
+        def read_control(execute, sql, params, many, context):
+            if control_offline:
+                raise error('test unavailable control database')
+            return execute(sql, params, many, context)
+
+        for error in (DatabaseError, InterfaceError):
+            with self.subTest(error=error.__name__):
+                control_offline = False
+                with (connections['default'].execute_wrapper(read_control),
+                      connections[self.second.database_alias].execute_wrapper(read_tenant)):
+                    unavailable = self.client.get(path, **headers)
+                self.assertTrue(control_offline)
+                self.assertEqual(unavailable.status_code, 503)
+                self.assertEqual(unavailable.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+                self.assertNotIn('data', unavailable.data)
+
+        recovered = self.client.get(path, **headers)
+        self.assertEqual(recovered.status_code, 200)
+        self.assertTrue(recovered.data['data']['complete'])
+
+    def test_dashboard_authentication_with_disconnected_control_database_is_retryable(self):
+        PlatformRoleGrant.objects.create(account=self.account, role='SUPER_ADMIN', scope_slug='*')
+        token = self.sms_login()['token']
+
+        def disconnected(execute, sql, params, many, context):
+            raise InterfaceError('test disconnected control database')
+
+        with connections['default'].execute_wrapper(disconnected):
+            response = self.client.get('/api/admin/platform/dashboard', HTTP_AUTHORIZATION='Bearer ' + token)
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn('data', response.data)
+
+    def test_aggregate_discards_results_when_global_grant_is_revoked_during_read(self):
+        grant = PlatformRoleGrant.objects.create(account=self.account, role='SUPER_ADMIN', scope_slug='*')
+        token = self.sms_login()['token']
+
         from stores.platform_dashboard import _read_store
-        def read_or_fail(store):
-            if store.slug == 'xinan':
-                raise DatabaseError('test unavailable database')
-            return _read_store(store)
-        with patch('stores.platform_dashboard._read_store', side_effect=read_or_fail):
-            data = self.client.get('/api/admin/platform/dashboard', **headers).data['data']
-        rows = {item['slug']: item for item in data['stores']}
-        self.assertFalse(data['complete'])
-        self.assertEqual(rows['xinan']['status'], 'UNAVAILABLE')
-        self.assertIsNone(rows['xinan']['counts'])
-        self.assertEqual(data['partial_totals']['bosses'], 1)
+
+        def read_and_revoke(store):
+            counts = _read_store(store)
+            if store.pk == self.second.pk:
+                PlatformRoleGrant.objects.filter(pk=grant.pk).update(is_active=False)
+            return counts
+
+        with patch('stores.platform_dashboard._read_store', side_effect=read_and_revoke):
+            response = self.client.get('/api/admin/platform/dashboard', HTTP_AUTHORIZATION='Bearer ' + token)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data['errorCode'], 'PLATFORM_FORBIDDEN')
+        self.assertNotIn('data', response.data)
+
+    def test_aggregate_discards_results_when_session_changes_during_read(self):
+        from stores.platform_dashboard import _read_store
+
+        grant = PlatformRoleGrant.objects.create(account=self.account, role='SUPER_ADMIN', scope_slug='*')
+        path = '/api/admin/platform/dashboard'
+        headers = {'HTTP_AUTHORIZATION': 'Bearer ' + self.sms_login()['token']}
+        self.assertEqual(self.client.get(path, **headers).status_code, 200)
+
+        def read_and_rotate_session(store):
+            counts = _read_store(store)
+            if store.pk == self.second.pk:
+                PlatformAccount.objects.filter(pk=self.account.pk).update(security_version=uuid.uuid4())
+            return counts
+
+        with patch('stores.platform_dashboard._read_store', side_effect=read_and_rotate_session):
+            response = self.client.get(path, **headers)
+        grant.refresh_from_db()
+        self.assertTrue(grant.is_active)
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn('data', response.data)
+        retry = self.client.get(path, **headers)
+        self.assertEqual(retry.status_code, 401)
+        self.assertEqual(response.data, retry.data)
+        self.assertEqual(response['WWW-Authenticate'], retry['WWW-Authenticate'])

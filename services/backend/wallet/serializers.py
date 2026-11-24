@@ -6,7 +6,42 @@ from .models import ProviderReport, WithdrawRequest
 from .settlement_display import ReportSettlementListSerializer
 
 
-class ReportSerializer(EntityNumberModelSerializer):
+class PointsReportReadMixin:
+    check_formal_approval = False
+    _formal_points_fields = None
+    _report_financial_snapshot = None
+
+    def to_representation(self, instance):
+        request = self.context.get('request')
+        if getattr(request, 'method', None) == 'GET':
+            from .reporting import formal_points_report_fields
+            self._formal_points_fields = formal_points_report_fields(instance, check_approval=self.check_formal_approval)
+        try:
+            return super().to_representation(instance)
+        finally:
+            self._formal_points_fields = None
+            self._report_financial_snapshot = None
+
+    def _points_snapshot(self, obj):
+        from .reporting import points_report_snapshot
+        if self._formal_points_fields is not None:
+            return self._formal_points_fields.snapshot
+        return points_report_snapshot(obj)
+
+    def _financial_snapshot(self, obj):
+        from .reporting import report_financial_snapshot
+        if self._report_financial_snapshot is None:
+            self._report_financial_snapshot = report_financial_snapshot(obj, formal_fields=self._formal_points_fields)
+        return self._report_financial_snapshot
+
+    def get_platform_funding_insufficient(self, obj):
+        from .reporting import report_platform_funding_insufficient
+        if self._formal_points_fields is not None:
+            return self._formal_points_fields.funding_insufficient
+        return report_platform_funding_insufficient(obj, self.context)
+
+
+class ReportSerializer(PointsReportReadMixin, EntityNumberModelSerializer):
     """C 端报单：陪玩提交与查询自己的报单。"""
 
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -27,16 +62,14 @@ class ReportSerializer(EntityNumberModelSerializer):
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from .reporting import points_report_snapshot
-            return obj.amount if points_report_snapshot(obj) else None
+            return obj.amount if self._points_snapshot(obj) else None
         return None if obj.order_id and transfer_income_pending(obj.order, obj.provider_account_id) else obj.amount
 
     def get_commission_rate(self, obj):
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from .reporting import points_report_snapshot
-            return obj.commission_rate if points_report_snapshot(obj) else None
+            return obj.commission_rate if self._points_snapshot(obj) else None
         return None if obj.order_id and transfer_income_pending(obj.order, obj.provider_account_id) else obj.commission_rate
 
     fulfillment = serializers.CharField(source='order.fulfillment', read_only=True, default='')
@@ -136,19 +169,14 @@ class ReportSerializer(EntityNumberModelSerializer):
     def get_expected_income(self, obj):
         return self._financial_snapshot(obj)['expected_income']
 
-    def get_platform_funding_insufficient(self, obj):
-        from .reporting import report_platform_funding_insufficient
-        return report_platform_funding_insufficient(obj, self.context)
-
     def get_payout_amount(self, obj):
         from .reporting import report_has_valid_order_share
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from .reporting import points_report_snapshot
-            if obj.status != ProviderReport.Status.APPROVED or not points_report_snapshot(obj):
+            if obj.status != ProviderReport.Status.APPROVED or not self._points_snapshot(obj):
                 return None
-            if obj.order.refund_records.exists():
+            if self._formal_points_fields is None and obj.order.refund_records.exists():
                 from orders.negotiation_settlement import report_income
                 negotiated, income = report_income(obj, display_only=True)
                 return income if negotiated else None
@@ -166,15 +194,6 @@ class ReportSerializer(EntityNumberModelSerializer):
         if has_subsidy:
             return amount if obj.status == ProviderReport.Status.APPROVED else None
         return obj.payout_amount
-
-    def _financial_snapshot(self, obj):
-        from .reporting import report_financial_snapshot
-        cache = getattr(self, '_report_financial_snapshots', None)
-        if cache is None:
-            cache = self._report_financial_snapshots = {}
-        if obj.pk not in cache:
-            cache[obj.pk] = report_financial_snapshot(obj)
-        return cache[obj.pk]
 
     def get_commission_type(self, obj):
         return self._financial_snapshot(obj)['commission_type']

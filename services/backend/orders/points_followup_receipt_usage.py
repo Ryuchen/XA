@@ -13,7 +13,7 @@ from .models import OrderPointsFundingAllocation, OrderPointsFundingRelease, Poi
 
 def facts(row):
     from users.receipt_usage_sources import _digest, first_negotiation_release_facts
-    from .points_followup_revision import FIELDS, _digest as revision_digest, _facts
+    from .points_followup_revision import FIELDS, _facts, revision_hash_matches
     from .points_funding_revision import plan_unpaid_funding_revision, plan_funding_revision
     from .points_negotiation_execution import participant_digest
     from .points_negotiation_preview import asset_digest, funding_after_refund
@@ -89,6 +89,7 @@ def facts(row):
         after_main_addon_release_facts(SimpleNamespace(run=payment_run, allocation=initial, pk=0, amount=0),
                                        witness_receipt_id=allocation.receipt_id)
         payment_event_facts.append([payment_run.pk, payment_run.points_payment_hash])
+    from .models import OrderAddonRefund
     team_event_facts = []
     if team:
         from .addon_funding_release import verify_run
@@ -104,7 +105,6 @@ def facts(row):
                            or item.handover.accepted_at >= revision.paid_person.settled_at
                            or item.created_at >= revision.paid_person.settled_at)) for item in team_runs)):
             raise ValidationError('后续退款的同单接替顺序待核对')
-        from .models import OrderAddonRefund
         if (OrderAddonRefund.objects.filter(order=order, created_at=second.created_at).exists()
                 or OrderAddonFundingReleaseRun.objects.filter(handover__payment__intent__order=order,
                     handover__accepted_at=second.created_at).exists()):
@@ -168,6 +168,21 @@ def facts(row):
             previous_at = run.created_at
         team_event_facts.extend([[run.pk, run.points_handover_hash] for run in team_runs])
         team_event_facts.extend(refund_run_facts)
+    else:
+        refunds = OrderAddonRefund.objects.filter(order=order)
+        if refunds.filter(created_at__in=(first.created_at, second.created_at)).exists():
+            raise ValidationError('后续退款与加购事件时间无法区分')
+        earlier_refunds = refunds.filter(created_at__gt=first.created_at, created_at__lt=second.created_at)
+        for refund in earlier_refunds.select_related('funding_release_run').order_by('created_at', 'pk'):
+            run = getattr(refund, 'funding_release_run', None)
+            if (not run or not isinstance(run.refunded_main_snapshot, dict)
+                    or run.refunded_main_snapshot.get('posting_id') != first.pk
+                    or not refund.created_at <= run.created_at < second.created_at):
+                raise ValidationError('后续退款的加购资金版本缺失')
+            # Nonzero releases are verified with their allocation rows below.
+            if not run.released_amount or not run.releases.exists():
+                after_main_addon_release_facts(SimpleNamespace(run=run, allocation=initial, pk=0, amount=0),
+                                               witness_receipt_id=allocation.receipt_id)
     if (proposal.status != 'ACCEPTED' or second.accepted_at != proposal.accepted_at
             or second.terms_hash != proposal.terms_hash or not isinstance(second.participants, list)
             or second.participants_hash != participant_digest(proposal, second.participants)
@@ -299,10 +314,12 @@ def facts(row):
                 paid_addon_facts.append([item.pk, item.payment_id, item.segment_id, item.report_id, item.amount,
                     item.settled_at.isoformat(), [tx.pk, tx.wallet_id, tx.order_id, tx.amount,
                     tx.balance_before, tx.balance_after] if tx else None])
-    from .models import OrderSegmentFinancialSnapshot
-    snapshots = {item.pk: item for item in OrderSegmentFinancialSnapshot.objects.filter(
-        segment__attribution__order=order).select_related('segment')}
-    if len(snapshots) != 2:
+    from .points_service_participation import service_snapshots
+    try:
+        snapshots = {item.pk: item for item in service_snapshots(order)}
+    except RestValidationError as exc:
+        raise ValidationError('双陪收益快照不完整') from exc
+    if len(snapshots) != 2 or len({row.segment.provider_account_id for row in snapshots.values()}) != 2:
         raise ValidationError('双陪收益快照不完整')
     for posting, shares in ((first, first_shares), (second, second_shares)):
         p, share, refund = posting.proposal, shares[0], posting.points_refund.refund
@@ -522,6 +539,7 @@ def facts(row):
             pending_deduction_units=sum(s.pending_deduction for s in first_shares + second_shares),
             provider_external_units=sum(s.wallet_deduction + s.deposit_deduction for s in first_shares + second_shares),
             rounding_reserved_units=first.rounding_to_store_units + second.rounding_to_store_units)
+        projected_addons = None
         if revision.addon_snapshot is not None:
             from .points_followup_revision import _with_addons
             before, before_addons = _with_addons(order, before, list(snapshots.values()), first_shares, second.created_at)
@@ -566,8 +584,7 @@ def facts(row):
     if ([getattr(revision, field) for field in FIELDS] != numeric
             or revision.releases != [list(item) for item in plan.releases]
             or actual_rows != list(plan.releases)
-            or revision.evidence_hash != revision_digest(second, revision.prior_settlement_id, revision.paid_person_id, revision.allocations,
-                                                         revision.releases, numeric, revision.addon_snapshot)):
+            or not revision_hash_matches(revision, second, numeric, projected_addons)):
         raise ValidationError('后续退款释放与资金版本不一致')
     payload = ['points-followup-release', row.pk, row.amount, allocation.pk, allocation.receipt_id,
                 first_fact, second.pk, second.terms_hash, second.participants_hash, terms.evidence_hash,

@@ -4,11 +4,12 @@ from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
 from .tokens import account_for_claims
+from stores.channels import STORE_UNAVAILABLE_CLOSE_CODE
 from stores.context import resolve_store, store_context
 from stores.hosts import host_store_slug, is_admin_host, websocket_store_slug
 
@@ -54,8 +55,8 @@ class ClubAccountTokenAuthMiddleware(BaseMiddleware):
         params = parse_qs(scope.get('query_string', b'').decode('utf-8', errors='replace'), keep_blank_values=True)
         try:
             expected_slug = await database_sync_to_async(websocket_store_slug)(scope, params)
-        except DatabaseError:
-            await send({'type': 'websocket.close', 'code': 1013})
+        except (DatabaseError, InterfaceError):
+            await send({'type': 'websocket.close', 'code': STORE_UNAVAILABLE_CLOSE_CODE})
             return
         except (ValueError, UnicodeDecodeError):
             await send({'type': 'websocket.close', 'code': 4401})
@@ -69,8 +70,8 @@ class ClubAccountTokenAuthMiddleware(BaseMiddleware):
                 if raw_token
                 else (None, None, None, None)
             )
-        except DatabaseError:
-            await send({'type': 'websocket.close', 'code': 1013})
+        except (DatabaseError, InterfaceError):
+            await send({'type': 'websocket.close', 'code': STORE_UNAVAILABLE_CLOSE_CODE})
             return
         scope['user'] = AnonymousUser()
         scope['account'] = account

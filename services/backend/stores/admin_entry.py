@@ -3,7 +3,7 @@ import json
 
 from django.conf import settings
 from django.core import signing
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from django.http import JsonResponse
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
@@ -97,15 +97,12 @@ def login_context(username, password, data):
             stores = Store.objects.filter(status__in=[Store.Status.ACTIVE, Store.Status.CONFIGURING], initialized_at__isnull=False)
         matches = []
         for store in stores:
-            from .dynamic_database import discover_store_connection
-            try:
-                available = discover_store_connection(store)
-            except ValueError as exc:
-                raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503) from exc
-            if not available:
-                # An unavailable store may contain the same username; do not
-                # silently select a different store as the unique match.
-                raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503)
+            if prefix is None:
+                # Without a specified store, every candidate must be checked
+                # online before a match can be treated as unique.
+                from .dynamic_database import store_connection_ready
+                if not store_connection_ready(store):
+                    raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503)
             account = _account(store, username, password)
             if account is not None:
                 matches.append((store, account))
@@ -116,7 +113,7 @@ def login_context(username, password, data):
                                   status=409, code='ADMIN_STORE_AMBIGUOUS')
         store, account = matches[0]
         return store, account, gate_data
-    except DatabaseError as exc:
+    except (DatabaseError, InterfaceError) as exc:
         # Never choose the healthy database when an unavailable database might
         # contain another matching identity.
         raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503) from exc
@@ -199,7 +196,7 @@ def neutral_admin_request(request, get_response):
                 return response
         except (signing.BadSignature, KeyError, TypeError, ValueError, UnicodeError, Store.DoesNotExist):
             return JsonResponse({'code': 400, 'msg': '微信登录请求无效或已过期，请重新发起'}, status=400)
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return JsonResponse({'code': 503, 'msg': '微信登录服务暂不可用，请稍后重试'}, status=503)
     try:
         if path == REFRESH_PATH:
@@ -262,6 +259,6 @@ def neutral_admin_request(request, get_response):
             return response
     except (TokenError, signing.BadSignature, KeyError, TypeError, ValueError, UnicodeError):
         return JsonResponse({'code': 401, 'msg': '后台登录无效或未绑定所属门店，请重新登录'}, status=401)
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         return JsonResponse({'code': 503, 'errorCode': 'STORE_DIRECTORY_UNAVAILABLE',
                              'msg': '门店服务暂不可用，请稍后重试'}, status=503)

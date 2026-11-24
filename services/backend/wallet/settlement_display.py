@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db.models import BooleanField, Case, Count, Exists, F, OuterRef, Q, Sum, Value, When, prefetch_related_objects
 from rest_framework import serializers
 from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
+from identifiers.services import prime_entity_numbers
 
 from club_accounts.models import LegacyAccountMap
 from orders.direct_payment_models import DirectPaymentIntent
@@ -60,7 +61,13 @@ def prepare_order_settlement_display(orders, *, points_prepared=False, order_lis
         refund_ids = set()
         legacy_accounts = {}
         if eligible_ids:
-            refund_ids = set(OrderRefund.objects.filter(order_id__in=eligible_ids).values_list('order_id', flat=True))
+            # OrderListSerializer already loads the complete refund collection.
+            known_refunds = {order.pk: bool(order.refund_records.all()) for order in chunk
+                             if order_list_only and order.pk in eligible_ids
+                             and 'refund_records' in getattr(order, '_prefetched_objects_cache', {})}
+            refund_ids = {pk for pk, has_refund in known_refunds.items() if has_refund}
+            refund_ids.update(OrderRefund.objects.filter(order_id__in=eligible_ids - known_refunds.keys())
+                              .values_list('order_id', flat=True))
             for row in OrderProvider.objects.filter(order_id__in=detailed_ids).only(
                     'id', 'order_id', 'provider_id', 'provider_account_id', 'settlement_base',
                     'provider_income', 'settled_at', 'released_at'):
@@ -113,9 +120,11 @@ class ReportSettlementListSerializer(EntityNumberListSerializer):
         for start in range(0, len(rows), 200):
             chunk = rows[start:start + 200]
             prefetch_related_objects(chunk, 'order__providers', 'order__refund_records', 'order__aftersales')
+            orders = [report.order for report in chunk if report.order_id]
+            prime_entity_numbers(orders)
             from orders.refunds import prepare_provider_refund_evidence
             account = getattr(self.context.get('request'), 'account', None)
-            prepare_provider_refund_evidence((report.order for report in chunk if report.order_id), account)
+            prepare_provider_refund_evidence(orders, account)
             identity_users = {report.provider_id for report in chunk if report.provider_account_id and report.provider_id}
             identity_map = dict(LegacyAccountMap.objects.filter(legacy_user_id__in=identity_users)
                                 .values_list('legacy_user_id', 'account_id')) if identity_users else {}
@@ -135,7 +144,7 @@ class ReportSettlementListSerializer(EntityNumberListSerializer):
             for report in manual:
                 wallet = report.transaction.wallet
                 report._display_wallet_account = wallet.account_id or accounts.get(wallet.user_id)
-            prepare_order_settlement_display(report.order for report in chunk if report.order_id)
+            prepare_order_settlement_display(orders)
         return super().to_representation(rows)
 
 

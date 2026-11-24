@@ -1,6 +1,8 @@
 """Exercise the test-only paid opening marker through actual order APIs."""
+from unittest import skipUnless
 from unittest.mock import patch
 
+from django.db import connection
 from django.test import override_settings
 from rest_framework.test import APITransactionTestCase
 
@@ -90,6 +92,7 @@ class GrabOpeningPaymentFlowTest(APITransactionTestCase):
         self.assertEqual(Transaction.objects.filter(order=order, tx_type='PAY').count(), 1)
 
 
+@skipUnless(connection.vendor == 'sqlite', '此用例使用 SQLite 专用积分试验入口')
 @override_settings(POINTS_REDEMPTION_PREVIEW_ENABLED=True, DISCOUNT_OPTIONS_PREVIEW_ENABLED=True,
     DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False,
     POINTS_USAGE_SWITCHES_ENABLED=True, SERVICE_ORDER_POINTS_RECEIPT_ENABLED=True,

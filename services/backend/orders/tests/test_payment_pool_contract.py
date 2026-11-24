@@ -25,6 +25,7 @@ class PaymentPoolContractTests(TestCase):
         service = make_service(price=10000)
         request = SimpleNamespace(account=self.account, legacy_user=self.boss, data={
             'service_id': service.pk, 'expected_amount': 10000, 'client_request_id': 'pool-contract-1',
+            'dispatch_mode': 'BOSS_SELECT',
         })
         self.intent = prepare_direct_order(request, appid='wx-test', mchid='mch-test')
         evidence = VerifiedPayment(self.intent.merchant_order_no, 'pool-contract-transaction', 'wx-test', 'mch-test',
@@ -32,7 +33,8 @@ class PaymentPoolContractTests(TestCase):
                                    payer_currency='CNY')
         with patch('orders.direct_payment._notify_paid'):
             confirm_verified_payment(self.intent.order_id, evidence)
-        self.legacy = make_order(self.boss, service, customer_account=self.account, payment_status='PAID')
+        self.legacy = make_order(self.boss, service, customer_account=self.account, payment_status='PAID',
+                                 requires_boss_selection=True)
         provider = make_provider(deposit_mode='EARNINGS')
         provider_account = get_or_create_account_for_legacy_user(provider)
         EscortProfile.objects.filter(user=provider).update(account=provider_account)

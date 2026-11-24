@@ -8,7 +8,9 @@ import json
 from functools import wraps
 
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import DatabaseError, InterfaceError
 from stores.db import transaction
+from rest_framework.exceptions import ValidationError
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 
@@ -62,7 +64,13 @@ def recover_fund_result(scope):
             replay = _replay(request, scope)
             if replay is not None:
                 return replay
-            result = view(self, request, *args, **kwargs)
+            try:
+                result = view(self, request, *args, **kwargs)
+            except ValidationError:
+                replay = _replay(request, scope)
+                if replay is not None:
+                    return replay
+                raise
             if isinstance(result.data, dict) and result.data.get('code') != 0:
                 # Another request may have committed while this one waited for
                 # wallet/profile locks, changing its balance or eligibility.
@@ -70,6 +78,27 @@ def recover_fund_result(scope):
                 if replay is not None:
                     return replay
             return result
+        return wrapped
+    return decorate
+
+
+def recover_withdrawal_result(scope):
+    """Report database failures across receipt lookup and the withdrawal write."""
+    def decorate(view):
+        recoverable_view = recover_fund_result(scope)(view)
+
+        @wraps(view)
+        def wrapped(self, request, *args, **kwargs):
+            try:
+                return recoverable_view(self, request, *args, **kwargs)
+            except (DatabaseError, InterfaceError):
+                request_id = normalize_request_id(request.data.get('client_request_id'))
+                if request_id and not request_id.startswith(DERIVED_KEY_PREFIX):
+                    msg = '提现操作结果暂不可核验，请使用原操作编号重试'
+                else:
+                    msg = '提现操作结果暂不可核验，请先核对提现记录'
+                return Response({'code': 503, 'errorCode': 'WITHDRAWAL_UNAVAILABLE', 'msg': msg}, status=503)
+
         return wrapped
     return decorate
 

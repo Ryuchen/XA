@@ -7,6 +7,7 @@ import hashlib
 import json
 from dataclasses import asdict
 
+from django.conf import settings
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from stores.db import transaction
@@ -31,13 +32,20 @@ def applies(order):
             and order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED)
 
 
-def prepare_locked(order, case):
+def prepare_locked(order, case, *, addon_refund=False):
     from .points_transfer_zero_followup import applies as transfer_applies, prepare_locked as transfer_prepare
     if transfer_applies(order):
         return transfer_prepare(order, case)
     from .points_business_access import permits
+    allowed = any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon'))
+    if (not allowed and addon_refund and transaction.get_connection().vendor == 'sqlite'
+            and getattr(settings, 'ADDON_REFUND_EXECUTION_INTERNAL_TESTING', False) is True
+            and getattr(settings, 'SERVICE_POINTS_REFUND_ADDON_REVISION_TESTING', False) is True):
+        from .points_checkout_test import require_isolated_checkout
+        require_isolated_checkout()
+        allowed = True
     if (not transaction.get_connection().in_atomic_block
-            or not any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon'))
+            or not allowed
             or order.status not in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
             or order.payment_status not in (Order.PaymentStatus.REFUNDED, Order.PaymentStatus.PARTIALLY_REFUNDED)
             or order.required_provider_count != 2 or order.refund_records.count() != 1
@@ -83,11 +91,10 @@ def prepare_locked(order, case):
     income = target.income_at_entry - deductions_at(order).get(active[0].provider_account_id, 0)
     if income < 0:
         raise ValidationError('继续履约的待结收益待核对')
-    from .points_refunded_funding import later_addon_runs, plan_refunded_order
-    from .points_funding_evidence import verify_order_funding
-    plan = plan_refunded_order(order.pk)
-    funding = verify_order_funding(order.pk)
-    runs = later_addon_runs(order, prior)
+    from .points_funding_evidence import VerifiedFirstRefundFunding, verify_order_funding
+    funding = verify_order_funding(order.pk, include_net_allocations=True)
+    if not isinstance(funding, VerifiedFirstRefundFunding):
+        raise ValidationError('缺少首退后逐笔补资凭证')
     settled_person_id = None
     settlement = OrderPointsRefundSettlement.objects.select_for_update().filter(posting=prior).first()
     if settlement:
@@ -98,15 +105,16 @@ def prepare_locked(order, case):
         first_snapshot = next((row for row in snapshots if row.segment_id == person.segment_id), None)
         if not first_snapshot or first_snapshot.segment.provider_account_id != first_share.account_id:
             raise ValidationError('已结算陪玩的收益归属待核对')
-        from .points_refunded_settlement import _addon_facts, _check_person, _facts, _funding_rows
+        from .points_refunded_settlement import _addon_facts_from_history, _check_person, _facts
         _check_person(order, prior, person, first_snapshot, first_share.assignment)
-        addon, parts = _addon_facts(order, prior)
+        addon, parts = _addon_facts_from_history(order, funding.addon_history)
         recorded = tuple(getattr(settlement, key) for key in ('paid_units', 'principal_units', 'gift_units',
             'compensation_units', 'recovered_units', 'funding_units', 'provider_units', 'inviter_units', 'store_units',
             'addon_paid_units', 'addon_principal_units', 'addon_gift_units', 'addon_compensation_units',
             'addon_recovered_units', 'addon_provider_units'))
-        if (recorded != _facts(plan, addon) or list(settlement.funding_uses.order_by('allocation_id').values_list(
-                'allocation_id', 'amount')) != _funding_rows(order)):
+        net_uses = [(pk, amount) for pk, _, amount in funding.net_allocations if amount]
+        if (recorded != _facts(funding.plan, addon) or list(settlement.funding_uses.order_by('allocation_id').values_list(
+                'allocation_id', 'amount')) != net_uses):
             raise ValidationError('既有结算资金版本待核对')
         from .addon_settlement import verify_addon_records
         if verify_addon_records(order, settlement, parts, [person]) != {
@@ -115,8 +123,8 @@ def prepare_locked(order, case):
         settled_person_id = person.pk
     elif order.providers.filter(settled_at__isnull=False).exists():
         raise ValidationError('已有收益但缺少结算凭证')
-    snapshot = {'prior_posting_id': prior.pk, 'last_addon_run_id': runs[-1].pk if runs else None,
-                'funding': asdict(plan), 'allocated_units': funding.allocated,
+    snapshot = {'prior_posting_id': prior.pk, 'last_addon_run_id': funding.last_addon_run_id,
+                'funding': asdict(funding.plan), 'allocated_units': funding.allocated,
                 'segment_id': segments[0].pk, 'assignment_id': active[0].pk,
                 'income_units': income, 'completed_at': order.completed_at.isoformat() if completed else None,
                 'prior_settled_person_id': settled_person_id}
@@ -134,9 +142,8 @@ def digest(proposal, prior, assignment, segment, operator, request_id, snapshot)
 def reconcile_unaffected_settlement_locked(order):
     """Advance only the unpaid funding header after B's add-on refund."""
     from .models import OrderPointsRefundSettlementFunding, PointsNegotiationPosting
-    from .points_refunded_funding import plan_refunded_order
-    from .points_funding_evidence import verify_order_funding
-    from .points_refunded_settlement import _addon_facts, _check_person, _facts, _funding_rows
+    from .points_funding_evidence import VerifiedFirstRefundFunding, verify_order_funding
+    from .points_refunded_settlement import _addon_facts_from_history, _check_person, _facts
     from .points_service_participation import service_snapshots
     from .addon_settlement import verify_addon_records
     if not transaction.get_connection().in_atomic_block or order.status != Order.Status.COMPLETED or order.settled_at:
@@ -151,10 +158,12 @@ def reconcile_unaffected_settlement_locked(order):
     if not snapshot or snapshot.segment.provider_account_id != share.account_id:
         raise ValidationError('已结算陪玩的收益归属待核对')
     _check_person(order, prior, person, snapshot, share.assignment)
-    plan, funding = plan_refunded_order(order.pk), verify_order_funding(order.pk)
+    funding = verify_order_funding(order.pk, include_net_allocations=True)
+    if not isinstance(funding, VerifiedFirstRefundFunding):
+        raise ValidationError('缺少首退后逐笔补资凭证')
     if not funding.fully_funded:
         raise ValidationError('加购退款后的整单补资不足')
-    addon, parts = _addon_facts(order, prior)
+    addon, parts = _addon_facts_from_history(order, funding.addon_history)
     expected = {(part.payment_id, part.segment_id) for part in parts if part.segment_id == person.segment_id}
     if verify_addon_records(order, settlement, parts, [person]) != expected:
         raise ValidationError('已结算陪玩的加购收益已变化')
@@ -162,13 +171,13 @@ def reconcile_unaffected_settlement_locked(order):
              'funding_units', 'provider_units', 'inviter_units', 'store_units', 'addon_paid_units',
              'addon_principal_units', 'addon_gift_units', 'addon_compensation_units',
              'addon_recovered_units', 'addon_provider_units')
-    for name, value in zip(names, _facts(plan, addon)):
+    for name, value in zip(names, _facts(funding.plan, addon)):
         setattr(settlement, name, value)
     settlement.save(update_fields=list(names))
     settlement.funding_uses.all().delete()
     OrderPointsRefundSettlementFunding.objects.bulk_create([
         OrderPointsRefundSettlementFunding(settlement=settlement, allocation_id=pk, amount=amount)
-        for pk, amount in _funding_rows(order)])
+        for pk, _, amount in funding.net_allocations if amount])
 
 
 def verify_proposal(case, proposal):

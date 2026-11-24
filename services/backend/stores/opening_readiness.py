@@ -8,16 +8,22 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.http.request import validate_host
+from django.utils import timezone
 
 from console.config_readiness import selected_configuration_evidence
 from orders.catalog import visible_service_q
 from orders.game_commission import preview_rate
 from orders.models import GameCommissionProfile, OrderTimeoutConfig, ServiceItem
+from orders.purchase_benefits import account_service_q
 from orders.reservation_deadlines import CONFIG_KEY as RESERVATION_KEY
+from support.assignment import selectable_cards
 from wallet.models import SystemConfig
 
+from .business_certificates import certificate_evidence
 from .hosts import DEFAULT_HOST_BINDINGS
 from .license_status import status_for_store
+from .media import verified_background_path
+from .opening_materials import order_notice_evidence, store_logo_present
 
 
 def admin_login_readiness():
@@ -60,7 +66,7 @@ def admin_login_readiness():
     return sorted(methods)
 
 
-def opening_readiness(store, permissions):
+def opening_readiness(store, permissions, *, license_status=None):
     """Read the target store's actual configuration without creating defaults.
 
     Caller supplies store_context(store); directory reads are routed separately.
@@ -74,10 +80,17 @@ def opening_readiness(store, permissions):
             row['details'] = details
         checks.append(row)
 
-    license_status = status_for_store(store)
+    if license_status is None:
+        license_status = status_for_store(store)
     add('license', license_status['can_open_store'],
         '授权在有效期内' if license_status['can_open_store'] else '首次开业须先激活有效期内的门店授权',
         details={'status': license_status['status'], 'tier': license_status['tier']})
+    certificate = certificate_evidence(store, timezone.now())
+    certificate_messages = {'VALID': '本店证照已核对且在有效期内', 'MISSING': '请保存并核对本店营业执照',
+                            'EXPIRED': '本店证照已到期，请登记新证照',
+                            'DOCUMENT_UNAVAILABLE': '本店证照原件无法核对，请检查证照记录'}
+    add('business_certificate', certificate['status'] == 'VALID', certificate_messages[certificate['status']],
+        details=certificate)
     admin_methods = admin_login_readiness()
     add('store_admin', bool(admin_methods),
         '至少一名本店超级管理员须绑定 OTP，或有已验证手机号及短信配置、已绑定微信及入口配置；外部渠道仍需实际联调',
@@ -143,10 +156,17 @@ def opening_readiness(store, permissions):
         '开业前须配置本店可访问的老板端 /boss 和陪玩端 /player 入口',
         details={'boss_configured': boss_ready, 'provider_configured': provider_ready})
 
-    services = list(ServiceItem.objects.filter(visible_service_q(), is_addon=False)
-                    .exclude(service_category__is_gift=True)
-                    .select_related('service_category', 'game_category', 'gameplay')
-                    .order_by('id'))
+    add('store_logo', store_logo_present(store, usable_domains), '请上传并保存可读取的本店 Logo')
+    add('store_background', bool(verified_background_path(store.background_url)), '请上传并保存可读取的本店背景')
+    add('store_introduction', bool(store.introduction.strip()), '请填写本店公开介绍')
+    notice = order_notice_evidence(timezone.now())
+    add('order_notice', notice is not None, '请发布老板端可查看的下单须知', details=notice)
+    add('support_contact', selectable_cards().exists(), '请启用至少一张绑定本店在职后台员工的客服名片')
+
+    catalog = ServiceItem.objects.filter(visible_service_q(), is_addon=False).exclude(service_category__is_gift=True)
+    add('price_list', catalog.filter(account_service_q(None), price__gt=0).exists(),
+        '请在本店服务目录公开至少一项有标价的陪玩服务')
+    services = list(catalog.select_related('service_category', 'game_category', 'gameplay').order_by('id'))
     evidence = selected_configuration_evidence(permissions)
     # An unconfigured reservation is disabled, while a saved configuration
     # must be valid and confirmed. Room timing applies to published rooms.

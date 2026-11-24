@@ -30,18 +30,19 @@ def database_id():
     return value
 
 
-def round_identity_valid(round_, *, identity=None, allow_prepared=False):
+def round_identity_valid(round_, *, identity=None, allow_prepared=False, lock=False):
     if not production_enabled():
         return False
     from .models import OrderGrabPoolOpeningIntent
-    marker = OrderGrabPoolOpeningIntent.objects.filter(order_id=round_.pool.order_id, state='OBSERVED').first()
+    markers = OrderGrabPoolOpeningIntent.objects.filter(order_id=round_.pool.order_id, state='OBSERVED')
+    marker = (markers.select_for_update() if lock else markers).first()
     if not (marker and marker.database_identity and marker.commit_observed_at
                 and marker.commit_observed_at <= round_.opened_at
                 and marker.database_identity == (identity or database_id())):
         return False
     from .grab_round_opening import opening_bounds, provisional_opening_lower
     try:
-        opening_bounds(round_)
+        opening_bounds(round_, lock=lock)
     except ValueError:
         if not allow_prepared:
             return False

@@ -1,6 +1,6 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { createApiClient, fundRequest } from "../src/client.ts";
+import { createApiClient, fundRequest, listPendingFundRequests, retryPendingFundRequest } from "../src/client.ts";
 import { clearSession, getSession, persistSession } from "../src/session.ts";
 import { subscribeRealtime } from "../src/realtime.ts";
 
@@ -8,6 +8,8 @@ const values = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
   value: {
+    get length() { return values.size; },
+    key: (index: number) => Array.from(values.keys())[index] ?? null,
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
@@ -159,6 +161,102 @@ test("explicit fund intent id is retained and processed receipt is recovered", a
     42,
   );
   assert.equal(submitted.client_request_id, "original-intent");
+});
+
+test("explicit recovery reuses the saved payload and only clears a verified result", async () => {
+  login();
+  const path = "/wallet/withdraw/";
+  const payload = { amount: 1200, withdrawal_account_id: 7 };
+  const attempts: unknown[] = [];
+  const accepts = (data: { id?: number }) => data?.id === 51;
+  globalThis.fetch = (async (url: string, options: RequestInit) => {
+    assert.equal(url, "/api" + path);
+    attempts.push(JSON.parse(String(options.body)));
+    if (attempts.length === 1) throw new TypeError("lost reply");
+    return response({ code: 409, errorCode: "FUND_ALREADY_PROCESSED",
+      fundResult: { code: 0, data: { id: attempts.length === 2 ? 52 : 51 } } });
+  }) as typeof fetch;
+
+  await assert.rejects(fundRequest("provider", path, payload));
+  const list = () => listPendingFundRequests("provider", candidate => candidate === path);
+  const [pending] = list();
+  assert.equal(attempts.length, 1);
+  assert.deepEqual(pending.payload, payload);
+  await assert.rejects(retryPendingFundRequest("provider", pending, accepts), /保留原编号/);
+  assert.equal(list()[0].requestId, pending.requestId);
+  assert.deepEqual(await retryPendingFundRequest("provider", pending, accepts), { id: 51 });
+  assert.deepEqual(attempts, Array(3).fill({ ...payload, client_request_id: pending.requestId }));
+  assert.deepEqual(list(), []);
+});
+
+test("explicit recovery fails before POST when the caller, contents, or saved marker changed", async () => {
+  login();
+  const path = "/wallet/withdraw/14/cancel/";
+  let requests = 0;
+  globalThis.fetch = (async () => {
+    requests++;
+    throw new TypeError("lost reply");
+  }) as typeof fetch;
+  await assert.rejects(fundRequest("provider", path, {}));
+  const [pending] = listPendingFundRequests("provider", candidate => candidate === path);
+  await assert.rejects(retryPendingFundRequest("provider", { ...pending, payload: { amount: 11 } }, () => true), /已变化/);
+  login("another-access", "another-provider");
+  assert.deepEqual(listPendingFundRequests("provider", () => true), []);
+  await assert.rejects(retryPendingFundRequest("provider", pending, () => true), /已变化/);
+  login("renewed-access");
+  localStorage.setItem(pending.key, "replaced-request");
+  await assert.rejects(retryPendingFundRequest("provider", pending, () => true), /已变化/);
+  assert.equal(requests, 1);
+});
+
+test("a late receipt only removes the marker for the request actually sent", async () => {
+  login();
+  const path = "/wallet/withdraw/14/cancel/";
+  globalThis.fetch = (async () => { throw new TypeError("lost reply"); }) as typeof fetch;
+  await assert.rejects(fundRequest("provider", path, {}));
+  const [pending] = listPendingFundRequests("provider", () => true);
+  const gate = deferred<Response>();
+  globalThis.fetch = (() => gate.promise) as typeof fetch;
+  const recovery = retryPendingFundRequest("provider", pending, (data: { id: number }) => data.id === 14);
+  localStorage.setItem(pending.key, "different-request");
+  gate.resolve(ok({ id: 14 }));
+  assert.deepEqual(await recovery, { id: 14 });
+  assert.equal(localStorage.getItem(pending.key), "different-request");
+});
+
+test("a first withdrawal rejection leaves the shared number for another tab with a lost reply", async () => {
+  login();
+  const otherTab = await import(new URL("../src/client.ts?tab=withdrawal-replay", import.meta.url).href);
+  const path = "/wallet/withdraw/";
+  const payload = { amount: 1500 };
+  const firstResponse = deferred<Response>();
+  const concurrentResponse = deferred<Response>();
+  const requests: unknown[] = [];
+  globalThis.fetch = ((_url: string, options: RequestInit) => {
+    requests.push(JSON.parse(String(options.body)));
+    return requests.length === 1 ? firstResponse.promise : concurrentResponse.promise;
+  }) as typeof fetch;
+
+  const first = fundRequest("provider", path, payload, { keepOriginalOnFailure: true });
+  const [pending] = otherTab.listPendingFundRequests("provider", (candidate: string) => candidate === path);
+  const concurrent = otherTab.retryPendingFundRequest("provider", pending, () => true);
+  assert.deepEqual(requests, Array(2).fill({ ...payload, client_request_id: pending.requestId }));
+  firstResponse.resolve(response({ code: 400, msg: "可用余额不足" }));
+  await assert.rejects(first, /可用余额不足/);
+  concurrentResponse.resolve(response({ code: 503, msg: "本次结果暂不可核验" }, 503));
+  await assert.rejects(concurrent, /暂不可核验/);
+  assert.equal(listPendingFundRequests("provider", () => true)[0].requestId, pending.requestId);
+});
+
+test("a coordinated confirmation that cannot open browser storage never falls back to POST", async () => {
+  login();
+  let attempts = 0;
+  globalThis.fetch = (async () => { attempts++; return ok({ id: 11 }); }) as typeof fetch;
+
+  await assert.rejects(fundRequest("provider", "/wallet/withdraw/", { amount: 500 }, { coordinateAcrossTabs: true }),
+    (error: { errorCode: string }) => error.errorCode === "FUND_STORAGE_UNAVAILABLE");
+  assert.equal(attempts, 0);
+  assert.deepEqual(listPendingFundRequests("provider", () => true), []);
 });
 
 test("multipart upload leaves boundary selection to the browser transport", async () => {

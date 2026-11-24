@@ -126,9 +126,8 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
             raise IllegalTransitionError('订单已离开待接单池')
         if OrderGrabPoolOpeningIntent.objects.filter(order=order, order__grab_pool_snapshot__isnull=True).exists():
             raise IllegalTransitionError('订单等待抢单池初始化')
-        from .models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
-        if (OrderGrabSingleRoundState.objects.filter(round__pool__order=order).exists()
-                or OrderGrabTeamRoundState.objects.filter(round__pool__order=order).exists()):
+        from .grab_round_facts import pool_exists
+        if pool_exists(order.pk):
             raise IllegalTransitionError('抢单订单须由本轮仲裁处理')
         if not order.auto_cancel_at or order.auto_cancel_at > timezone.now():
             raise IllegalTransitionError('当前接单期限尚未到达')
@@ -166,14 +165,14 @@ def check_pending_timeouts() -> int:
     """
     import logging
 
-    def enqueue_candidate(task, order_id):
+    def enqueue_candidate(task, *args):
         try:
-            task.delay(order_id)
+            task.delay(*args)
         except Exception:
             # A broker error can happen before or after acceptance. Keep the
             # persisted business state unchanged and retry in the next scan.
             logging.getLogger(__name__).exception(
-                '订单恢复任务入队结果未确认 task=%s order_id=%s', task.name, order_id)
+                '订单恢复任务入队结果未确认 task=%s args=%s', task.name, args)
 
     from .timeout import expired_order_candidates
     if getattr(settings, 'GRAB_COMMITTED_OPENING_ENABLED', False):
@@ -183,20 +182,18 @@ def check_pending_timeouts() -> int:
             order__grab_pool_snapshot__isnull=True).order_by('pk').values_list('order_id', flat=True)
         for order_id in pending.iterator(chunk_size=200):
             enqueue_candidate(open_committed_grab_order, order_id)
-    # Activation acknowledgement and receipt classification are separate
-    # commits.  A lost post-commit callback must not strand committed entries.
-    from .models import OrderGrabReceiptProbe
-    waiting_rounds = (OrderGrabReceiptProbe.objects.filter(
-        state='WAIT_OPENING', round__opening_evidence__state='OBSERVED',
-        round__pool__order__status=Order.Status.PENDING)
-        .order_by().values_list('round_id', flat=True).distinct())
-    for round_id in waiting_rounds.iterator(chunk_size=200):
-        enqueue_candidate(recover_grab_opening_waiters, round_id)
     from .grab_single_flow import enabled
     from django.db.models import Q
     from .grab_clock_contract import production_enabled
     if production_enabled():
+        from .models import OrderGrabReceiptProbe
         from .grab_receipt_probe import _db_clock
+        # Recover receipt classification independently of the order's current status.
+        waiting_rounds = (OrderGrabReceiptProbe.objects.filter(
+            state='WAIT_OPENING', round__opening_evidence__state='OBSERVED')
+            .order_by().values_list('round_id', flat=True).distinct())
+        for round_id in waiting_rounds.iterator(chunk_size=200):
+            enqueue_candidate(recover_grab_opening_waiters, round_id)
         clock_now, _, _ = _db_clock()
     else:
         clock_now = timezone.now()
@@ -216,9 +213,9 @@ def check_pending_timeouts() -> int:
             round__receipt_probes__kind='SINGLE', round__receipt_probes__state='BEFORE',
             round__receipt_probes__single_admission__status='ACTIVE')
         due = OrderGrabSingleRoundState.objects.filter(due_rounds | committed_cancel | parked_candidate,
-            round__pool__order__status=Order.Status.PENDING).values_list('round__pool__order_id', flat=True).distinct()
-        for order_id in due:
-            enqueue_candidate(finalize_single_grab, order_id)
+            round__pool__order__status=Order.Status.PENDING).values_list('round__pool__order_id', 'round_id').distinct()
+        for order_id, round_id in due:
+            enqueue_candidate(finalize_single_grab, order_id, round_id)
     from .grab_team_flow import enabled as team_enabled
     if team_enabled():
         from .models import OrderGrabTeamRoundState
@@ -251,15 +248,21 @@ def open_committed_grab_order(order_id):
 
 
 @shared_task
-def finalize_single_grab(order_id):
+def finalize_single_grab(order_id, expected_round_id=None):
     from .grab_single_flow import resolve
-    return resolve(order_id)
+    if expected_round_id is None:
+        # Legacy queue messages carry only the order ID. Bind them to round one.
+        from .models import OrderGrabRound
+        expected_round_id = OrderGrabRound.objects.filter(pool__order_id=order_id, number=1).values_list('pk', flat=True).first()
+        if expected_round_id is None:
+            return 'NOT_FOUND'
+    return resolve(order_id, expected_round_id=expected_round_id)
 
 
 @shared_task
-def finalize_team_grab(order_id):
+def finalize_team_grab(order_id, expected_round_id=None):
     from .grab_team_flow import resolve
-    return resolve(order_id)
+    return resolve(order_id, expected_round_id=expected_round_id)
 
 
 @shared_task

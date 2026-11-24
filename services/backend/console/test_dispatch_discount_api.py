@@ -64,6 +64,64 @@ class DispatchDiscountApiTest(APITestCase):
         self.assertEqual(order.funding_allocations.get(kind='PREPAID').amount, 5500)
         self.owned.refresh_from_db(); self.assertEqual((self.owned.status, self.owned.order_id), ('USED', order.pk))
 
+    def test_duplicate_recovers_receipt_if_coupon_validation_races_payment(self):
+        from wallet.models import Transaction
+        from wallet.receipts import _replay
+
+        quote = self.quote()
+        confirmation = {'boss_confirmation': '老板确认活动加金额券'}
+        committed = self.submit(quote, **confirmation).data
+        self.assertEqual(committed['code'], 0, committed)
+        saw_first_lookup = False
+
+        def observe_receipt_after_first_lookup(request, scope):
+            nonlocal saw_first_lookup
+            if not saw_first_lookup:
+                saw_first_lookup = True
+                return None
+            return _replay(request, scope)
+
+        # The retry passed both early checks before the first debit consumed the coupon.
+        with patch('wallet.receipts._replay', side_effect=observe_receipt_after_first_lookup), \
+                patch('console.views.peek_fund_write', return_value=(False, '')):
+            replay = self.submit(quote, **confirmation).data
+        self.assertEqual(replay.get('errorCode'), 'FUND_ALREADY_PROCESSED', replay)
+        self.assertEqual(replay['fundResult'], committed)
+        self.assertEqual(Order.objects.count(), 1)
+        self.assertEqual(Transaction.objects.filter(tx_type='PAY').count(), 1)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 14500)
+
+    def test_grab_review_cancellation_records_the_refund_operator(self):
+        quote = self.quote()
+        paid = self.submit(quote, boss_confirmation='老板确认活动加金额券').data
+        self.assertEqual(paid['code'], 0, paid)
+        order = Order.objects.get(pk=paid['data']['id'])
+        url = f'/api/admin/grab-reviews/{order.pk}/actions/'
+        payload = {'action': 'CANCEL', 'reason': '核对原付款并取消', 'client_request_id': 'review-coupon-order'}
+        self.assertEqual(self.admin.post(url, payload, format='json').status_code, 403)
+        self.assertFalse(order.refund_records.exists())
+
+        user = make_console_user(['order:view', 'order:dispatch', 'order:refund'])
+        reviewer = get_or_create_account_for_legacy_user(user)
+        user.admin_membership.account = reviewer
+        user.admin_membership.save(update_fields=['account'])
+        review_client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(reviewer)[0])
+        result = review_client.post(url, payload, format='json')
+        self.assertEqual(result.data['code'], 0, result.data)
+        self.assertEqual(review_client.post(url, payload, format='json').data, result.data)
+
+        refund = order.refund_records.get()
+        self.assertEqual((refund.operator_id, refund.operator_account_id), (user.pk, reviewer.pk))
+        self.assertEqual((refund.customer_transaction.operator_id, refund.customer_transaction.operator_account_id),
+                         (user.pk, reviewer.pk))
+        self.assertEqual(refund.customer_transaction.amount, 5500)
+        self.assertEqual(order.transactions.get(tx_type='PAY').operator_account_id, self.staff.pk)
+        self.wallet.refresh_from_db()
+        self.owned.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 20000)
+        self.assertEqual((self.owned.status, self.owned.order_id), ('UNUSED', None))
+
     def test_staff_selects_vip_and_coupon_remains_unused(self):
         first = self.quote()
         vip = next(item for item in first['discount_options'] if item['key'] == 'vip')

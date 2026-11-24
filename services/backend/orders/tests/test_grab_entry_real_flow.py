@@ -1,23 +1,29 @@
 import os
-from unittest import skipUnless
 from datetime import timedelta
-from unittest.mock import patch
+from time import monotonic, sleep
+from unittest import skipUnless
 
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 
+from console.capacity_config import save_capacity
 from console.grab_config import save_grab_window
+from orders.grab_receipt_probe import _db_clock
 from orders.models import Order, OrderGrabPoolSnapshot
 from orders.tests import test_game_commission_payment as fixture
 from orders.tests.factories import make_console_user
+from wallet.models import SystemConfig
 from wallet.services import get_wallet
 
 
 @override_settings(GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True,
+                   REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED=True,
                    GAME_COMMISSION_PAYMENT_ENABLED=False, LEGACY_FORCE_AUTH_COMPAT=False,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
-class GrabEntryRealFlowTest(APITestCase):
+class GrabEntryRealFlowTest(APITransactionTestCase):
     setUp = fixture.GameCommissionPaymentTest.setUp
     link = fixture.GameCommissionPaymentTest.link
     auth = fixture.GameCommissionPaymentTest.auth
@@ -25,6 +31,7 @@ class GrabEntryRealFlowTest(APITestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_boss_and_staff_entry_snapshot_survives_real_later_pass_purchase(self):
         rejected = self.create(dispatch_mode='AUTO_GRAB')
         self.assertEqual(rejected.status_code, 400)
@@ -32,12 +39,21 @@ class GrabEntryRealFlowTest(APITestCase):
         self.assertEqual(self.wallet.balance, 100000)
         self.assertFalse(Order.objects.exists())
         save_grab_window(30, 0, lambda *args: None)
+        save_capacity(3, 0, lambda *args: None)
+        delay = 4
+        for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
+            SystemConfig.objects.update_or_create(key=f'provider_pass_delay_seconds_{tier}',
+                defaults={'value': str(delay if tier == 'NONE' else 0)})
         self.service.game_category = None
         self.service.save(update_fields=['game_category'])
         player = self.providers[0]
         profile = player.escort_profile
+        account = self.accounts[0]
+        account.is_openid_bound, account.openid = True, 'grab-entry-pass-buyer'
+        account.save(update_fields=['is_openid_bound', 'openid'])
         profile.pass_tier, profile.pass_expires_at = '', None
-        profile.save(update_fields=['pass_tier', 'pass_expires_at'])
+        profile.wechat_avatar_verified_at = timezone.now()
+        profile.save(update_fields=['pass_tier', 'pass_expires_at', 'wechat_avatar_verified_at'])
         first = self.create(dispatch_mode='AUTO_GRAB')
         self.assertEqual(first.data['code'], 0, first.data)
         first_order = Order.objects.get(pk=first.data['data']['id'])
@@ -84,11 +100,15 @@ class GrabEntryRealFlowTest(APITestCase):
         self.assertEqual(accepted.data['code'], 0, accepted.data)
 
         # The first order retains its no-card delay even though the pass is now active.
-        later = first_pool.opened_at + timedelta(seconds=301)
-        with patch('django.utils.timezone.now', return_value=later):
-            listing = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
-            self.assertIn(first_order.pk, [row['id'] for row in listing])
-            accepted = self.client.post(f'/api/orders/orders/{first_order.pk}/grab/', {}, format='json')
-            self.assertEqual(accepted.data['code'], 0, accepted.data)
-            accepted = self.client.post(f'/api/orders/orders/{arranged_order.pk}/grab/', {}, format='json')
-            self.assertEqual(accepted.data['code'], 0, accepted.data)
+        self.assertEqual(first_pool.visibility_delays[''], delay)
+        visible_at = first_pool.opened_at + timedelta(seconds=delay)
+        deadline = monotonic() + delay + 3
+        while _db_clock()[0] <= visible_at:
+            self.assertLess(monotonic(), deadline)
+            sleep(.025)
+        listing = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
+        self.assertIn(first_order.pk, [row['id'] for row in listing])
+        accepted = self.client.post(f'/api/orders/orders/{first_order.pk}/grab/', {}, format='json')
+        self.assertEqual(accepted.data['code'], 0, accepted.data)
+        accepted = self.client.post(f'/api/orders/orders/{arranged_order.pk}/grab/', {}, format='json')
+        self.assertEqual(accepted.data['code'], 0, accepted.data)

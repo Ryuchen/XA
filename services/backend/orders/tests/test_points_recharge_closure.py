@@ -16,6 +16,7 @@ from orders.tests.factories import make_console_user, make_provider
 from stores.context import store_context
 from stores import test_platform_pass_repayment as platform_tests
 from wallet.models import RechargeRecord, Transaction
+from wallet.services import get_wallet
 from engagement.models import PointLedger
 from orders.models import Order, OrderPointsRefund, OrderRefund
 
@@ -76,6 +77,7 @@ class PointsRealRechargeClosureTest(TestCase):
             provider_account = get_or_create_account_for_legacy_user(provider)
             provider.escort_profile.account = provider_account
             provider.escort_profile.save(update_fields=['account'])
+            get_wallet(account=provider_account, user=provider)
             payload = {**self.payload(), 'dispatch_mode': 'BOSS_SELECT', 'dispatch_route': 'PUBLIC',
                        'provider_ids': [provider_account.pk]}
             quote = self.client.post('/api/orders/quote/', payload, format='json')
@@ -133,3 +135,162 @@ class PointsRealRechargeClosureTest(TestCase):
             damaged = admin.post(path, data, format='json')
             self.assertEqual(damaged.data['errorCode'], 'REFUND_LEDGER_INCOMPLETE')
             self.assertEqual(OrderRefund.objects.filter(order=self.order).count(), 1)
+
+    @override_settings(SERVICE_POINTS_ASSIGNED_CANCEL_ENABLED=True,
+                       RECEIPT_USAGE_LEDGER_INTERNAL_TESTING=True,
+                       RECEIPT_USAGE_ALLOCATIONS_INTERNAL_TESTING=True)
+    def test_unstarted_refund_releases_each_receipt_and_preserves_other_use(self):
+        from uuid import uuid4
+
+        from orders.models import OrderPointsFundingAllocation, PointsPrestartCancelFundingEvidence
+        from stores.db import transaction
+        from stores.models import PlatformPointsFundingOperation
+        from users.models import PassReceiptUsageEvent, PassRefundRepaymentReceipt
+        from users.receipt_usage_ledger import initialize_empty_locked
+        from users.receipt_usage_sources import verify_allocations_locked
+
+        # Both incoming receipts are isolated bookkeeping fixtures.
+        register = platform_tests.PlatformPassRepaymentTests.post
+        finance_action = platform_tests.PlatformPassRepaymentTests.action
+        other = register(self, 'xinan', {**self.data, 'request_id': str(uuid4()),
+                                        'external_reference': 'isolated-prestart-second-receipt'})
+        self.assertEqual(other.status_code, 200, other.data)
+        other_claim = other.data['data']['claim_id']
+        other_receipt = other.data['data']['receipt_id']
+        receipts = (self.receipt_id, other_receipt)
+        for claim in (self.claim, other_claim):
+            result = finance_action(self, claim, 'verify', {'request_id': str(uuid4())})
+            self.assertEqual(result.status_code, 200, result.data)
+        with store_context(self.second), transaction.atomic():
+            for receipt_id in receipts:
+                initialize_empty_locked(receipt_id)
+        pass_refund, _ = platform_tests.PlatformPassRepaymentTests.setup_refunds(self)
+        passage = finance_action(self, self.claim, 'allocate',
+            {'request_id': str(uuid4()), 'refund_id': pass_refund, 'amount': 100})
+        self.assertEqual(passage.status_code, 200, passage.data)
+        for claim, amount in ((self.claim, 300), (other_claim, 200)):
+            allocated = finance_action(self, claim, 'points-allocation',
+                {'request_id': str(uuid4()), 'order_id': self.order.pk, 'amount': amount})
+            self.assertEqual(allocated.status_code, 200, allocated.data)
+
+        def usage():
+            with transaction.atomic():
+                states = [verify_allocations_locked(receipt_id) for receipt_id in receipts]
+                return [(state.pass_units, state.order_units, state.released_units) for state in states]
+
+        def available():
+            response = platform_tests.PlatformPassRepaymentTests.reconciliation(self)
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertEqual(response.data['data']['status'], 'OK', response.data)
+            return {row['receipt']['id']: row['receipt']['unallocated_amount']
+                    for row in response.data['data']['claims']}
+
+        self.assertEqual(available(), {self.receipt_id: 100, other_receipt: 300})
+        queue_url = '/api/admin/platform/points-funding/xinan/orders'
+        status_url = f'{queue_url}/{self.order.pk}'
+
+        def assert_funding_status(expected):
+            detail = self.platform_client.get(status_url, HTTP_AUTHORIZATION='Bearer ' + self.token)
+            queue = self.platform_client.get(queue_url, {'after_id': self.order.pk - 1},
+                                             HTTP_AUTHORIZATION='Bearer ' + self.token)
+            self.assertEqual(queue.status_code, 200, queue.data)
+            rows = [row for row in queue.data['data']['list'] if row['order_id'] == self.order.pk]
+            if expected == 'REVIEW':
+                self.assertEqual((detail.status_code, detail.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
+                self.assertEqual([row['funding_status'] for row in rows], ['REVIEW'])
+            else:
+                self.assertEqual(detail.status_code, 200, detail.data)
+                funding = detail.data['data']
+                self.assertEqual((funding['required_units'], funding['allocated_units'], funding['remaining_units'],
+                                  funding['fully_funded']), (0, 0, 0, True))
+                self.assertEqual(rows, [])
+
+        # Substitute the MySQL configuration prerequisite for this SQLite test.
+        with (store_context(self.second),
+              self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, RECEIPT_USAGE_LEDGER_ENABLED=True),
+              patch('orders.points_business_access.configured', return_value=True)):
+            staff = make_console_user(['order:refund'])
+            account = get_or_create_account_for_legacy_user(staff)
+            staff.admin_membership.account = account
+            staff.admin_membership.save(update_fields=['account'])
+            admin = APIClient(HTTP_HOST='admin.esports.club',
+                HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+            order_url = f'/api/admin/orders/{self.order.pk}/'
+            request = {'reason': '核对未开工后全退', 'client_request_id': 'prestart-two-receipt-refund'}
+            preview = admin.get(order_url + 'refund-preview/')
+            self.assertEqual(preview.data['code'], 0, preview.data)
+            self.assertEqual(preview.data['data']['released_funding_units'], 500)
+            self.assertEqual(usage(), [(100, 300, 0), (0, 200, 0)])
+
+            create_event = PassReceiptUsageEvent.objects.create
+            release_attempts = []
+
+            def fail_second_release(**fields):
+                if fields['kind'] == 'RELEASE':
+                    receipt_id = fields['state'].receipt_id
+                    release_attempts.append(receipt_id)
+                    if receipt_id == other_receipt:
+                        raise RuntimeError('隔离测试中断第二笔释放写入')
+                return create_event(**fields)
+
+            with patch('users.receipt_usage_ledger.PassReceiptUsageEvent.objects.create', side_effect=fail_second_release):
+                with self.assertRaisesMessage(RuntimeError, '隔离测试中断第二笔释放写入'):
+                    admin.post(order_url + 'refund/', request, format='json')
+            self.assertEqual(release_attempts, list(receipts))
+            self.assertEqual(usage(), [(100, 300, 0), (0, 200, 0)])
+            self.assertFalse(self.order.refund_records.exists())
+            self.assertFalse(PointsPrestartCancelFundingEvidence.objects.exists())
+            self.wallet.refresh_from_db()
+            self.profile.refresh_from_db()
+            self.assertEqual((self.wallet.balance, self.profile.points_balance), (4000, 5000))
+
+            result = admin.post(order_url + 'refund/', request, format='json')
+            self.assertEqual(result.data['code'], 0, result.data)
+            self.assertEqual(admin.post(order_url + 'refund/', request, format='json').data['code'], 0)
+            refund = self.order.refund_records.get()
+            evidence = PointsPrestartCancelFundingEvidence.objects.get(points_refund__refund=refund)
+            self.assertEqual(evidence.store_slug, self.second.slug)
+            self.assertEqual(list(evidence.releases.order_by('allocation__receipt_id').values_list(
+                'allocation__receipt_id', 'amount')), [(self.receipt_id, 300), (other_receipt, 200)])
+            self.assertEqual(OrderPointsFundingAllocation.objects.filter(redemption__order=self.order).count(), 2)
+            self.assertEqual(usage(), [(100, 300, 300), (0, 200, 200)])
+            self.wallet.refresh_from_db()
+            self.profile.refresh_from_db()
+            self.assertEqual((self.wallet.balance, self.profile.points_balance), (8000, 15000))
+            self.assertEqual(PointLedger.objects.filter(order=self.order, kind='ORDER_POINTS_RETURN').count(), 1)
+            assert_funding_status('RELEASED')
+            operation = PlatformPointsFundingOperation.objects.get(claim_id=self.claim)
+            PlatformPointsFundingOperation.objects.filter(pk=operation.pk).update(payload_digest='0' * 64)
+            assert_funding_status('REVIEW')
+            PlatformPointsFundingOperation.objects.filter(pk=operation.pk).update(payload_digest=operation.payload_digest)
+
+        self.assertEqual(available(), {self.receipt_id: 400, other_receipt: 500})
+        with store_context(self.second):
+            buyer = APIClient(HTTP_HOST='xa.esports.club',
+                HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
+            with patch.object(self, 'client', buyer):
+                payload = self.payload()
+            payload.update(dispatch_mode='BOSS_SELECT', dispatch_route='PUBLIC',
+                           provider_ids=[self.order.providers.get().provider_account_id],
+                           client_request_id='prestart-reuse-after-refund')
+            quote = buyer.post('/api/orders/quote/', payload, format='json')
+            self.assertEqual(quote.data['code'], 0, quote.data)
+            token = quote.data['data']['points_preview']['checkout_test_token']
+            payload.pop('preview_points_hundredths')
+            created = buyer.post('/api/orders/create/', {**payload, 'points_checkout_test_token': token}, format='json')
+            self.assertEqual(created.data['code'], 0, created.data)
+            new_order_id = created.data['data']['id']
+        self.assertNotEqual(new_order_id, self.order.pk)
+        reallocated = self.fund({'request_id': str(uuid4()), 'order_id': new_order_id, 'amount': 350})
+        self.assertEqual(reallocated.status_code, 200, reallocated.data)
+        self.assertEqual(available(), {self.receipt_id: 50, other_receipt: 500})
+        with store_context(self.second):
+            self.assertEqual(usage(), [(100, 650, 300), (0, 200, 200)])
+            self.assertEqual(self.order.refund_records.get().pk, refund.pk)
+            self.assertEqual(admin.post(order_url + 'refund/', request, format='json').data['code'], 0)
+            with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, RECEIPT_USAGE_LEDGER_ENABLED=True),
+                  patch('orders.points_business_access.configured', return_value=True)):
+                assert_funding_status('RELEASED')
+        self.assertEqual(available(), {self.receipt_id: 50, other_receipt: 500})
+        with store_context(self.first):
+            self.assertFalse(PassRefundRepaymentReceipt.objects.exists())

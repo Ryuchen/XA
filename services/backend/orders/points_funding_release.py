@@ -1,9 +1,7 @@
-"""Test-only refund funding releases against immutable allocation evidence.
+"""First-refund funding releases against immutable allocation evidence.
 
-Receipt consumers must hold the receipt lock before using a returned net
-amount. Releases are currently enabled only on the isolated SQLite databases;
-the receipt-first consumers must not acquire order locks on MySQL until the
-cross-flow lock ordering has been redesigned and tested there.
+Order-side writers acquire receipt locks after the order and money locks.
+Receipt-side readers verify source facts without acquiring order locks.
 """
 from dataclasses import asdict
 import hashlib
@@ -11,6 +9,7 @@ import json
 from uuid import UUID
 
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError
 from django.db.migrations.recorder import MigrationRecorder
 from django.db.models import Q
@@ -56,14 +55,25 @@ def release_tables_exist():
     return False
 
 
-def _digest(posting, allocations, provider_income, settlement_id, expected, addon_snapshot=None, prior_addon=None):
+def _digest(posting, allocations, provider_income, settlement_id, expected, addon_snapshot=None, prior_addon=None,
+            *, sort_keys=False):
     payload = [posting.pk, posting.terms_hash, posting.points_refund_id, allocations,
                provider_income, settlement_id, expected]
     if addon_snapshot is not None:
         payload.append(addon_snapshot)
     if prior_addon:
         payload.append(prior_addon)
-    return hashlib.sha256(json.dumps(payload, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(payload, separators=(',', ':'), ensure_ascii=True,
+                                     sort_keys=sort_keys).encode()).hexdigest()
+
+
+def first_release_hash_matches(evidence, posting):
+    """Check both the canonical hash and the encoding used for older first refunds."""
+    facts = (posting, evidence.allocations, evidence.original_provider_income,
+             evidence.original_settlement_id, evidence.expected_release,
+             evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)
+    return (evidence.evidence_hash == _digest(*facts, sort_keys=True)
+            or evidence.evidence_hash == _digest(*facts))
 
 
 def _prior_addon_releases(allocations, boundary):
@@ -179,9 +189,7 @@ def verify_release_locked(evidence, *, _skip_usage=False):
             or any(type(value) is not int or value <= 0 for value in item) for item in items)
             or len({item[0] for item in items}) != len(items)
             or items != sorted(items, key=lambda item: item[0])
-            or evidence.evidence_hash != _digest(posting, items, evidence.original_provider_income,
-                                                 evidence.original_settlement_id, evidence.expected_release,
-                                                 evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)):
+            or not first_release_hash_matches(evidence, posting)):
         raise ValidationError('补资释放快照异常')
     owner = Q(redemption__order=order) | Q(service_order=order)
     max_id = items[-1][0] if items else 0
@@ -194,11 +202,26 @@ def verify_release_locked(evidence, *, _skip_usage=False):
     if prior_addon != evidence.prior_addon_release_snapshot:
         raise ValidationError('主单退款前的加购补资释放凭证已变化')
     net_items, addon_released = _net_allocations(items, prior_addon)
-    # Recheck the original platform authorization without calling its normal
-    # receipt-total helper: doing so would recurse back into this verifier.
+    # Recheck platform authorization without calling the order-level totals
+    # helper, which would recurse back into this verifier.
     from stores.models import PlatformPointsFundingOperation
     from stores.platform_pass_repayment import RepaymentError, _claimed_receipt, _sha
     from stores.platform_points_funding import _verified_receipt
+    from users.models import PassRefundRepaymentReceipt
+    from users.receipt_usage_guard import capture_allocation_usage_locked, isolated_allocation_state_locked
+    from .points_addon_receipt_usage import reuse_history_locked
+
+    receipt_ids = {item[2] for item in items}
+    ledger_enabled = getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is True
+    # Several allocations can share a receipt. Verify its tenant ledger once
+    # under the existing locks and still check each platform operation.
+    locked_receipts = {}
+    if ledger_enabled:
+        locked_receipts = {receipt.pk: receipt for receipt in PassRefundRepaymentReceipt.objects.select_for_update()
+                           .filter(pk__in=receipt_ids).order_by('pk')}
+        if set(locked_receipts) != receipt_ids:
+            raise ValidationError('补资释放原到账凭证缺失')
+    verified_usage = {}
     for allocation in OrderPointsFundingAllocation.objects.filter(pk__in=[item[0] for item in items]).select_related('receipt'):
         key = allocation.request_key
         try:
@@ -219,10 +242,14 @@ def verify_release_locked(evidence, *, _skip_usage=False):
                 or action.result != expected_action or operation.payload_digest != _sha(json.dumps(
                     [str(operation.claim_id), order.pk, allocation.amount], separators=(',', ':')))):
             raise ValidationError('补资释放原平台分配凭证异常')
+        receipt = locked_receipts.get(allocation.receipt_id, allocation.receipt)
         try:
-            _claimed_receipt(operation.claim, current_store().slug, allocation.receipt)
-            _verified_receipt(operation.claim, allocation.receipt)
-        except RepaymentError as exc:
+            _claimed_receipt(operation.claim, current_store().slug, receipt)
+            if ledger_enabled and receipt.pk not in verified_usage:
+                with reuse_history_locked(order, {receipt.pk}):
+                    verified_usage[receipt.pk] = capture_allocation_usage_locked(receipt)
+            _verified_receipt(operation.claim, receipt, verified_usage=verified_usage.get(receipt.pk))
+        except (RepaymentError, DjangoValidationError) as exc:
             raise ValidationError('补资释放原到账核实凭证异常') from exc
     settlement = OrderPointsSettlement.objects.filter(order=order).first()
     from .models import PointsFirstRefundPaidPersonEvidence
@@ -252,7 +279,6 @@ def verify_release_locked(evidence, *, _skip_usage=False):
             raise ValidationError('退款前的补资预留或收益结算异常')
         if prior_people.exists():
             from .points_first_paid_source import verify_current
-            from django.core.exceptions import ValidationError as DjangoValidationError
             try:
                 verify_current(posting, evidence)
             except DjangoValidationError as exc:
@@ -272,11 +298,10 @@ def verify_release_locked(evidence, *, _skip_usage=False):
             or rows != [(item.allocation_id, item.amount) for item in expected]):
         raise ValidationError('补资释放金额与退款结果不一致')
     if not _skip_usage and (formal_service or getattr(settings, 'SERVICE_POINTS_FIRST_REFUND_USAGE_TESTING', False)):
-        from users.models import PassRefundRepaymentReceipt
-        from users.receipt_usage_guard import isolated_allocation_state_locked
         for receipt in PassRefundRepaymentReceipt.objects.select_for_update().filter(
-                pk__in=sorted({item[2] for item in items})).order_by('pk'):
-            isolated_allocation_state_locked(receipt)
+                pk__in=receipt_ids - verified_usage.keys()).order_by('pk'):
+            with reuse_history_locked(order, {receipt.pk}):
+                isolated_allocation_state_locked(receipt)
     return result
 
 
@@ -362,10 +387,12 @@ def record_release_locked(posting, calculation):
         original_provider_income=income, original_settlement_id=settlement_id, expected_release=actual.release_units,
         addon_funding_snapshot=addon_snapshot,
         prior_addon_release_snapshot=prior_addon,
-        evidence_hash=_digest(posting, items, income, settlement_id, actual.release_units, addon_snapshot, prior_addon))
+        evidence_hash=_digest(posting, items, income, settlement_id, actual.release_units, addon_snapshot, prior_addon,
+                              sort_keys=True))
     OrderPointsFundingRelease.objects.bulk_create([OrderPointsFundingRelease(posting=posting,
         allocation_id=item.allocation_id, amount=item.amount) for item in parts])
-    verified = verify_release_locked(evidence, _skip_usage=True)
+    # Receipt verification checks the full usage chain, including the release
+    # rows above. Append their events before verifying the completed write.
     if formal_service or getattr(settings, 'SERVICE_POINTS_FIRST_REFUND_USAGE_TESTING', False):
         from .points_receipt_usage import eligible
         if not eligible(order):
@@ -382,7 +409,7 @@ def record_release_locked(posting, calculation):
                 touched.add(row.allocation.receipt_id)
         for receipt_id in sorted(touched):
             verify_allocations_locked(receipt_id)
-    return verified
+    return verify_release_locked(evidence, _skip_usage=True)
 
 
 def receipt_points_used_locked(receipt, *, pending_followup_posting_id=None):

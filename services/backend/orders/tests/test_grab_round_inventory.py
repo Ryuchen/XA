@@ -26,9 +26,8 @@ class SingleInventoryTest(TransactionTestCase):
     submit = fixture.BoundSingleRankingTest.submit
 
     def inspect(self):
-        with patch('django.utils.timezone.now', return_value=self.round.deadline + timedelta(seconds=1)):
-            with transaction.atomic():
-                return inspect_round(self.round.pk)
+        with fixture.after_window(self.round), transaction.atomic():
+            return inspect_round(self.round.pk)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
@@ -140,9 +139,8 @@ class TeamInventoryTest(TransactionTestCase):
     team = fixture.BoundTeamRankingTest.team
 
     def inspect(self):
-        with patch('django.utils.timezone.now', return_value=self.round.deadline + timedelta(seconds=1)):
-            with transaction.atomic():
-                return inspect_round(self.round.pk)
+        with fixture.after_window(self.round), transaction.atomic():
+            return inspect_round(self.round.pk)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
@@ -307,9 +305,8 @@ class InventoryStoreTest(TransactionTestCase):
             with store_context(store):
                 from orders.models import OrderGrabRound
                 round_ = OrderGrabRound.objects.get(pk=round_id)
-                with patch('django.utils.timezone.now', return_value=round_.deadline + timedelta(seconds=1)):
-                    with transaction.atomic():
-                        result = inspect_round(round_id)
+                with fixture.after_window(round_), transaction.atomic():
+                    result = inspect_round(round_id)
                 if store.slug == 'xinan':
                     self.assertEqual((result.status, result.review_receipt_ids), ('REVIEW', (proof_id,)))
                 else:
@@ -339,9 +336,8 @@ class InventoryStoreTest(TransactionTestCase):
                 round_ = OrderGrabRound.objects.get(pk=round_id)
                 team = OrderGrabTeamDraft.objects.get(pk=team_id)
                 self.assertEqual((team.withdrawal_receipt_id, team.occupied_seats.count()), (receipt_id, 0))
-                with patch('django.utils.timezone.now', return_value=round_.deadline + timedelta(seconds=1)):
-                    with transaction.atomic():
-                        result = inspect_round(round_id)
+                with fixture.after_window(round_), transaction.atomic():
+                    result = inspect_round(round_id)
                 if store.slug == 'xinan':
                     self.assertEqual(result.status, 'REVIEW')
                     self.assertIn(team_id, result.unresolved_team_ids)

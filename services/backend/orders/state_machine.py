@@ -338,9 +338,9 @@ def log_only(
     operator=None,
     operator_account=None,
     reason: str = '',
-) -> None:
+) -> OrderStatusLog:
     """记录不涉及状态变更的事件（如订单创建、退款标记）。"""
-    OrderStatusLog.objects.create(
+    return OrderStatusLog.objects.create(
         order=order,
         action=action,
         from_status=order.status,

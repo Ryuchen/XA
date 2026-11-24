@@ -1,10 +1,12 @@
 from datetime import timedelta
+from tempfile import TemporaryDirectory
 from django.test import TestCase,override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from club_accounts.services import get_or_create_account_for_legacy_user
 from users.models import ProviderQualification,EscortProfile,EscortSchedule
 from users.qualifications import grade_options,service_requirement,matching_qualification,qualified_order_q,authorized_skill_q
+from users.test_voice_recordings import audio_file
 from orders.models import GameCategory,Gameplay,Order
 from orders.pricing import resolve_commission_rate,club_provider_specs
 from orders.tests.factories import make_user,make_provider,make_service
@@ -23,8 +25,17 @@ class ProviderQualificationRulesTest(APITestCase):
     def qualification(self,platform='PC',security='CONFIDENTIAL',grade='LEGEND',kind='GUARD',game=None):
         return ProviderQualification.objects.create(profile=self.profile,game_category=game or self.game,provider_kind=kind,platform=platform,security_level=security,grade=grade)
     def order(self):
-        order=Order.objects.create(customer=self.boss,customer_account=self.boss_account,service=self.service,amount=10000,commission_rate=resolve_commission_rate(self.service,self.profile,None),created_at=timezone.now()-timedelta(hours=1))
+        order=Order.objects.create(customer=self.boss,customer_account=self.boss_account,service=self.service,amount=10000,commission_rate=resolve_commission_rate(self.service,self.profile,None),requires_boss_selection=True)
         Order.objects.filter(pk=order.pk).update(created_at=timezone.now()-timedelta(hours=1));order.refresh_from_db();return order
+
+    def apply_with_recording(self, order):
+        with TemporaryDirectory(prefix='xa-qualification-voice-') as media, override_settings(MEDIA_ROOT=media):
+            voice = self.client.post('/api/users/recordings/', {
+                'audio': audio_file(), 'title': '资格测试试音', 'client_request_id': f'qualification-voice-{order.pk}',
+            }, format='multipart')
+            self.assertEqual(voice.data['code'], 0, voice.data)
+            return self.client.post(f'/api/orders/orders/{order.pk}/grab/', {'recording_id': voice.data['data']['id']},
+                                    format='json')
     def test_multi_scope_does_not_share_platform_difficulty_or_game(self):
         self.qualification()
         self.qualification('MOBILE','TOP_SECRET','MASTER')
@@ -75,7 +86,7 @@ class ProviderQualificationRulesTest(APITestCase):
         order=self.order();self.assertTrue(Order.objects.filter(pk=order.pk).filter(qualified_order_q(self.profile),authorized_skill_q(self.profile)).exists())
         self.service.catalog_family='别的玩法';self.assertIn('技能',self.profile.order_acceptance_error(self.service))
 
-    def test_same_gameplay_higher_skill_is_visible_and_can_grab_without_catalog_family(self):
+    def test_same_gameplay_higher_skill_is_visible_and_can_apply_without_catalog_family(self):
         self.qualification()
         gameplay = Gameplay.objects.create(name='同玩法池测试', code='same-gameplay-pool')
         self.service.catalog_family = ''
@@ -89,10 +100,10 @@ class ProviderQualificationRulesTest(APITestCase):
         self.client.force_authenticate(self.user)
         pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
         self.assertIn(order.pk, [row['id'] for row in pool])
-        result = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
+        result = self.apply_with_recording(order)
         self.assertEqual(result.data['code'], 0, result.data)
         order.refresh_from_db()
-        self.assertEqual(order.provider_account_id, self.account.pk)
+        self.assertTrue(order.applications.filter(applicant=self.account, status='PENDING').exists())
 
     def test_pool_uses_order_scope_snapshot_after_catalog_scope_changes(self):
         self.qualification()
@@ -115,7 +126,7 @@ class ProviderQualificationRulesTest(APITestCase):
         self.client.force_authenticate(self.user)
         pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
         self.assertIn(order.pk, [row['id'] for row in pool])
-        result = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
+        result = self.apply_with_recording(order)
         self.assertEqual(result.data['code'], 0, result.data)
 
     def test_pool_does_not_grant_other_gameplay_or_game(self):
@@ -135,7 +146,7 @@ class ProviderQualificationRulesTest(APITestCase):
             provider_grade='MASTER', platform='PC', security_level='CONFIDENTIAL',
             catalog_family='', gameplay=gameplay)
         other_game_order = Order.objects.create(customer=self.boss, customer_account=self.boss_account,
-            service=other_game_service, amount=10000)
+            service=other_game_service, amount=10000, requires_boss_selection=True)
         Order.objects.filter(pk=other_game_order.pk).update(created_at=timezone.now()-timedelta(hours=1))
         self.client.force_authenticate(self.user)
         pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']

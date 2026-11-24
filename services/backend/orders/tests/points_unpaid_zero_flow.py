@@ -67,7 +67,8 @@ def exercise_unpaid_zero_deposit(test, *, order, case_id, buyer, account, accoun
         profile.save(update_fields=['deposit_mode', 'deposit_paid', 'deposit_required'])
         SystemConfig.objects.update_or_create(key='provider_deposit_targets', defaults={
             'value': '{"cash_target":8050,"earnings_target":16100,"version":1}'})
-        with patch('django.utils.timezone.now', return_value=baseline + timedelta(seconds=3)):
+        proposal_time = baseline + timedelta(seconds=3)
+        with patch('django.utils.timezone.now', side_effect=lambda: proposal_time):
             topup_url = f'/api/admin/escorts/{profile.pk}/deposit-topups/'
             topup = client.post(topup_url, {'amount': 8000, 'reason': '未结算双陪押金测试',
                 'reference': 'UNPAID-ZERO-1', 'client_request_id': 'unpaid-zero-topup-1'}, format='multipart')
@@ -82,6 +83,7 @@ def exercise_unpaid_zero_deposit(test, *, order, case_id, buyer, account, accoun
                 agreed = actor.post(f'/api/orders/orders/{order.pk}/negotiation-proposal/',
                                     {'proposal_id': proposal, 'accepted': True}, format='json')
                 test.assertEqual(agreed.data['code'], 0, agreed.data)
+            proposal_time += timedelta(seconds=1)
             request = {'proposal_id': proposal, 'client_request_id': 'unpaid-zero-refund'}
             buyer_wallet = get_wallet(account_id=account.pk, user_id=buyer.pk)
             # Reload after the real top-up, before checking rollback.

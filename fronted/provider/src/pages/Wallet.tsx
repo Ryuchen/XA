@@ -5,8 +5,9 @@ import {
   loadProviderBenefits,
   withdrawalPresentation,
   useCurrentStore,
+  useSession,
 } from "@xa/shared"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router"
 import {
   ArrowDownLeft,
@@ -51,6 +52,10 @@ import {
   type Failure,
   useViewGuard,
 } from "@/lib/provider"
+import {
+  cancelWithdrawal as cancelOriginalWithdrawal, readPendingWithdrawals, retryPendingWithdrawal, submitWithdrawal,
+  type PendingWithdrawal,
+} from "@/lib/withdrawal-recovery"
 
 type Account = {
   id: number
@@ -143,7 +148,9 @@ const transactionLabel = (row: Transaction) =>
   walletTransactionPresentation(row).label
 export function WalletPage() {
   const store = useCurrentStore()
+  const session = useSession("provider")
   const guardView = useViewGuard()
+  const recoveryTitle = useId()
   const chosenVersion = useRef<{ id: number; version: number } | null>(null)
   const [params, setParams] = useSearchParams(),
     tab = params.get("tab") || "transactions",
@@ -156,6 +163,26 @@ export function WalletPage() {
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
     [issue, setIssue] = useState("")
+  const [pending, setPending] = useState<PendingWithdrawal[]>([])
+  const [recovery, setRecovery] = useState<PendingWithdrawal | null>(null)
+  const [recoveryIssue, setRecoveryIssue] = useState("")
+  const pendingRead = useRef(0)
+
+  function reloadPending() {
+    const attempt = ++pendingRead.current
+    void readPendingWithdrawals().then(items => {
+      if (attempt === pendingRead.current) setPending(items)
+    })
+  }
+  useEffect(() => {
+    reloadPending()
+    window.addEventListener("storage", reloadPending)
+    return () => {
+      pendingRead.current++
+      window.removeEventListener("storage", reloadPending)
+    }
+  }, [store.slug, session.user?.id])
+
   const data = useLoad(async () => {
     const [overview, transactions, benefits, accounts] = await Promise.all([
       api<Overview>(
@@ -271,7 +298,7 @@ export function WalletPage() {
     setBusy(true)
     setIssue("")
     try {
-      await fund("/wallet/withdraw/", {
+      await submitWithdrawal({
         amount: rawAmount,
         withdrawal_account_id: account.id,
         expected_payee_version: account.version,
@@ -281,11 +308,12 @@ export function WalletPage() {
         expected_config_version: q.config_version,
       })
       if (!currentView()) return
+      reloadPending()
       setOpen(false)
       setAmount("")
       setParams({ tab: "withdraw" })
       setNotice("提现申请已提交")
-      await data.reload()
+      void data.reload().catch(() => {})
     } catch (cause) {
       if (!currentView()) return
       const failure = cause as Failure
@@ -299,10 +327,52 @@ export function WalletPage() {
       } else
         setIssue(
           uncertain(cause)
-            ? "提现结果未确认，请查看提现记录或联系客服核对，暂勿重复提交。"
+            ? "提现结果未确认，请在待核对提现操作中按原编号重试。"
             : message(cause)
         )
     } finally {
+      if (currentView()) reloadPending()
+      setBusy(false)
+    }
+  }
+
+  async function cancel() {
+    if (cancelWithdrawal == null || busy) return
+    const currentView = guardView()
+    setBusy(true)
+    try {
+      await cancelOriginalWithdrawal(cancelWithdrawal)
+      if (!currentView()) return
+      setCancelWithdrawal(null)
+      setNotice("提现已取消")
+    } catch (cause) {
+      if (currentView()) setIssue(uncertain(cause) ? "取消结果未确认，请在待核对提现操作中按原编号重试。" : message(cause))
+    } finally {
+      if (currentView()) {
+        reloadPending()
+        void data.reload().catch(() => {})
+      }
+      setBusy(false)
+    }
+  }
+
+  async function retryOriginal() {
+    if (!recovery || busy) return
+    const currentView = guardView()
+    setRecoveryIssue("")
+    setBusy(true)
+    try {
+      const id = await retryPendingWithdrawal(recovery)
+      if (!currentView()) return
+      reloadPending()
+      setRecovery(null)
+      setNotice(recovery.kind === "apply" ? "已核对原提现申请" : "已核对原取消操作")
+      if (tab === "withdraw" && focus === String(id)) void data.reload().catch(() => {})
+      else setParams({ tab: "withdraw", withdraw_id: String(id) })
+    } catch (cause) {
+      if (currentView()) setRecoveryIssue(message(cause))
+    } finally {
+      if (currentView()) reloadPending()
       setBusy(false)
     }
   }
@@ -341,6 +411,26 @@ export function WalletPage() {
         </Button>
       </PageHeader>
       <Notice tone={["提现申请已提交", "收款账户已保存", "收款账户已保存，已重新核对。", "已解绑", "采购成功"].includes(notice) ? "success" : "info"}>{notice}</Notice>
+      {pending.length > 0 && (
+        <section aria-labelledby={recoveryTitle} className="space-y-3 rounded-[12px] border bg-card p-4">
+          <h2 id={recoveryTitle} className="text-sm font-semibold">待核对提现操作</h2>
+          <p className="text-sm text-muted-foreground">请按原编号核对结果，避免重复发起同一笔提现。</p>
+          <ul className="divide-y">
+            {pending.map(item => (
+              <li key={item.original.key} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm">{item.kind === "apply" ? `提现申请 ${money(item.amount)} ${coinUnit()}` : `取消申请 #${item.rowId}`}</p>
+                  <p className="break-all text-xs text-muted-foreground">原编号 {item.original.requestId}</p>
+                </div>
+                <Button type="button" variant="outline" disabled={busy} onClick={() => {
+                  setRecoveryIssue("")
+                  setRecovery(item)
+                }}>{item.kind === "apply" ? "重试原申请" : "重试原取消"}</Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <SnapshotGate
         loading={data.loading}
         error={data.error}
@@ -546,7 +636,7 @@ export function WalletPage() {
                         <p className="text-xs text-muted-foreground">
                           {date(row.paid_at || row.created_at)}
                         </p>
-                        {row.can_cancel && <Button type="button" variant="outline" disabled={busy || data.loading}
+                        {row.can_cancel && !pending.some(item => item.kind === "cancel" && item.rowId === row.id) && <Button type="button" variant="outline" disabled={busy || data.loading}
                           onClick={() => { setIssue(""); setCancelWithdrawal(row.id) }}>取消申请</Button>}
                       </div>
                     ))}
@@ -703,15 +793,21 @@ export function WalletPage() {
       <Confirm open={cancelWithdrawal != null} title="取消提现申请"
         description="取消后申请金额将解冻并退回可用余额。"
         onClose={() => setCancelWithdrawal(null)} busy={busy} disabled={!!issue}
-        label="确认取消" onConfirm={() => {
-          if (cancelWithdrawal == null || busy) return
-          setBusy(true)
-          void fund(`/wallet/withdraw/${cancelWithdrawal}/cancel/`, {}).then(() => {
-            setCancelWithdrawal(null); setNotice("提现已取消")
-          }).catch(cause => setIssue(uncertain(cause) ? "取消结果未确认，请先核对提现记录。" : message(cause)))
-            .finally(() => { void data.reload().catch(() => {}); setBusy(false) })
-        }}>
+        label="确认取消" onConfirm={() => void cancel()}>
         <Notice error>{issue}</Notice>
+      </Confirm>
+      <Confirm open={recovery != null} title="核对原提现操作"
+        description={recovery?.kind === "cancel" ? "系统会核对或重试原取消操作。取消成功后，原申请金额退回可用余额。"
+          : "系统会按原金额和收款资料核对或重试。申请成功后，资金进入冻结。"}
+        onClose={() => setRecovery(null)} busy={busy} label="按原编号重试" onConfirm={() => void retryOriginal()}>
+        {recovery && <DetailGrid items={[
+          { label: "原操作编号", value: <span className="break-all">{recovery.original.requestId}</span> },
+          ...(recovery.kind === "apply" ? [
+            { label: "原申请金额", value: `${money(recovery.amount)} ${coinUnit()}` },
+            { label: "原预计打款", value: `¥${formatRmb(recovery.actualAmount)}` },
+          ] : [{ label: "原提现申请", value: `#${recovery.rowId}` }]),
+        ]} />}
+        <Notice error>{recoveryIssue}</Notice>
       </Confirm>
     </div>
   )

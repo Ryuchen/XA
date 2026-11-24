@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
 from console.reservation_deadlines import save_deadlines
+from engagement.models import PointFundingLot
 from orders.models import Reservation
 from orders.tests.factories import make_completed_order, make_provider, make_service, make_user
 from stores.context import resolve_store, store_context
@@ -35,6 +36,10 @@ class ReservationConfirmedBeforeDeficitTest(TestCase):
                 link_legacy_relations(boss_user, boss)
                 customer_wallet = get_wallet(user=boss_user, account=boss)
                 customer_wallet.balance = 10000; customer_wallet.save(update_fields=['balance'])
+                PointFundingLot.objects.create(
+                    account=boss, source_key='reservation-refund-gap', kind=PointFundingLot.Kind.PREPAID,
+                    remaining=customer_wallet.balance,
+                )
                 self.platform = get_platform_wallet()
                 self.platform.balance = 10000; self.platform.save(update_fields=['balance'])
                 providers = []
@@ -48,7 +53,10 @@ class ReservationConfirmedBeforeDeficitTest(TestCase):
                 client = lambda account: APIClient(HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
                 owner = client(boss)
                 for index, selected in enumerate((providers[:1], providers[1:])):
-                    service = make_service(price=1000, billing_provider_count=len(selected), price_unit='份')
+                    service = make_service(
+                        price=1000, billing_provider_count=len(selected),
+                        fulfillment_provider_count=len(selected), price_unit='份',
+                    )
                     payload = {'service_id': service.pk, 'start_time': start.isoformat(),
                                'end_time': (start + timedelta(hours=1)).isoformat(),
                                'provider_account_ids': [account.pk for _, account in selected]}

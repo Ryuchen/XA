@@ -1,11 +1,4 @@
-"""Experimental two-sided commit observations for future grab commands.
-
-These probes only record an intent and a conservative cutoff classification;
-they do not validate eligibility, apply the intent, reserve a candidate, or
-allow a round to finalize. No live endpoint calls this module. Before use,
-the deployment must establish trustworthy database time, clock monitoring,
-connection/failover behavior and crash recovery for every store.
-"""
+"""Record grab requests and classify their original commit observations."""
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone as dt_timezone
 import hashlib
@@ -14,14 +7,16 @@ from itertools import islice
 
 from django.conf import settings
 from django.db import DatabaseError
+from django.db.models import Q
 from stores.db import connection, transaction
 from club_accounts.models import ClubAccount
 from club_accounts.provider_lifecycle import ProviderLifecycleError
 from users.models import EscortProfile
 from users.pass_rules import lock_pass_config
 
-from .models import (Order, OrderGrabReceiptPassEvidence, OrderGrabReceiptProbe, OrderGrabRound,
-                     OrderGrabTeamDraft)
+from .grab_round_facts import current_pending_round_state
+from .models import (Order, OrderGrabReceiptPassEvidence, OrderGrabReceiptProbe,
+                     OrderGrabReviewCancellation, OrderGrabRound, OrderGrabTeamDraft)
 
 
 @dataclass(frozen=True)
@@ -29,6 +24,11 @@ class ProbeOutcome:
     receipt_id: int
     state: str
     replayed: bool = False
+    current_round: bool = True
+
+
+class GrabRequestConflict(ValueError):
+    pass
 
 
 def actor_membership_evidence_present(probe):
@@ -239,13 +239,15 @@ def _lock_round(round_id):
 
 
 def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow=False, team_flow=False,
-                  actor_snapshot=None):
+                  actor_snapshot=None, replay_only=False):
     """Durably record an intent, then independently record a post-commit bound.
 
     The request must already be authenticated by the future caller. This
     method verifies store-local identity and resource ownership but is not a
     substitute for the full eligibility check. It must own both transactions;
     callers cannot wrap it in an outer atomic block.
+    A missing receipt returns None without a write in replay-only mode or
+    when an existing customer cancellation application owns the review.
     """
     if transaction.get_connection().in_atomic_block or not transaction.get_autocommit():
         raise RuntimeError('登记证据必须使用独立的最外层事务')
@@ -256,6 +258,10 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
     fingerprint = hashlib.sha256(canonical.encode('ascii')).hexdigest()
     lifecycle_accounts = []
     lifecycle_team_ids = None
+    order_invite = team_flow and kind == 'INVITE'
+    order_cancel = (single_flow or team_flow) and kind == 'BOSS_CANCEL'
+    order_single = single_flow and kind == 'SINGLE'
+    order_request = order_invite or order_cancel or order_single
     team_cycle_guard = team_flow and kind in ('INVITE', 'CONFIRM')
     lifecycle_guard = team_cycle_guard or (single_flow and kind == 'SINGLE')
     if lifecycle_guard:
@@ -274,9 +280,10 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
             other_id = lifecycle_team_ids[0]
         if other_id is not None:
             other = ClubAccount.objects.filter(pk=other_id, account_type='PROVIDER').first()
-            if other is None:
+            if other is None and not order_invite:
                 raise ValueError('双陪队友不可用')
-            lifecycle_accounts.append(other)
+            if other is not None:
+                lifecycle_accounts.append(other)
     if single_flow and kind == 'SINGLE':
         from .services import ensure_provider_dispatch_locks
         ensure_provider_dispatch_locks([actor_id])
@@ -305,13 +312,52 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
                 raise ValueError('只能登记本人订单取消')
         elif actor.account_type != 'PROVIDER':
             raise ValueError('仅陪玩可登记抢单意向')
-        old = OrderGrabReceiptProbe.objects.select_for_update().filter(round=round_, actor_id=actor_id,
-                                                                       request_key=request_key).first()
+        matching = OrderGrabReceiptProbe.objects.select_for_update().filter(actor_id=actor_id, request_key=request_key)
+        if order_request:
+            # The order lock serializes these requests with round changes.
+            matches = list(matching.filter(round__pool_id=pool.pk).filter(Q(round=round_) | Q(kind=kind))
+                           .order_by('pk')[:2])
+            if len(matches) > 1:
+                raise GrabRequestConflict('请求编号关联多个登记，请核对原请求')
+            old = matches[0] if matches else None
+        else:
+            old = matching.filter(round=round_).first()
         if old:
-            if old.fingerprint != fingerprint or old.kind != kind or old.payload != payload:
-                raise ValueError('请求编号已用于其他登记')
+            expected_payload, expected_fingerprint = payload, fingerprint
+            if order_cancel and old.payload == {} and payload == {'reason': ''}:
+                expected_payload = {}
+                expected_fingerprint = hashlib.sha256(_payload(kind, {}, actor_id).encode('ascii')).hexdigest()
+            if old.fingerprint != expected_fingerprint or old.kind != kind or old.payload != expected_payload:
+                conflict = GrabRequestConflict if order_request else ValueError
+                raise conflict('请求编号已用于其他登记')
+            if order_invite:
+                from club_accounts.provider_lifecycle import provider_membership_current
+                if (len(lifecycle_accounts) != 2 or not actor_membership_evidence_present(old)
+                        or old.actor_business_cycle != lifecycle_accounts[0].business_cycle
+                        or old.invitee_business_cycle != lifecycle_accounts[1].business_cycle
+                        or not all(provider_membership_current(account) for account in lifecycle_accounts)):
+                    raise GrabRequestConflict('原组队成员身份已变化，请重新组队')
             evidence = OrderGrabReceiptPassEvidence.objects.select_for_update().filter(receipt=old).first()
-            return ProbeOutcome(old.pk, _effective_state(old, evidence), True)
+            state = _effective_state(old, evidence)
+            current = True
+            if order_single or (order_cancel and state != 'AFTER' and order.status != Order.Status.CANCELLED):
+                latest_id = pool.rounds.select_for_update().order_by('-number').values_list('pk', flat=True).first()
+                current = old.round_id == latest_id
+            if order_single:
+                from club_accounts.provider_lifecycle import provider_membership_current
+                if (not actor_membership_evidence_present(old)
+                        or old.actor_business_cycle != actor_snapshot.business_cycle
+                        or not provider_membership_current(actor_snapshot)):
+                    raise GrabRequestConflict('原抢单登记的陪玩身份已变化，请重新提交')
+            return ProbeOutcome(old.pk, state, replayed=True, current_round=current)
+        if replay_only or (order_cancel and OrderGrabReviewCancellation.objects.select_for_update()
+                           .filter(order=order).exists()):
+            return None
+        if kind in ('SINGLE', 'INVITE', 'CONFIRM'):
+            from .grab_customer_review import require_no_pending_review
+            require_no_pending_review(order.pk)
+        if order_invite and len(lifecycle_accounts) != 2:
+            raise ValueError('双陪队友不可用')
         if lifecycle_guard:
             from club_accounts.provider_lifecycle import provider_membership_current
             if not all(provider_membership_current(account) for account in lifecycle_accounts):
@@ -333,7 +379,11 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
                 raise ValueError('双陪抢单轮次已结束或正在核对')
             phase = state_row.status
             cutoff = round_.total_deadline if phase == 'PARKED' else round_.deadline
-        if (single_flow or team_flow) and phase == 'OPEN':
+        if (single_flow or team_flow) and kind == 'BOSS_CANCEL':
+            # The buyer can cancel until the total wait expires while the
+            # order is unassigned. Keep this receipt out of the OPEN seal.
+            phase, cutoff = 'PARKED', round_.total_deadline
+        elif (single_flow or team_flow) and phase == 'OPEN':
             from .grab_cutoff_watermark import enabled as watermark_enabled
             if watermark_enabled():
                 from .models import OrderGrabCutoffWatermark
@@ -493,7 +543,7 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
                 # but do not reject that in-flight evidence on a changed status.
                 from club_accounts.provider_lifecycle import lock_provider_operations
                 lock_provider_operations(lifecycle_accounts)
-            _lock_round(round_id)
+            locked_order, locked_round = _lock_round(round_id)
             saved = OrderGrabReceiptProbe.objects.select_for_update().get(pk=receipt_id, round_id=round_id)
             if saved.state != 'PENDING':
                 evidence = OrderGrabReceiptPassEvidence.objects.select_for_update().filter(receipt=saved).first()
@@ -525,9 +575,8 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
             if state == 'AFTER' and saved.kind in ('INVITE', 'CONFIRM'):
                 _release_late_team_receipt(saved)
             if state == 'BEFORE' and saved.kind == 'WITHDRAW':
-                from .grab_team_draft import withdraw_with_receipt
                 try:
-                    withdraw_with_receipt(round_id, saved.payload.get('team_id'), saved.pk)
+                    apply_team_withdrawal(locked_order, locked_round, saved)
                 except ValueError:
                     saved.state, saved.review_reason = 'REVIEW', 'WITHDRAWAL_ORDER_UNCERTAIN'
                     saved.save(update_fields=['state', 'review_reason', 'updated_at'])
@@ -546,14 +595,21 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
 
 def finalize_opening_waiters(round_id):
     """Reclassify saved receipt bounds after activation evidence is durable."""
-    from .grab_clock_contract import database_id, round_identity_valid, valid_bounds
+    from .grab_clock_contract import database_id, production_enabled, round_identity_valid, valid_bounds
     from .grab_round_opening import classify_window
+    from .models import OrderGrabRoundOpeningEvidence
+
+    if not production_enabled():
+        return
     ids = list(OrderGrabReceiptProbe.objects.filter(round_id=round_id, state='WAIT_OPENING')
                .order_by('pk').values_list('pk', flat=True))
     for receipt_id in ids:
         try:
             with transaction.atomic():
-                _order, round_ = _lock_round(round_id)
+                order, round_ = _lock_round(round_id)
+                if not OrderGrabRoundOpeningEvidence.objects.select_for_update().filter(
+                        round=round_, state='OBSERVED').exists():
+                    return
                 saved = OrderGrabReceiptProbe.objects.select_for_update().filter(
                     pk=receipt_id, round_id=round_id, state='WAIT_OPENING').first()
                 if not saved:
@@ -561,13 +617,13 @@ def finalize_opening_waiters(round_id):
                 evidence = OrderGrabReceiptPassEvidence.objects.select_for_update().filter(receipt=saved).first()
                 try:
                     identity = database_id()
-                    if (not round_identity_valid(round_, identity=identity) or not saved.opening_prepared_observed
+                    if (not round_identity_valid(round_, identity=identity, lock=True) or not saved.opening_prepared_observed
                             or not saved.upper_observed_at or not valid_bounds(saved.lower_at, saved.upper_observed_at,
                                                                              saved.clock_evidence, identity=identity)):
                         raise ValueError('登记或开池提交证据异常')
                     state, reason = classify_window(lower=saved.lower_at, upper=saved.upper_observed_at,
                         precision_us=saved.precision_us, round_=round_, phase=saved.round_phase,
-                        cancellation=saved.kind == 'BOSS_CANCEL')
+                        cancellation=saved.kind == 'BOSS_CANCEL', lock=True)
                 except (ValueError, TypeError):
                     state, reason = 'REVIEW', 'OPENING_EVIDENCE_UNAVAILABLE'
                 if saved.kind in ('SINGLE', 'INVITE', 'CONFIRM'):
@@ -589,16 +645,15 @@ def finalize_opening_waiters(round_id):
                 saved.state, saved.review_reason = state, reason
                 saved.save(update_fields=['state', 'review_reason', 'updated_at'])
                 if state == 'BEFORE' and saved.kind == 'WITHDRAW':
-                    from .grab_team_draft import withdraw_with_receipt
                     try:
-                        withdraw_with_receipt(round_id, saved.payload.get('team_id'), saved.pk)
+                        apply_team_withdrawal(order, round_, saved)
                     except ValueError:
                         saved.state, saved.review_reason = 'REVIEW', 'WITHDRAWAL_ORDER_UNCERTAIN'
                         saved.save(update_fields=['state', 'review_reason', 'updated_at'])
                 if state == 'BEFORE' and saved.kind == 'INVITE':
-                    team = OrderGrabTeamDraft.objects.filter(round=round_, captain_id=saved.actor_id,
-                        request_key=saved.request_key).first()
-                    if team and team.status == 'INVITING':
+                    active = current_pending_round_state(order, round_id)
+                    if active and active.status in ('OPEN', 'PARKED') and OrderGrabTeamDraft.objects.filter(
+                            round=round_, captain_id=saved.actor_id, request_key=saved.request_key, status='INVITING').exists():
                         from site_messages.grab_invite import schedule
                         schedule(saved.pk)
                 if state == 'AFTER' and saved.kind in ('INVITE', 'CONFIRM'):
@@ -621,6 +676,17 @@ def _release_late_team_receipt(receipt):
     if team_id:
         from .grab_team_flow import _release_late_team
         _release_late_team(team_id, confirmation=receipt.kind == 'CONFIRM', receipt_id=receipt.pk)
+
+
+def apply_team_withdrawal(order, round_, receipt):
+    """Apply a current receipt or read its already committed withdrawal."""
+    team_id = receipt.payload.get('team_id')
+    state = current_pending_round_state(order, round_.pk)
+    if state and state.status in ('OPEN', 'PARKED', 'REVIEW'):
+        from .grab_team_draft import withdraw_with_receipt
+        return withdraw_with_receipt(round_.pk, team_id, receipt.pk)
+    return OrderGrabTeamDraft.objects.filter(pk=team_id, round=round_, status='WITHDRAWN',
+        withdrawal_receipt=receipt, withdrawn_by_id=receipt.actor_id).first()
 
 
 def unresolved_round(round_id):

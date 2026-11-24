@@ -226,63 +226,15 @@ def record_prestart_cancel_release_locked(row):
                          amount=amount, source_digest=digest)
 
 
-def first_negotiation_release_facts(row):
-    """Recheck frozen first-refund facts without locking an order or another receipt."""
-    from orders.models import (OrderPointsFundingReleaseEvidence, OrderAddonFundingReleaseRun,
-                               PointsFirstRefundPaidPersonEvidence)
-    from orders.points_funding_release import _digest as evidence_digest
-    from orders.points_negotiation_execution import participant_digest
-    from orders.points_funding_allocation import plan_release, PointsFundingAllocationError
-    posting, allocation = row.posting, row.allocation
-    read_receipt_id = getattr(row, 'read_receipt_id', allocation.receipt_id)
-    proposal, proof = posting.proposal, posting.points_refund
-    redemption, refund = proof.redemption, proof.refund
-    evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
-    historical_empty = bool(evidence and not evidence.allocations and row.pk == 0 and row.amount == 0
-                            and allocation.created_at > posting.created_at)
+def _first_refund_addon_history(posting, evidence, *, read_receipt_id):
+    from orders.models import OrderAddonFundingReleaseRun
+
+    redemption = posting.points_refund.redemption
     team_runs = list(OrderAddonFundingReleaseRun.objects.filter(
         handover__payment__intent__order_id=redemption.order_id,
         points_handover_snapshot__kind='SAME_TEAM_V1', created_at__lt=posting.created_at)
         .select_related('handover').order_by('handover__accepted_at', 'pk'))
     team = bool(team_runs)
-    paid_source = PointsFirstRefundPaidPersonEvidence.objects.filter(posting=posting).exists()
-    terms = getattr(proposal, 'points_terms', None)
-    if (not evidence or not terms or terms.prior_refund_id or not isinstance(posting.participants, list)
-            or not isinstance(evidence.allocations, list) or not isinstance(evidence.prior_addon_release_snapshot, list)
-            or posting.participants_hash != participant_digest(proposal, posting.participants)
-            or posting.terms_hash != proposal.terms_hash or proposal.status != 'ACCEPTED'
-            or posting.accepted_at != proposal.accepted_at or terms.redemption_id != redemption.pk
-            or allocation.funding_order_id != redemption.order_id
-            or ([allocation.pk, allocation.amount, allocation.receipt_id] not in evidence.allocations
-                and not historical_empty)
-            or proof.equivalent_units != proposal.refund_units or refund.order_id != redemption.order_id
-            or refund.amount != proof.coin_units or refund.operator_account_id != posting.operator_id
-            or (terms.coin_units, terms.points_hundredths, terms.prepaid_units, terms.gift_units,
-                terms.compensation_units, terms.is_final) != (proof.coin_units, proof.points_hundredths,
-                proof.prepaid_units, proof.gift_units, proof.compensation_units, proof.is_final)
-            or evidence.evidence_hash != evidence_digest(posting, evidence.allocations,
-                evidence.original_provider_income, evidence.original_settlement_id, evidence.expected_release,
-                evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)):
-        raise ValidationError('首次积分退款释放来源凭证异常')
-    from orders.models import OrderPointsSettlement
-    original = OrderPointsSettlement.objects.filter(order_id=redemption.order_id,
-        pk=evidence.original_settlement_id).first() if evidence.original_settlement_id else None
-    paid_before = bool(original and original.persons.filter(settled_at__lt=evidence.created_at).exists())
-    if paid_before:
-        from orders.points_first_paid_source import verify_current
-        verify_current(posting, evidence, receipt_id=read_receipt_id)
-    elif PointsFirstRefundPaidPersonEvidence.objects.filter(posting=posting).exists():
-        raise ValidationError('首退已付人员与到账来源不一致')
-    from orders.models import OrderOriginalShareTransfer
-    if OrderOriginalShareTransfer.objects.filter(
-            previous_segment__attribution__order_id=redemption.order_id).exists():
-        from orders.points_pretransfer_refund_source import verify_participants_locked
-        from rest_framework.exceptions import ValidationError as RestValidationError
-        try:
-            verify_participants_locked(posting,
-                receipt_id=read_receipt_id)
-        except RestValidationError as exc:
-            raise ValidationError('首次转单前的退款履约凭证异常') from exc
     addon_payload = None
     prior_by_allocation = {}
     if evidence.addon_funding_snapshot is not None or evidence.prior_addon_release_snapshot:
@@ -386,6 +338,77 @@ def first_negotiation_release_facts(row):
             for refund_run in refund_runs:
                 addon_payload.append(['TEAM_ADDON_REFUND_V1', refund_run.pk,
                                       refund_run.points_addon_hash])
+    return addon_payload, prior_by_allocation
+
+
+def _read_first_refund_addon_history(posting, evidence, allocation, *, read_receipt_id):
+    from orders.points_addon_receipt_usage import _history_scope
+
+    # Only the shared historical add-on reconstruction is reused. The caller
+    # still checks and hashes the specific allocation and RELEASE for each row.
+    scope = _history_scope(read_receipt_id, posting)
+    if (scope is None or read_receipt_id != allocation.receipt_id
+            or evidence._state.db != posting._state.db or allocation._state.db != posting._state.db
+            or scope[0] != posting.points_refund.redemption.order_id):
+        return _first_refund_addon_history(posting, evidence, read_receipt_id=read_receipt_id)
+    _, results = scope
+    key = (_first_refund_addon_history, posting.pk, posting.created_at,
+           evidence.pk, evidence.evidence_hash, read_receipt_id)
+    if key not in results:
+        results[key] = _first_refund_addon_history(posting, evidence, read_receipt_id=read_receipt_id)
+    return results[key]
+
+
+def first_negotiation_release_facts(row):
+    """Recheck frozen first-refund facts without locking an order or another receipt."""
+    from orders.models import OrderPointsFundingReleaseEvidence, PointsFirstRefundPaidPersonEvidence
+    from orders.points_funding_release import first_release_hash_matches
+    from orders.points_negotiation_execution import participant_digest
+    from orders.points_funding_allocation import plan_release, PointsFundingAllocationError
+    posting, allocation = row.posting, row.allocation
+    read_receipt_id = getattr(row, 'read_receipt_id', allocation.receipt_id)
+    proposal, proof = posting.proposal, posting.points_refund
+    redemption, refund = proof.redemption, proof.refund
+    evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
+    historical_empty = bool(evidence and not evidence.allocations and row.pk == 0 and row.amount == 0
+                            and allocation.created_at > posting.created_at)
+    terms = getattr(proposal, 'points_terms', None)
+    if (not evidence or not terms or terms.prior_refund_id or not isinstance(posting.participants, list)
+            or not isinstance(evidence.allocations, list) or not isinstance(evidence.prior_addon_release_snapshot, list)
+            or posting.participants_hash != participant_digest(proposal, posting.participants)
+            or posting.terms_hash != proposal.terms_hash or proposal.status != 'ACCEPTED'
+            or posting.accepted_at != proposal.accepted_at or terms.redemption_id != redemption.pk
+            or allocation.funding_order_id != redemption.order_id
+            or ([allocation.pk, allocation.amount, allocation.receipt_id] not in evidence.allocations
+                and not historical_empty)
+            or proof.equivalent_units != proposal.refund_units or refund.order_id != redemption.order_id
+            or refund.amount != proof.coin_units or refund.operator_account_id != posting.operator_id
+            or (terms.coin_units, terms.points_hundredths, terms.prepaid_units, terms.gift_units,
+                terms.compensation_units, terms.is_final) != (proof.coin_units, proof.points_hundredths,
+                proof.prepaid_units, proof.gift_units, proof.compensation_units, proof.is_final)
+            or not first_release_hash_matches(evidence, posting)):
+        raise ValidationError('首次积分退款释放来源凭证异常')
+    from orders.models import OrderPointsSettlement
+    original = OrderPointsSettlement.objects.filter(order_id=redemption.order_id,
+        pk=evidence.original_settlement_id).first() if evidence.original_settlement_id else None
+    paid_before = bool(original and original.persons.filter(settled_at__lt=evidence.created_at).exists())
+    if paid_before:
+        from orders.points_first_paid_source import verify_current
+        verify_current(posting, evidence, receipt_id=read_receipt_id)
+    elif PointsFirstRefundPaidPersonEvidence.objects.filter(posting=posting).exists():
+        raise ValidationError('首退已付人员与到账来源不一致')
+    from orders.models import OrderOriginalShareTransfer
+    if OrderOriginalShareTransfer.objects.filter(
+            previous_segment__attribution__order_id=redemption.order_id).exists():
+        from orders.points_pretransfer_refund_source import verify_participants_locked
+        from rest_framework.exceptions import ValidationError as RestValidationError
+        try:
+            verify_participants_locked(posting,
+                receipt_id=read_receipt_id)
+        except RestValidationError as exc:
+            raise ValidationError('首次转单前的退款履约凭证异常') from exc
+    addon_payload, prior_by_allocation = _read_first_refund_addon_history(
+        posting, evidence, allocation, read_receipt_id=read_receipt_id)
     try:
         planned = plan_release(allocations=[(item[0], item[1], prior_by_allocation.get(item[0], 0))
                                             for item in evidence.allocations],
@@ -422,9 +445,10 @@ def first_negotiation_release_facts(row):
     from orders.negotiation_proposals import _digest as proposal_digest, _snapshot_terms
     episode = copy(proposal.case)
     episode.created_at, episode.client_request_id = proposal.case_opened_at, proposal.case_request_id
-    expected_decisions = {(redemption.order.customer_account_id, 'BOSS', True)} | {
+    expected_decisions = {(spent.account_id, 'BOSS', True)} | {
         (share[0], 'PROVIDER', True) for share in shares}
-    if (not shares or set((account, role, accepted) for account, role, accepted, _ in decisions) != expected_decisions
+    if (episode.order_id != redemption.order_id or episode.account_id != spent.account_id
+            or not shares or set((account, role, accepted) for account, role, accepted, _ in decisions) != expected_decisions
             or any(not decided for _, _, _, decided in decisions)
             or proposal.accepted_at != max(decided for _, _, _, decided in decisions)
             or sorted(proposal.affected_accounts) != sorted(share[0] for share in shares)
@@ -502,7 +526,9 @@ def first_addon_release_facts(row, *, witness_receipt_id=None):
         verify_run(run, _skip_usage=True, witness_receipt_id=witness_receipt_id or allocation.receipt_id)
         if run.refund_id:
             from orders.ordinary_addon_paid_receipt import verify_run as verify_paid_refund
+            from orders.points_voluntary_paid_evidence import verify_standard_refund_current_read
             verify_paid_refund(run)
+            verify_standard_refund_current_read(run)
     except Exception as exc:
         from rest_framework.exceptions import ValidationError as RestValidationError
         if isinstance(exc, (RestValidationError, ValidationError)):
@@ -922,14 +948,27 @@ def record_third_addon_release_locked(row):
                          amount=amount, source_digest=digest)
 
 
-def record_first_addon_release_locked(row):
+def _first_addon_release_event_locked(row):
     if row._state.db != transaction.get_connection().alias:
         raise ValidationError('加购退款释放不属于当前门店')
     receipt = _locked_receipt(row.allocation.receipt_id)
     _require_current_unlocked_reads()
     kind, key, request, amount, digest = _addon_release_facts(row)
-    return append_locked(receipt.pk, request_key=request, kind=kind, allocation_key=key,
-                         amount=amount, source_digest=digest)
+    return dict(receipt_id=receipt.pk, request_key=request, kind=kind, allocation_key=key,
+                amount=amount, source_digest=digest)
+
+
+def record_first_addon_release_locked(row):
+    return append_locked(**_first_addon_release_event_locked(row))
+
+
+def record_first_addon_releases_locked(order, rows):
+    """Check persisted sources together before any append changes a receipt version."""
+    from orders.points_addon_receipt_usage import reuse_history_locked
+    with reuse_history_locked(order, {row.allocation.receipt_id for row in rows}):
+        events = [_first_addon_release_event_locked(row) for row in rows]
+    for event in events:
+        append_locked(**event)
 
 
 def record_followup_release_locked(row):

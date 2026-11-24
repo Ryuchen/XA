@@ -183,6 +183,9 @@ def resolve_locked(decision_id, *, request_id, actor_id, outcome, reason):
         return LicenseConsumptionPointsReview.objects.create(decision=decision, request_id=request_id,
             platform_actor_id=actor_id, outcome=outcome, reason=reason, awarded_points=0,
             refunded_principal_at_award=baseline, points_ledger=None, skip_reason='DENIED')
+    from stores.certificate_admission import require_original_certificate
+    evidence = decision.license_evidence.get('points_evidence') if vip_review else decision.license_evidence
+    require_original_certificate(evidence)
     from club_accounts.models import ClubAccount
     observed_cycle = ClubAccount.objects.filter(pk=decision.account_id).values_list('business_cycle', flat=True).first()
     if observed_cycle is not None and observed_cycle > order.business_cycle:

@@ -19,14 +19,16 @@ from .models import Store
 def create_database(alias, *, admin_username=None):
     """Explicit deployment action; never drops or truncates an existing DB."""
     from .database_identity import assert_distinct_store_database, database_identity, identity_from_config, lock_store_registration
-    from .provision_claim import (create_or_verify_mysql, create_or_verify_sqlite,
-                                  fingerprint, reserve_admin_intent, reserve_claim)
+    from .provision_claim import (StoreAlreadyInitialized, create_or_verify_mysql, create_or_verify_sqlite,
+                                  fingerprint, reserve_claim)
     from .models import StoreProvisioningClaim
     from django.db import transaction as platform_transaction
     owner = Store.objects.filter(database_alias=alias).first()
     if owner is None:
         raise CommandError('请先登记门店后再创建数据库')
-    if owner.initialized_at is not None or owner.status != Store.Status.PROVISIONING:
+    if owner.initialized_at is not None:
+        raise StoreAlreadyInitialized(owner)
+    if owner.status != Store.Status.PROVISIONING:
         raise CommandError('仅待初始化门店可创建或恢复数据库')
     try:
         assert_distinct_store_database(alias, exclude_store_id=owner.pk if owner else None)
@@ -47,9 +49,7 @@ def create_database(alias, *, admin_username=None):
             raise CommandError('无法安全确认 SQLite URI 的库归属，请人工核对')
         if name == ':memory:' or (name.startswith('file:') and 'mode=memory' in name):
             # Volatile, isolated test databases have no durable retry contract.
-            reserve_claim(owner)
-            if admin_username:
-                reserve_admin_intent(owner, admin_username)
+            reserve_claim(owner, admin_username=admin_username)
             connections[alias].ensure_connection()
             return
     elif 'mysql' not in engine:
@@ -58,13 +58,13 @@ def create_database(alias, *, admin_username=None):
         name = str(configuration.get('NAME') or '')
     if 'mysql' in engine and not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', name):
         raise CommandError('MySQL 门店库名须为字母开头的字母数字下划线，最长64位')
-    claim = reserve_claim(owner)
-    if admin_username:
-        reserve_admin_intent(owner, admin_username)
+    claim = reserve_claim(owner, admin_username=admin_username)
     with platform_transaction.atomic(using='default'):
         lock_store_registration()
         current = Store.objects.select_for_update().get(pk=owner.pk)
-        if current.initialized_at is not None or current.status != Store.Status.PROVISIONING:
+        if current.initialized_at is not None:
+            raise StoreAlreadyInitialized(current)
+        if current.status != Store.Status.PROVISIONING:
             raise CommandError('仅待初始化门店可创建或恢复数据库')
         claim = StoreProvisioningClaim.objects.select_for_update().select_related('store').get(pk=claim.pk)
         if claim.database_fingerprint != fingerprint(alias):

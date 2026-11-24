@@ -1,6 +1,6 @@
 """Transactional, per-store License account admission."""
 from django.conf import settings
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, InterfaceError, transaction
 from rest_framework.exceptions import APIException
 
 from stores.context import current_database, current_store
@@ -36,7 +36,7 @@ def assert_available(account_type, *, quota):
         raise LicenseAdmissionError('无法确定账号所属门店，请从门店入口重试')
     try:
         status = business_status(store)
-    except (DatabaseError, ValueError) as exc:
+    except (DatabaseError, InterfaceError, ValueError) as exc:
         raise LicenseAdmissionUnavailable('暂时无法核验门店授权，请联系平台') from exc
     tier = TIERS.get(status['tier'])
     if not status['allow_new_accounts'] or tier is None:
@@ -47,6 +47,19 @@ def assert_available(account_type, *, quota):
         raise LicenseAdmissionError('门店该类型账号已达到授权人数上限，请联系门店管理员')
 
 
+def _assert_certificate_admission():
+    from stores.certificate_admission import check_admission
+    result = check_admission()
+    if result is None:
+        return
+    outcome, evidence = result
+    if outcome == 'UNKNOWN':
+        raise LicenseAdmissionUnavailable('暂时无法核验门店证照，请联系平台')
+    if outcome == 'DENY':
+        message = '门店证照已过期，暂不允许新增账号' if evidence['status'] == 'EXPIRED' else '门店未登记证照，暂不允许新增账号'
+        raise LicenseAdmissionError(message)
+
+
 def create_account_with_quota(account, save, *, using=None):
     if using is not None and using != current_database():
         raise LicenseAdmissionError('不能跨门店创建账号')
@@ -54,6 +67,7 @@ def create_account_with_quota(account, save, *, using=None):
         raise LicenseAdmissionError('新账号必须占用门店授权名额')
     with transaction.atomic(using=current_database()):
         quota = lock_category(account.account_type)
+        _assert_certificate_admission()
         if enabled():
             assert_available(account.account_type, quota=quota)
         result = save()
@@ -107,6 +121,7 @@ def rejoin_if_retired(account):
             if not (locked.license_membership_active and locked.business_cycle == account.business_cycle + 1):
                 raise LicenseAdmissionError('陪玩账号周期已变化，请重新登录')
         if not locked.license_membership_active:
+            _assert_certificate_admission()
             if enabled():
                 assert_available(locked.account_type, quota=quota)
             quota.active_count += 1

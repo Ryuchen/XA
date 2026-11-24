@@ -102,11 +102,22 @@ class RewardSerializer(EntityNumberModelSerializer):
         return attrs
 
 
+class _ClaimEventKey(Concat):
+    def __init__(self, suffix):
+        super().__init__(Value('claim:'), Cast(OuterRef('pk'), output_field=CharField()), Value(suffix))
+
+    def as_mysql(self, compiler, connection, **extra_context):
+        sql, params = super().as_sql(compiler, connection, **extra_context)
+        # The generated key is ASCII, so MySQL can use the target column's
+        # Unicode collation even when it differs from the session default.
+        return f'CONVERT({sql} USING ascii)', params
+
+
 def with_claim_return_status(queryset):
-    key = Concat(Value('claim:'), Cast(OuterRef('pk'), output_field=CharField()), Value(':return'))
-    tag_key = Concat(Value('claim:'), Cast(OuterRef('pk'), output_field=CharField()), Value(':tag'))
+    return_key = _ClaimEventKey(':return')
+    tag_key = _ClaimEventKey(':tag')
     return queryset.annotate(points_were_returned=Exists(PointLedger.objects.filter(
-        account_id=OuterRef('account_id'), event_key=key, kind='RETURN')),
+        account_id=OuterRef('account_id'), event_key=return_key, kind='RETURN')),
         tag_was_reviewed=Exists(MemberTag.objects.filter(account_id=OuterRef('account_id'), event_key=tag_key, reviewed_at__isnull=False, suspended_at__isnull=True)),
         tag_needs_review=Exists(MemberTag.objects.filter(account_id=OuterRef('account_id'), event_key=tag_key,
             is_active=True).filter(Q(reviewed_at__isnull=True) | Q(suspended_at__isnull=False))

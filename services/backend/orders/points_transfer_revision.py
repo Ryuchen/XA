@@ -1,15 +1,17 @@
-"""Isolated, tenant-local audit of funding revisions for service transfers.
+"""Tenant-local audit of funding revisions for service transfers.
 
 This verifies immutable platform allocation authorizations without recursively
 asking a shared receipt for its available balance. Callers must already hold
-the order and receipt locks; production MySQL lock ordering is not enabled.
+the order and receipt locks.
 """
+from contextlib import nullcontext
 from dataclasses import dataclass
 import hashlib
 import json
 from uuid import UUID
 
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError
 from django.db.migrations.recorder import MigrationRecorder
 from django.db.models import Q
@@ -70,8 +72,8 @@ def _digest(order_id, revision):
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
-def _verify_allocation(order, allocation):
-    """Reconcile platform/tenant evidence without querying receipt net use."""
+def _verify_allocation(order, allocation, *, verified_receipts=None):
+    """Reconcile each allocation with its own platform and tenant actions."""
     from stores.models import PlatformPointsFundingOperation
     from stores.platform_pass_repayment import RepaymentError, _claimed_receipt, _sha
     from stores.platform_points_funding import _verified_receipt
@@ -96,28 +98,46 @@ def _verify_allocation(order, allocation):
             or operation.payload_digest != _sha(json.dumps([str(operation.claim_id), order.pk, allocation.amount],
                                                            separators=(',', ':')))):
         raise PointsFundingPlanError('转单补资原分配凭证异常')
+    receipt, usage = (verified_receipts or {}).get(allocation.receipt_id, (allocation.receipt, None))
     try:
-        _claimed_receipt(operation.claim, current_store().slug, allocation.receipt)
-        _verified_receipt(operation.claim, allocation.receipt)
-    except RepaymentError as exc:
+        _claimed_receipt(operation.claim, current_store().slug, receipt)
+        if verified_receipts is not None and usage is None and receipt.usage_version is not None:
+            from users.receipt_usage_guard import capture_allocation_usage_locked
+            usage = capture_allocation_usage_locked(receipt)
+        _verified_receipt(operation.claim, receipt, verified_usage=usage)
+    except (RepaymentError, DjangoValidationError) as exc:
         raise PointsFundingPlanError('转单补资原到账凭证异常') from exc
+    if verified_receipts is not None and usage is not None:
+        verified_receipts[receipt.pk] = (receipt, usage)
     return operation.completed_at
 
 
-def _enabled():
-    from .points_transfer_refund_access import permits, require_refund_or_isolated
-    formal = permits(phase='refund') or permits(phase='transfer')
+def _enabled(order):
+    from .points_transfer_refund_access import permits
+    formal = any(permits(order, phase=phase) for phase in ('refund', 'transfer'))
     if not formal:
-        require_refund_or_isolated()
+        require_isolated_checkout()
     if ((not getattr(settings, 'SERVICE_POINTS_TRANSFER_FUNDING_REVISION_TESTING', False)
             and not formal)
             or not transaction.get_connection().in_atomic_block or current_store() is None):
         raise PointsFundingPlanError('转单补资版本核对尚未开放')
 
 
-def verify_revisions_locked(order, *, allow_missing_last=False):
-    """Rebuild all revisions in transfer order; optionally return newest draft."""
-    _enabled()
+def verify_revisions_locked(order, *, allow_missing_last=False, locked_receipt_ids=None):
+    """Rebuild revisions, sharing receipt evidence only when all order receipts are already locked."""
+    from .points_transfer_refund_access import permits, verification_scope
+    read_phase = any(permits(order, phase=phase) for phase in ('report', 'settlement'))
+    with verification_scope(order) if read_phase else nullcontext():
+        _enabled(order)
+        if locked_receipt_ids is None or getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is not True:
+            return _verify_revisions_locked(order, allow_missing_last=allow_missing_last)
+        from .points_addon_receipt_usage import reuse_history_locked
+        with reuse_history_locked(order, locked_receipt_ids):
+            return _verify_revisions_locked(order, allow_missing_last=allow_missing_last,
+                                            locked_receipt_ids=locked_receipt_ids)
+
+
+def _verify_revisions_locked(order, *, allow_missing_last, locked_receipt_ids=None):
     if not revision_tables_exist():
         raise PointsFundingPlanError('转单补资版本数据尚未就绪')
     from .points_funding_release import _paged
@@ -129,7 +149,12 @@ def verify_revisions_locked(order, *, allow_missing_last=False):
     if OrderPointsFundingRelease.objects.filter(Q(allocation__redemption__order=order)
                                                   | Q(allocation__service_order=order)).exists():
         raise PointsFundingPlanError('转单补资历史涉及退款，须先核对')
-    completed_at = {allocation.pk: _verify_allocation(order, allocation) for allocation in allocations}
+    verified_receipts = None
+    if locked_receipt_ids is not None:
+        if {row.receipt_id for row in allocations} != locked_receipt_ids:
+            raise PointsFundingPlanError('转单补资到账记录已变化，请重新核对')
+        verified_receipts = {}
+    completed_at = {row.pk: _verify_allocation(order, row, verified_receipts=verified_receipts) for row in allocations}
     revisions = list(OrderPointsTransferFundingRevision.objects.filter(order=order).order_by('last_transfer_id'))
     by_event = {row.last_transfer_id: row for row in revisions}
     if len(by_event) != len(revisions):

@@ -6,7 +6,7 @@ from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated
 from stores.db import transaction
 from .models import Transaction, WithdrawRequest
-from .receipts import fund_success, recover_fund_result
+from .receipts import fund_success, recover_withdrawal_result
 from .services import claim_fund_write, get_wallet
 
 
@@ -14,7 +14,7 @@ class WithdrawCancelView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
     throttle_scope = 'wallet_write'
 
-    @recover_fund_result('withdraw.cancel')
+    @recover_withdrawal_result('withdraw.cancel')
     def post(self, request, pk):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩本人可取消提现'})

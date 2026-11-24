@@ -16,7 +16,7 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
 from orders.tests.test_reservation_api import ReservationApiTestBase, slot
 from stores.db import transaction
 from users.models import EscortProfile
-from wallet.models import Transaction, Wallet
+from wallet.models import IdempotencyKey, Transaction, Wallet
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, PROVIDER_WECHAT_GATE_ENABLED=False,
@@ -33,6 +33,10 @@ class ReservationPointsTest(ReservationApiTestBase):
         self.service.price = 10000
         self.service.commission_rate = 20
         self.service.save(update_fields=['price', 'commission_rate'])
+        wallet = Wallet.objects.get(account=self.boss_account)
+        self.prepaid_lot = PointFundingLot.objects.create(account=self.boss_account,
+            source_key='isolated-reservation-points-principal', kind=PointFundingLot.Kind.PREPAID,
+            remaining=wallet.balance)
         self.profile, _ = MemberProfile.objects.update_or_create(account=self.boss_account,
             defaults={'points_balance': 15000})
         save_points_terms(group_point_hundredths=10000, group_coin_units=4000,
@@ -44,6 +48,14 @@ class ReservationPointsTest(ReservationApiTestBase):
     def login(account):
         return APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
 
+    def use_mixed_wallet_sources(self):
+        other_sources = ((PointFundingLot.Kind.GIFT, 2000), (PointFundingLot.Kind.COMPENSATION, 1000))
+        self.prepaid_lot.remaining -= sum(amount for _, amount in other_sources)
+        self.prepaid_lot.save(update_fields=['remaining'])
+        for kind, amount in other_sources:
+            PointFundingLot.objects.create(account=self.boss_account,
+                source_key=f'isolated-reservation-points-{kind}', kind=kind, remaining=amount)
+
     def confirmed(self, *, team=False, minute=0):
         start = slot(hour=10, minute=minute)
         payload = self.create_payload(start_time=start.isoformat(),
@@ -54,7 +66,8 @@ class ReservationPointsTest(ReservationApiTestBase):
             account = get_or_create_account_for_legacy_user(user)
             link_legacy_relations(user, account)
             EscortProfile.objects.filter(user=user).update(account=account)
-            service = make_service(price=10000, billing_provider_count=2, commission_rate=20)
+            service = make_service(price=10000, billing_provider_count=2, fulfillment_provider_count=2,
+                                   commission_rate=20)
             payload.update(service_id=service.pk, provider_account_ids=[self.provider_account.pk, account.pk])
             accounts.append(account)
         result = self.boss_client.post('/api/orders/reservations/', payload, format='json')
@@ -90,11 +103,21 @@ class ReservationPointsTest(ReservationApiTestBase):
         with transaction.atomic():
             plan = plan_verified_order(order.pk)
         self.assertEqual((plan.provider_income_units, plan.additional_store_funding_units), (8000, 2000))
-        self.assertNotEqual(self.boss_client.post(path + 'convert/', payload, format='json').data['code'], 0)
+        replay = self.boss_client.post(path + 'convert/', payload, format='json').data
+        self.assertEqual((replay['code'], replay.get('errorCode')), (409, 'FUND_ALREADY_PROCESSED'), replay)
+        self.assertEqual(replay['fundResult'], result.data)
+        changed = self.boss_client.post(path + 'convert/', {**payload, 'gift_balance_amount': 1}, format='json').data
+        self.assertEqual((changed['code'], changed.get('errorCode')), (409, 'REQUEST_ID_CONFLICT'))
+        self.assertNotIn('fundResult', changed)
         self.profile.refresh_from_db()
         self.assertEqual((self.profile.points_balance, Wallet.objects.get(account=self.boss_account).balance), (5000, 94000))
         self.assertEqual((Transaction.objects.filter(order=order, tx_type='PAY').count(),
                           PointLedger.objects.filter(order=order, kind='ORDER_POINTS_REDEEM').count()), (1, 1))
+        IdempotencyKey.objects.filter(account=self.boss_account, request_id=payload['client_request_id']).update(
+            request_fingerprint='', response=None)
+        legacy = self.boss_client.post(path + 'convert/', payload, format='json').data
+        self.assertEqual((legacy['code'], legacy.get('errorCode')), (409, 'FUND_RESULT_UNAVAILABLE'))
+        self.assertNotIn('fundResult', legacy)
 
     def test_team_uses_two_pre_points_shares(self):
         from orders.points_funding_plan import plan_verified_order
@@ -149,9 +172,7 @@ class ReservationPointsTest(ReservationApiTestBase):
 
     def test_sources_are_bound_to_quote_and_store_funds_gift_and_compensation(self):
         from orders.points_funding_plan import plan_verified_order
-        for kind, amount in (('PREPAID', 97000), ('GIFT', 2000), ('COMPENSATION', 1000)):
-            PointFundingLot.objects.create(account=self.boss_account, source_key=f'reservation-{kind}',
-                                           kind=kind, remaining=amount)
+        self.use_mixed_wallet_sources()
         path, _ = self.confirmed()
         response = self.boss_client.get(path+'quote/', {'preview_points_hundredths': 10000,
             'gift_balance_amount': 1000, 'compensation_balance_amount': 500})
@@ -221,6 +242,49 @@ class ReservationPointsTest(ReservationApiTestBase):
         self.assertFalse(Order.objects.exists())
         self.assertFalse(Transaction.objects.filter(tx_type='PAY').exists())
         self.assertEqual(Reservation.objects.get().status, 'CONFIRMED')
+
+    def test_receipt_failure_rolls_back_reservation_payment_and_can_retry(self):
+        path, _ = self.confirmed()
+        payload = self.quote(path)
+        with patch('orders.reservation_views.fund_success', side_effect=RuntimeError('receipt write failed')):
+            with self.assertRaisesMessage(RuntimeError, 'receipt write failed'):
+                self.boss_client.post(path + 'convert/', payload, format='json')
+        self.profile.refresh_from_db()
+        self.prepaid_lot.refresh_from_db()
+        self.assertEqual((Wallet.objects.get(account=self.boss_account).balance,
+                          self.profile.points_balance, self.prepaid_lot.remaining), (100000, 15000, 100000))
+        booking = Reservation.objects.get()
+        self.assertEqual((booking.status, booking.order_id), (Reservation.Status.CONFIRMED, None))
+        self.assertFalse(booking.status_logs.filter(action='CONVERT').exists())
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(Transaction.objects.filter(tx_type='PAY').exists())
+        self.assertFalse(PointLedger.objects.filter(kind='ORDER_POINTS_REDEEM').exists())
+        self.assertFalse(IdempotencyKey.objects.filter(account=self.boss_account,
+            request_id=payload['client_request_id']).exists())
+        paid = self.boss_client.post(path + 'convert/', payload, format='json').data
+        self.assertEqual(paid['code'], 0, paid)
+        replay = self.boss_client.post(path + 'convert/', payload, format='json').data
+        self.assertEqual((replay['errorCode'], replay['fundResult']), ('FUND_ALREADY_PROCESSED', paid))
+
+    def test_payment_replay_rechecks_access_before_returning_receipt(self):
+        from club_accounts.models import ClubAccount
+        from orders.reservation_views import ReservationConvertView
+
+        path, _ = self.confirmed()
+        payload = self.quote(path)
+        paid = self.boss_client.post(path + 'convert/', payload, format='json').data
+        self.assertEqual(paid['code'], 0, paid)
+        convert = ReservationConvertView._convert
+
+        def revoke_then_replay(view, request, reservation):
+            ClubAccount.objects.filter(pk=self.boss_account.pk).update(license_membership_active=False)
+            return convert(view, request, reservation)
+
+        with patch.object(ReservationConvertView, '_convert', new=revoke_then_replay):
+            denied = self.boss_client.post(path + 'convert/', payload, format='json')
+        self.assertEqual((denied.status_code, denied.data['code']), (403, 403), denied.data)
+        self.assertNotIn('fundResult', denied.data)
+        self.assertEqual(Transaction.objects.filter(order_id=paid['data']['order']['id'], tx_type='PAY').count(), 1)
 
     @override_settings(SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_FUNDING_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
@@ -508,9 +572,7 @@ class ReservationPointsTest(ReservationApiTestBase):
 
     @override_settings(SERVICE_POINTS_RESERVATION_CANCEL_TESTING=True)
     def test_prestart_refund_restores_each_wallet_source(self):
-        for kind, amount in (('PREPAID', 97000), ('GIFT', 2000), ('COMPENSATION', 1000)):
-            PointFundingLot.objects.create(account=self.boss_account, source_key=f'return-{kind}',
-                                           kind=kind, remaining=amount)
+        self.use_mixed_wallet_sources()
         path, _ = self.confirmed()
         quote = self.boss_client.get(path+'quote/', {'preview_points_hundredths': 10000,
             'gift_balance_amount': 1000, 'compensation_balance_amount': 500}).data['data']
@@ -534,27 +596,41 @@ class ReservationPointsTest(ReservationApiTestBase):
         self.assertEqual(dict(order.funding_allocations.values_list('kind', 'refunded_amount')),
                          {'PREPAID': 4500, 'GIFT': 1000, 'COMPENSATION': 500})
 
-    @override_settings(SERVICE_POINTS_RESERVATION_CANCEL_TESTING=True)
+    @override_settings(SERVICE_POINTS_RESERVATION_CANCEL_TESTING=True,
+                       SERVICE_POINTS_RESERVATION_CANCEL_FUNDING_TESTING=True,
+                       SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_POINTS_FUNDING_RELEASE_TESTING=True)
     def test_prestart_refund_does_not_ignore_any_recorded_funding(self):
+        from uuid import uuid4
+
         from django.utils import timezone
-        from orders.models import OrderPointsFundingAllocation
+        from orders.models import OrderPointsFundingAllocation, ReservationPointsCancelFundingRelease
+        from orders.points_funding_evidence import verified_order_allocations_locked
         from users.models import PassRefundRepaymentReceipt
         path, _ = self.confirmed()
         paid = self.boss_client.post(path+'convert/', self.quote(path), format='json')
         self.assertEqual(paid.data['code'], 0, paid.data)
         order = Order.objects.get(pk=paid.data['data']['order']['id'])
         receipt = PassRefundRepaymentReceipt.objects.create(request_key='test-receipt', external_reference='test-funds',
-            amount=1000, received_at=timezone.now(), evidence='测试证据', registered_by='test')
-        OrderPointsFundingAllocation.objects.create(request_key='test-allocation', receipt=receipt,
+            amount=1000, received_at=timezone.now(), evidence='隔离测试工装，未发生线下到账', registered_by='test')
+        allocation = OrderPointsFundingAllocation.objects.create(request_key=f'points:{uuid4().hex}', receipt=receipt,
             redemption=OrderPointsRedemption.objects.get(order=order), amount=1000, allocated_by='test')
         admin = make_console_user(['order:view', 'order:refund'])
         staff = get_or_create_account_for_legacy_user(admin)
         admin.admin_membership.account = staff; admin.admin_membership.save(update_fields=['account'])
-        denied = self.login(staff).post(f'/api/admin/orders/{order.pk}/refund/', {
-            'reason': '已有补资须核对', 'client_request_id': 'funded-prestart'}, format='json')
-        self.assertNotEqual(denied.data.get('code'), 0)
+        with patch('orders.points_funding_evidence.verified_order_allocations_locked',
+                   wraps=verified_order_allocations_locked) as verify:
+            denied = self.login(staff).post(f'/api/admin/orders/{order.pk}/refund/', {
+                'reason': '已有补资须核对', 'client_request_id': 'funded-prestart'}, format='json')
+        verify.assert_called_once()
+        self.assertEqual((denied.data['errorCode'], denied.data['msg']),
+                         ('REFUND_NOT_ALLOWED', '预约补资分配或释放凭证待核对'))
         order.refresh_from_db(); self.assertEqual((order.status, order.payment_status), ('GRABBED', 'PAID'))
+        self.profile.refresh_from_db()
+        self.prepaid_lot.refresh_from_db()
+        self.assertEqual((Wallet.objects.get(account=self.boss_account).balance,
+                          self.profile.points_balance, self.prepaid_lot.remaining), (94000, 5000, 94000))
         self.assertFalse(order.refund_records.exists())
+        self.assertFalse(ReservationPointsCancelFundingRelease.objects.filter(allocation=allocation).exists())
 
     @override_settings(SERVICE_POINTS_RESERVATION_CANCEL_TESTING=True)
     def test_prestart_refund_requires_refund_permission_and_isolated_gate(self):

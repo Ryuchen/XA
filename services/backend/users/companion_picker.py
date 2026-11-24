@@ -2,11 +2,7 @@
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 
-from django.db.models import BigIntegerField, Case, Q, Sum, When
-from django.db.models.functions import Coalesce
 from django.utils import timezone
-
-from orders.models import Order, OrderProvider
 
 
 RECENT_ACCEPTANCE_DAYS = 30
@@ -15,10 +11,11 @@ RECENT_ACCEPTANCE_DAYS = 30
 def _service_amounts(profiles, periods):
     """Public amounts use the same original-share facts as grab ranking."""
     from orders.grab_original_facts import original_amount_facts
-    account_ids = [p.account_id for p in profiles if p.account_id]
+    account_profiles = [profile for profile in profiles if profile.account_id]
+    account_ids = [profile.account_id for profile in account_profiles]
     totals = {}
     for name, (start, end) in periods.items():
-        facts = original_amount_facts(account_ids, since=start, as_of=end)
+        facts = original_amount_facts(account_ids, since=start, as_of=end, loaded_profiles=account_profiles)
         totals[name] = {p.account_id or p.user_id:
                         facts[p.account_id].amount if p.account_id else None for p in profiles}
     return totals

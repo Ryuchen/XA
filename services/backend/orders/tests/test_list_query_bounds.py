@@ -1,5 +1,6 @@
 """List cost must not grow one query per provider/order; eligibility stays intact."""
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.conf import settings
@@ -9,11 +10,16 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
+from club_accounts.models import ClubAccount, WechatIdentity
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
-from orders.models import Order, OrderProvider
-from orders.tests.factories import make_order, make_provider, make_service, make_user
+from engagement.models import ClubOperationConfig, MemberTag, PointFundingLot, ProviderNaming
+from orders.capacity import CONFIG_KEY as CAPACITY_KEY
+from orders.models import Order, OrderProvider, OrderSegmentSettlementManifest
+from orders.tests.factories import make_order, make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile, EscortSchedule
+from wallet.club_rules import DEPOSIT_TARGET_KEY
+from wallet.models import SystemConfig
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
@@ -51,7 +57,7 @@ class ListQueryBoundsTest(APITestCase):
 
     def pending(self):
         order = make_order(self.boss, service=self.service, customer_account=self.boss_account,
-                           payment_status='PAID', provider_income=8000)
+                           payment_status='PAID', provider_income=8000, requires_boss_selection=True)
         Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(hours=1))
         return order
 
@@ -64,9 +70,146 @@ class ListQueryBoundsTest(APITestCase):
         rows, larger_queries = self.read('/api/users/escorts/')
         self.assertEqual((len(first), len(rows)), (1, 21))
         self.assertLessEqual(larger_queries, queries + 1)
-        # The fixed budget includes current store deposit configuration and
-        # the batched WeChat-identity prefetch and the store capacity setting.
+        # Keep the original ceiling including tenant settings and eligibility.
         self.assertLessEqual(larger_queries, 16)
+
+    @override_settings(REFUND_DEPOSIT_DEFICIT_ENABLED=True, REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=True)
+    def test_provider_list_refund_gap_reads_are_bounded_and_respect_permits(self):
+        from orders.services import ensure_provider_dispatch_locks, lock_provider_dispatch
+        from orders.state_machine import transition
+        from stores.db import transaction
+        from wallet.models import RefundDepositDeficit, RefundDepositRecoveryPermit, Transaction, get_platform_wallet
+        from wallet.refund_recovery_order import reserve
+        from wallet.services import get_wallet
+        from wallet.test_refund_deposit_deficit import RefundDepositDeficitTest
+
+        platform = get_platform_wallet()
+        platform.balance = 10000
+        platform.save(update_fields=['balance'])
+
+        def add_cash_candidate():
+            user, account = self.provider()
+            profile = user.escort_profile
+            profile.deposit_mode = 'CASH'
+            profile.deposit_paid = 40000
+            profile.save(update_fields=['deposit_mode', 'deposit_paid'])
+            old = timezone.now() - timedelta(days=62)
+            order = make_order(
+                self.boss, service=self.service, provider=user, provider_account=account,
+                status='COMPLETED', payment_status='PAID', in_service_at=old, completed_at=old,
+            )
+            fixture = SimpleNamespace(
+                profile=profile, wallet=get_wallet(account=account, user=user), platform=platform,
+                order=order, assertEqual=self.assertEqual,
+            )
+            RefundDepositDeficitTest.deficit(fixture, 200)
+            return user, account
+
+        user, account = add_cash_candidate()
+        self.login(self.boss_account)
+        first, queries = self.read('/api/users/escorts/')
+        expected = {add_cash_candidate()[1].pk for _ in range(20)}
+        expected.add(account.pk)
+        ledger = list(Transaction.objects.values_list('pk', 'amount', 'balance_after'))
+        deficits = list(RefundDepositDeficit.objects.values_list('pk', 'remaining'))
+        rows, larger_queries = self.read('/api/users/escorts/')
+        self.assertEqual([row['id'] for row in first], [account.pk])
+        self.assertEqual({row['id'] for row in rows}, expected)
+        self.assertLessEqual(larger_queries, queries + 1)
+        self.assertLessEqual(larger_queries, 16)
+        self.assertFalse(RefundDepositRecoveryPermit.objects.exists())
+        self.assertEqual(list(Transaction.objects.values_list('pk', 'amount', 'balance_after')), ledger)
+        self.assertEqual(list(RefundDepositDeficit.objects.values_list('pk', 'remaining')), deficits)
+
+        profile = user.escort_profile
+        profile.refresh_from_db()
+        detail = f'/api/users/escorts/{account.pk}/'
+        EscortProfile.objects.filter(pk=profile.pk).update(deposit_paid=39799)
+        self.assertIn('非退款造成的押金不足', self.read(detail)[0]['order_unavailable_reason'])
+        EscortProfile.objects.filter(pk=profile.pk).update(deposit_paid=39800)
+        self.assertTrue(self.read(detail)[0]['can_order'])
+        active = make_order(
+            self.boss, service=self.service, provider=user, provider_account=account, status='GRABBED',
+            payment_status='PAID',
+        )
+        ensure_provider_dispatch_locks([account.pk])
+        with transaction.atomic():
+            lock_provider_dispatch([account.pk])
+            permit = reserve(profile, active)
+        self.assertNotIn(account.pk, {row['id'] for row in self.read('/api/users/escorts/')[0]})
+        self.assertIn('补差订单尚未完成结算', self.read(detail)[0]['order_unavailable_reason'])
+        transition(active.pk, Order.Status.CANCELLED, reason='隔离测试未开始取消')
+        permit.refresh_from_db()
+        self.assertEqual(permit.close_reason, 'CANCELLED_UNSTARTED')
+        self.assertIn(account.pk, {row['id'] for row in self.read('/api/users/escorts/')[0]})
+
+        make_order(self.boss, service=self.service, provider=user, provider_account=account,
+                   status='GRABBED', payment_status='PAID')
+        SystemConfig.objects.update_or_create(
+            key=CAPACITY_KEY, defaults={'value': '{"max_concurrent_orders":1,"version":1}'},
+        )
+        self.assertIn('接单已满', self.read(detail)[0]['order_unavailable_reason'])
+        with self.settings(REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=False):
+            self.assertIn('补差接单功能尚未开放', self.read(detail)[0]['order_unavailable_reason'])
+        other_profile = EscortProfile.objects.get(account_id=min(expected - {account.pk}))
+        # Historical records with conflicting profile ownership must stay blocked.
+        RefundDepositDeficit.objects.filter(account=account).update(profile=other_profile)
+        self.assertIn('退款押金缺口已变化', self.read(detail)[0]['order_unavailable_reason'])
+
+    @override_settings(PROVIDER_WECHAT_GATE_ENABLED=True)
+    def test_provider_list_refreshes_eligibility_and_preserves_public_labels(self):
+        user, account = self.provider()
+        _, unbound = self.provider()
+        account.is_openid_bound = True
+        account.save(update_fields=['is_openid_bound'])
+        identity = WechatIdentity.objects.create(
+            account=account, channel='OFFICIAL_H5', appid='wx-roster', openid='roster-fixture',
+        )
+        profile = user.escort_profile
+        profile.deposit_mode = 'CASH'
+        profile.deposit_paid = 40000
+        profile.wechat_avatar_legacy_exempt = True
+        profile.save(update_fields=['deposit_mode', 'deposit_paid', 'wechat_avatar_legacy_exempt'])
+        now = timezone.now()
+        visible_name = ProviderNaming.objects.create(
+            provider=account, sponsor=self.boss_account, provider_business_cycle=account.business_cycle,
+            title='当前称号', expires_at=now + timedelta(days=1),
+        )
+        ProviderNaming.objects.create(
+            provider=account, sponsor=self.boss_account, provider_business_cycle=account.business_cycle + 1,
+            title='其他周期的称号', expires_at=now + timedelta(days=2),
+        )
+        tags = [MemberTag.objects.create(
+            account=account, event_key=f'roster-approved-{index}', title=f'已审核 {index}',
+            reviewed_at=now, highlighted=index == 2,
+        ) for index in range(4)]
+        MemberTag.objects.create(account=account, event_key='roster-unreviewed', title='待审核')
+        self.login(self.boss_account)
+
+        rows, query_count = self.read('/api/users/escorts/')
+        self.assertEqual([row['id'] for row in rows], [account.pk])
+        self.assertLessEqual(query_count, 16)
+        self.assertEqual([name['id'] for name in rows[0]['namings']], [visible_name.pk])
+        self.assertEqual(
+            [(tag['id'], tag['highlighted']) for tag in rows[0]['display_tags']],
+            [(tag.pk, tag.highlighted) for tag in reversed(tags[1:])],
+        )
+
+        make_order(self.boss, service=self.service, provider=user, provider_account=account,
+                   status='GRABBED', payment_status='PAID')
+        capacity = SystemConfig.objects.create(key=CAPACITY_KEY, value='{"max_concurrent_orders":1,"version":1}')
+        self.assertEqual(self.read('/api/users/escorts/')[0], [])
+        capacity.value = '{"max_concurrent_orders":2,"version":2}'
+        capacity.save(update_fields=['value'])
+        deposit = SystemConfig.objects.create(
+            key=DEPOSIT_TARGET_KEY, value='{"cash_target":40001,"earnings_target":80000,"version":1}',
+        )
+        self.assertEqual(self.read('/api/users/escorts/')[0], [])
+        deposit.value = '{"cash_target":40000,"earnings_target":80000,"version":2}'
+        deposit.save(update_fields=['value'])
+        self.assertEqual([row['id'] for row in self.read('/api/users/escorts/')[0]], [account.pk])
+        WechatIdentity.objects.filter(pk=identity.pk).update(account=unbound)
+        self.assertEqual(self.read('/api/users/escorts/')[0], [])
 
     def test_provider_list_keeps_legacy_double_and_released_capacity_rules(self):
         full_user, full = self.provider()
@@ -167,27 +310,57 @@ class ListQueryBoundsTest(APITestCase):
         self.service.save(update_fields=['commission_policy'])
         self.login(account)
         self.pending()
-        _, initial_queries = self.read('/api/orders/orders/?status=pending')
+        first, initial_queries = self.read('/api/orders/orders/?status=pending')
         for _ in range(19):
             self.pending()
         rows, larger_queries = self.read('/api/orders/orders/?status=pending')
         self.assertEqual(len(rows), 20)
+        self.assertTrue(all(row['expected_income'] == first[0]['expected_income'] for row in rows))
         self.assertLessEqual(larger_queries, initial_queries + 1)
 
+    @override_settings(SEGMENT_SETTLEMENT_ENFORCE_ENABLED=True)
+    def test_pool_preserves_unknown_income_for_inconsistent_segment_evidence(self):
+        _, account = self.provider()
+        order = self.pending()
+        self.login(account)
+        initial, _ = self.read('/api/orders/orders/?status=pending')
+        self.assertEqual(initial[0]['expected_income'], 8000)
+        OrderSegmentSettlementManifest.objects.create(order=order, plan={}, plan_hash='unverified')
+        rows, _ = self.read('/api/orders/orders/?status=pending')
+        row, = rows
+        self.assertEqual(row['id'], order.pk)
+        self.assertEqual(row['settlement_status'], 'REVIEW')
+        self.assertIsNone(row['expected_income'])
+        self.assertIs(row['my_assignment_settled'], False)
+
+    @override_settings(REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED=True)
     def test_teammate_picker_queries_are_bounded_and_respect_capacity_and_schedule(self):
-        requester_user, requester = self.provider()
+        _, requester = self.provider()
         first_user, first = self.provider()
-        service = make_service(name='双陪测试', billing_provider_count=2)
-        order = make_order(self.boss, service=service, customer_account=self.boss_account,
-                           payment_status='PAID', requires_boss_selection=True)
-        Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(hours=1))
+        service = make_service(name='双陪整队计价', price=5000, billing_provider_count=1, fulfillment_provider_count=2)
+        wallet = make_wallet(self.boss, balance=100000)
+        wallet.account = self.boss_account
+        wallet.save(update_fields=['account'])
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        PointFundingLot.objects.create(account=self.boss_account, source_key='teammate-picker-principal',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=100000)
+        SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_NONE', defaults={'value': '0'})
+        self.login(self.boss_account)
+        purchase = self.client.post('/api/orders/create/', {
+            'service_id': service.pk, 'dispatch_mode': 'BOSS_SELECT', 'client_request_id': 'teammate-picker-order',
+        }, format='json')
+        self.assertEqual(purchase.data['code'], 0, purchase.data)
+        order = Order.objects.get(pk=purchase.data['data']['id'])
+        self.assertEqual((order.escort_mode, order.required_provider_count), (Order.EscortMode.DOUBLE, 2))
+        self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
         self.login(requester)
         url = f'/api/orders/orders/{order.pk}/teammates/'
         initial, queries = self.read(url)
         added = [self.provider() for _ in range(19)]
         rows, larger_queries = self.read(url)
-        self.assertEqual(len(initial), 1)
-        self.assertEqual(len(rows), 20)
+        self.assertEqual([row['id'] for row in initial], [first.pk])
+        candidate_ids = {first.pk, *(account.pk for _, account in added)}
+        self.assertEqual({row['id'] for row in rows}, candidate_ids)
         self.assertLessEqual(larger_queries, queries + 2)
         # Full-capacity and off-shift teammates must disappear on the next read.
         for _ in range(Order.MAX_CONCURRENT_ORDERS):
@@ -197,8 +370,22 @@ class ListQueryBoundsTest(APITestCase):
                                       weekday=(timezone.localdate().weekday() + 1) % 7,
                                       start_minute=0, end_minute=1440)
         rows, _ = self.read(url)
-        self.assertNotIn(first.pk, {row['id'] for row in rows})
-        self.assertNotIn(off.pk, {row['id'] for row in rows})
+        self.assertEqual({row['id'] for row in rows}, candidate_ids - {first.pk, off.pk})
+        EscortProfile.objects.filter(account_id__in=candidate_ids).update(deposit_mode='CASH')
+        rows, cash_queries = self.read(url)
+        self.assertEqual(rows, [])
+        self.assertLessEqual(cash_queries, larger_queries + 1)
+        ClubAccount.objects.filter(pk__in=candidate_ids).update(license_membership_active=False)
+        _, earnings = self.provider()
+        SystemConfig.objects.update_or_create(key='provider_deposit_targets', defaults={'value': 'invalid'})
+        rows, _ = self.read(url)
+        self.assertEqual([row['id'] for row in rows], [earnings.pk])
+        SystemConfig.objects.filter(key='provider_pass_delay_seconds_NONE').update(value='3600')
+        early = self.client.get(url)
+        self.assertEqual(early.data['code'], 404)
+        self.assertNotIn('data', early.data)
+        self.assertFalse(order.applications.exists())
+        self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
 
     def test_prefetched_income_is_personal_and_does_not_leak_other_provider_share(self):
         first_user, first = self.provider()

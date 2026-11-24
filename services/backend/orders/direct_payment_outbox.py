@@ -86,8 +86,8 @@ def process_payment_outbox(outbox_id, *, lease_seconds=120):
                     model = MODELS[channel]
                     existed = model.objects.filter(order=order, sequence=order.reject_count).exists()
                     if not existed:
-                        from stores.license_benefits import check_new_benefits
-                        outcome, _ = check_new_benefits('CONTENT_OPERATIONS')
+                        from stores.license_benefits import check_license_benefits
+                        outcome, _ = check_license_benefits('CONTENT_OPERATIONS')
                         if outcome == 'DENY':
                             continue
                         if outcome == 'UNKNOWN':

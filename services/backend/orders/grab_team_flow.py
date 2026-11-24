@@ -10,6 +10,8 @@ from rest_framework.views import APIView
 from stores.db import transaction
 
 from club_accounts.permissions import IsClubAccountAuthenticated
+from .grab_customer_review import PendingGrabCancellationReview
+from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, locked_latest_round_id, pool_exists
 from .models import (Order, OrderGrabReceiptProbe, OrderGrabRound, OrderGrabTeamDraft,
                      OrderGrabTeamRoundState, OrderStatusLog)
 
@@ -25,19 +27,18 @@ def enabled():
 
 
 def applies(order_id):
-    return OrderGrabTeamRoundState.objects.filter(
-        round__pool__order_id=order_id, round__pool__required_provider_count=2).exists()
+    return pool_exists(order_id, seats=2)
 
 
 def _latest(order_id):
-    return (OrderGrabTeamRoundState.objects.filter(round__pool__order_id=order_id)
-            .select_related('round__pool__order').order_by('-round__number').first())
+    return latest_round_state(order_id, seats=2)
 
 
-def enqueue(order_id, *, eta=None):
+def enqueue(order_id, *, eta=None, expected_round_id=None):
     from .tasks import finalize_team_grab
+    args = [order_id] if expected_round_id is None else [order_id, expected_round_id]
     try:
-        finalize_team_grab.apply_async(args=[order_id], eta=eta)
+        finalize_team_grab.apply_async(args=args, eta=eta)
     except Exception:
         logger.exception('双陪抢单任务入队失败，等待定时扫描：order=%s', order_id)
 
@@ -49,26 +50,40 @@ def _request_key(request):
     return key.strip()
 
 
-def _advance_due_round(order_id):
+def _advance_due_round(order_id, *, expected_round_id=None):
     state = _latest(order_id)
-    if state and state.status == 'OPEN':
+    if (state and state.status == 'OPEN' and state.round.pool.order.status == Order.Status.PENDING
+            and (expected_round_id is None or state.round_id == expected_round_id)):
         from .grab_receipt_probe import _db_clock
         now, precision, _ = _db_clock()
         if now - timedelta(microseconds=precision) > state.round.deadline:
-            resolve(order_id)
+            resolve(order_id, expected_round_id=state.round_id)
     return _latest(order_id)
 
 
 def _release_late_team(team_id, *, confirmation, receipt_id=None):
     """A definitely late submission must not occupy a place in the next phase."""
+    from .grab_receipt_probe import _effective_state
+    from .grab_round_facts import current_pending_round_state
+
     with transaction.atomic():
-        order_id = OrderGrabTeamDraft.objects.filter(pk=team_id).values_list('round__pool__order_id', flat=True).get()
-        Order.objects.select_for_update().get(pk=order_id)
-        team = OrderGrabTeamDraft.objects.select_for_update().get(pk=team_id)
+        order_id, round_id = OrderGrabTeamDraft.objects.filter(pk=team_id).values_list('round__pool__order_id', 'round_id').get()
+        order = Order.objects.select_for_update().get(pk=order_id)
+        active = current_pending_round_state(order, round_id)
+        if not active or active.status not in ('OPEN', 'PARKED', 'REVIEW'):
+            return
+        team = OrderGrabTeamDraft.objects.select_for_update().get(pk=team_id, round_id=round_id)
         member_id = team.partner_id if confirmation else team.captain_id
         member = team.members.select_for_update().get(account_id=member_id)
         evidence = member.receipt_pass_evidence
-        if receipt_id is not None and (not evidence or evidence.receipt_id != receipt_id):
+        if not evidence or evidence.receipt_id != receipt_id:
+            return
+        receipt = evidence.receipt
+        expected_kind = 'CONFIRM' if confirmation else 'INVITE'
+        expected_payload = {'team_id': team.pk} if confirmation else {'partner_id': team.partner_id}
+        if (receipt.round_id != round_id or receipt.actor_id != member_id or receipt.kind != expected_kind
+                or receipt.payload != expected_payload or (not confirmation and receipt.request_key != team.request_key)
+                or _effective_state(receipt, evidence) != 'AFTER'):
             return
         if confirmation and team.status == 'UNVERIFIED':
             member.joined, member.provisional_pass_tier = False, None
@@ -91,25 +106,63 @@ class TeamInviteView(APIView):
         if not enabled() or request.account.account_type != 'PROVIDER':
             return Response({'code': 404, 'msg': '抢单订单不存在'}, status=404)
         state = _advance_due_round(order_id)
+        if state is None and applies(order_id):
+            return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '当前抢单轮次待核对'}, status=409)
         partner = request.data.get('partner_id')
         if not state or type(partner) is not int or partner <= 0 or partner == request.account.pk:
             return Response({'code': 400, 'msg': '请选择其他陪玩组队'}, status=400)
+        from .grab_receipt_probe import GrabRequestConflict, record_intent
         try:
             key = _request_key(request)
-            from .grab_receipt_probe import record_intent
             result = record_intent(state.round_id, request.account.pk, 'INVITE', key,
                                    {'partner_id': partner}, team_flow=True, actor_snapshot=request.account)
+        except GrabRequestConflict as exc:
+            return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT', 'msg': str(exc)}, status=409)
+        except PendingGrabCancellationReview:
+            return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '订单正在核对，暂时无法组队'}, status=409)
         except ValueError as exc:
             return Response({'code': 400, 'msg': str(exc)}, status=400)
+        if result.state == 'PENDING':
+            return Response({'code': 409, 'errorCode': 'GRAB_INVITE_PENDING', 'receipt_id': result.receipt_id,
+                             'msg': '邀请已登记，结果待确认，请用原请求号重试'}, status=409)
+        if result.state not in ('BEFORE', 'AFTER'):
+            return Response({'code': 409, 'errorCode': 'GRAB_INVITE_REVIEW',
+                             'msg': '邀请时间待核对，请勿重新发起'}, status=409)
+        team = OrderGrabTeamDraft.objects.filter(round__pool__order_id=order_id,
+            round__receipt_probes__pk=result.receipt_id, captain=request.account, partner_id=partner, request_key=key).first()
+        if not team:
+            return Response({'code': 409, 'msg': '原组队登记待核对'}, status=409)
         if result.state == 'AFTER':
-            team = OrderGrabTeamDraft.objects.get(round_id=state.round_id, captain=request.account, request_key=key)
-            _release_late_team(team.pk, confirmation=False, receipt_id=result.receipt_id)
-        if result.state != 'BEFORE':
-            return Response({'code': 409, 'msg': '邀请时间已截止或待核对'}, status=409)
-        team = OrderGrabTeamDraft.objects.get(round_id=state.round_id, captain=request.account, request_key=key)
-        from site_messages.grab_invite import schedule
-        schedule(result.receipt_id)
+            if team.round_id == state.round_id:
+                _release_late_team(team.pk, confirmation=False, receipt_id=result.receipt_id)
+            return Response({'code': 409, 'errorCode': 'GRAB_INVITE_CLOSED', 'msg': '本轮邀请已截止'}, status=409)
+        if team.round_id == state.round_id and state.status in ('OPEN', 'PARKED'):
+            from site_messages.grab_invite import schedule
+            schedule(result.receipt_id)
         return Response({'code': 0, 'data': {'team_id': team.pk, 'status': team.status}})
+
+
+def _invitation_visibility(team, account_id):
+    from .grab_admission import GrabAdmissionError, check_candidate
+    from .grab_clock_contract import production_enabled
+    from .grab_pool_visibility import initial_visibility
+    from .grab_round_opening import opening_bounds
+
+    try:
+        if team.round.simultaneous_visibility:
+            visible_at = opening_bounds(team.round)[1] if production_enabled() else team.round.opened_at
+        else:
+            visibility = initial_visibility(team.round.pool_id, account_id)
+            if visibility.opening_pending:
+                return None, False, 'PENDING'
+            visible_at = visibility.visible_at
+    except ValueError:
+        return None, False, 'REVIEW'
+    try:
+        check_candidate(team.round.pool_id, account_id, round_id=team.round_id)
+    except GrabAdmissionError:
+        return visible_at, False, 'KNOWN'
+    return visible_at, True, 'KNOWN'
 
 
 class TeamInvitationsView(APIView):
@@ -118,61 +171,40 @@ class TeamInvitationsView(APIView):
     def get(self, request):
         if not enabled() or request.account.account_type != 'PROVIDER':
             return Response({'code': 404, 'msg': '组队邀请不存在'}, status=404)
-        from .grab_pool_visibility import initial_visibility
-        from .grab_admission import check_candidate, GrabAdmissionError
-        from .grab_receipt_probe import team_invitation_cycles_match
+        from django.db.models import OuterRef, Subquery
+        from .grab_receipt_probe import _effective_state, team_invitation_cycles_match
         before = request.query_params.get('before_id')
         if before is not None and (not before.isascii() or not before.isdigit() or len(before) > 19
                                    or not 0 < int(before) <= 9223372036854775807):
             return Response({'code': 400, 'msg': '邀请位置无效，请刷新列表'}, status=400)
+        latest = OrderGrabRound.objects.filter(pool_id=OuterRef('round__pool_id')).order_by('-number')
         rows = (OrderGrabTeamDraft.objects.filter(partner=request.account, status__in=['INVITING', 'UNVERIFIED'],
-            round__team_state__status__in=['OPEN', 'PARKED']).select_related('captain', 'round__pool__order')
+            round__pool__order__status=Order.Status.PENDING, round__pool__order__payment_status=Order.PaymentStatus.PAID,
+            round_id=Subquery(latest.values('pk')[:1]), round__team_state__status__in=['OPEN', 'PARKED'])
+            .select_related('captain', 'round__pool__order__grab_review_cancellation')
             .order_by('-pk'))
         if before is not None:
             rows = rows.filter(pk__lt=int(before))
         data = []
         for team in rows.iterator(chunk_size=100):
             captain_member = team.members.filter(account_id=team.captain_id).select_related(
-                'receipt_pass_evidence__receipt').first()
+                'receipt_pass_evidence__receipt__actor').first()
             evidence = captain_member.receipt_pass_evidence if captain_member else None
+            receipt = evidence.receipt if evidence else None
             if (not team.captain.is_active or not team.captain.can_login
                     or not team.captain.license_membership_active
-                    or not team_invitation_cycles_match(team, evidence.receipt if evidence else None,
+                    or not team_invitation_cycles_match(team, receipt,
                         captain_cycle=team.captain.business_cycle, partner_cycle=request.account.business_cycle)):
                 continue
-            try:
-                from .grab_clock_contract import production_enabled
-                opening_pending = False
-                if team.round.simultaneous_visibility and production_enabled():
-                    from .grab_round_opening import opening_bounds, provisional_opening_lower
-                    try:
-                        _, visible_at = opening_bounds(team.round)
-                    except ValueError:
-                        # A valid provisional lower bound is not an observed
-                        # activation or a time we can show as fact.
-                        provisional_opening_lower(team.round)
-                        opening_pending, visible_at = True, None
-                elif team.round.simultaneous_visibility:
-                    visible_at = team.round.opened_at
-                else:
-                    visibility = initial_visibility(team.round.pool_id, request.account.pk)
-                    opening_pending = visibility.opening_pending
-                    visible_at = None if opening_pending else visibility.visible_at
-            except ValueError:
-                # One unavailable opening/pass snapshot must not hide every
-                # other real invitation. Never infer its visibility time.
-                visible_at, visible, visibility_state = None, False, 'REVIEW'
-            else:
-                if opening_pending:
-                    visible, visibility_state = False, 'PENDING'
-                else:
-                    visibility_state = 'KNOWN'
-                    try:
-                        check_candidate(team.round.pool_id, request.account.pk, round_id=team.round_id)
-                    except GrabAdmissionError:
-                        visible = False
-                    else:
-                        visible = True
+            receipt_state = _effective_state(receipt, evidence)
+            if receipt_state == 'AFTER':
+                continue
+            visible_at, visible, visibility_state = (None, False, receipt_state)
+            review = getattr(team.round.pool.order, 'grab_review_cancellation', None)
+            if review and review.status == 'PENDING':
+                visibility_state = 'REVIEW'
+            elif receipt_state == 'BEFORE':
+                visible_at, visible, visibility_state = _invitation_visibility(team, request.account.pk)
             item = {'team_id': team.pk, 'captain_name': team.captain.nickname or '陪玩', 'status': team.status,
                     'visible_at': visible_at, 'order_visible': visible, 'visibility_state': visibility_state}
             if visible:
@@ -199,15 +231,20 @@ class TeamActionView(APIView):
         if action not in ('confirm', 'withdraw'):
             return Response({'code': 404, 'msg': '操作不存在'}, status=404)
         try:
-            _advance_due_round(team.round.pool.order_id)
+            _advance_due_round(team.round.pool.order_id, expected_round_id=team.round_id)
             key = _request_key(request)
             from .grab_receipt_probe import record_intent
             result = record_intent(team.round_id, request.account.pk, action.upper(), key,
                                    {'team_id': team.pk}, team_flow=True, actor_snapshot=request.account)
             if result.state == 'BEFORE' and action == 'withdraw':
-                from .grab_team_draft import withdraw_with_receipt
+                from .grab_receipt_probe import _lock_round, apply_team_withdrawal
                 with transaction.atomic():
-                    withdraw_with_receipt(team.round_id, team.pk, result.receipt_id)
+                    order, round_ = _lock_round(team.round_id)
+                    receipt = OrderGrabReceiptProbe.objects.select_for_update().get(pk=result.receipt_id, round=round_)
+                    if apply_team_withdrawal(order, round_, receipt) is None:
+                        return Response({'code': 409, 'msg': '原组队轮次已结束'}, status=409)
+        except PendingGrabCancellationReview:
+            return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '订单正在核对，暂时无法确认组队'}, status=409)
         except ValueError as exc:
             return Response({'code': 400, 'msg': str(exc)}, status=400)
         if result.state == 'AFTER' and action == 'confirm':
@@ -217,10 +254,12 @@ class TeamActionView(APIView):
         team.refresh_from_db()
         if action == 'confirm':
             state = _latest(team.round.pool.order_id)
-            if state and state.status == 'PARKED':
-                resolve(team.round.pool.order_id)
-            else:
-                enqueue(team.round.pool.order_id)
+            if (state and state.round_id == team.round_id and state.status in ('OPEN', 'PARKED')
+                    and state.round.pool.order.status == Order.Status.PENDING):
+                if state.status == 'PARKED':
+                    resolve(team.round.pool.order_id, expected_round_id=team.round_id)
+                else:
+                    enqueue(team.round.pool.order_id, expected_round_id=team.round_id)
         # Read this team's own persisted round after any synchronous resolve.
         # A task being queued is not evidence of an allocation. A retry from a
         # later account cycle must not expose the old confirmation's result.
@@ -244,36 +283,9 @@ class TeamActionView(APIView):
 
 
 def cancel(request, order_id):
-    state = _latest(order_id)
-    if (not state or request.account.account_type != 'BOSS'
-            or state.round.pool.order.customer_account_id != request.account.pk):
-        return Response({'code': 404, 'msg': '订单不存在'}, status=404)
-    if not enabled():
-        return Response({'code': 503, 'msg': '订单取消暂需客服核对，请联系客服'}, status=503)
-    state = _advance_due_round(order_id)
-    if state.status == 'CANCELLED':
-        return Response({'code': 0, 'msg': '订单已取消，资金及权益已按规则退回', 'data': {'status': 'CANCELLED'}})
-    if state.status == 'REVIEW':
-        from .grab_customer_review import request_cancellation
-        return request_cancellation(request, order_id)
-    if state.status not in ('OPEN', 'PARKED', 'CANCELLED'):
-        return Response({'code': 409, 'msg': '订单已分配或正在核对，请查看订单状态'}, status=409)
-    try:
-        key = request.data.get('client_request_id') or f'cancel-team-{order_id}-{request.account.pk}'
-        reason = request.data.get('reason') or ''
-        if not isinstance(reason, str):
-            raise ValueError('取消原因无效')
-        from .grab_receipt_probe import record_intent
-        result = record_intent(state.round_id, request.account.pk, 'BOSS_CANCEL', key,
-                               {'reason': reason.strip()[:255]}, team_flow=True)
-    except ValueError as exc:
-        return Response({'code': 400, 'msg': str(exc)}, status=400)
-    if result.state != 'BEFORE':
-        from .grab_customer_review import request_cancellation
-        return request_cancellation(request, order_id)
-    if resolve(order_id) != 'CANCELLED':
-        return Response({'code': 409, 'msg': '取消请求待核对，请查看订单状态'}, status=409)
-    return Response({'code': 0, 'msg': '订单已取消，资金及权益已按规则退回', 'data': {'status': 'CANCELLED'}})
+    from .grab_customer_cancel import cancel as customer_cancel
+
+    return customer_cancel(request, order_id, state=_latest(order_id), enabled=enabled(), resolve=resolve, team=True)
 
 
 @transaction.atomic
@@ -415,7 +427,8 @@ def _cancel_order(order, state, *, receipt=None):
             else:
                 refund_fact['refund'] = refund_expired_locked(locked, grab_team_state=state)
         else:
-            refund_fact['refund'] = refund_to_customer(locked, reason=reason)
+            refund_fact['refund'] = refund_to_customer(locked, reason=reason,
+                                                       operator_account=receipt.actor if receipt else None)
         locked.cancel_reason = reason
 
     cancelled = transition(order.pk, Order.Status.CANCELLED,
@@ -436,7 +449,7 @@ def _cancel_order(order, state, *, receipt=None):
     return cancelled
 
 
-def resolve(order_id, *, _cancel_only=False):
+def resolve(order_id, *, _cancel_only=False, expected_round_id=None):
     if not enabled():
         return 'DISABLED'
     from .grab_receipt_probe import _db_clock, _effective_state, compare_candidate_bounds
@@ -450,13 +463,16 @@ def resolve(order_id, *, _cancel_only=False):
     if (lifecycle or watermark) and not _cancel_only:
         if transaction.get_connection().in_atomic_block:
             raise RuntimeError('抢单分配必须使用独立的最外层事务')
-        outcome = resolve(order_id, _cancel_only=True)
+        outcome = resolve(order_id, _cancel_only=True, expected_round_id=expected_round_id)
         if outcome != 'NO_CANCELLATION':
             return outcome
     if watermark and not _cancel_only:
         from .grab_cutoff_watermark import seal
         try:
-            if seal(order_id, team=True) == 'REVIEW':
+            sealed = seal(order_id, team=True, expected_round_id=expected_round_id)
+            if sealed == 'STALE_ROUND':
+                return sealed
+            if sealed == 'REVIEW':
                 return 'WAIT_WATERMARK_REVIEW'
         except ValueError:
             return 'WAIT_WATERMARK_REVIEW'
@@ -477,13 +493,22 @@ def resolve(order_id, *, _cancel_only=False):
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order:
             return 'NOT_FOUND'
-        from .applications import ApplicationError, _enter_assignment_scope
+        if expected_round_id is not None and locked_latest_round_id(order.pk) != expected_round_id:
+            return 'STALE_ROUND'
+        if order.status == Order.Status.PENDING:
+            from .applications import ApplicationError, _enter_assignment_scope
+            try:
+                _enter_assignment_scope(stack, order)
+            except ApplicationError:
+                return 'WAIT_POINTS_FUNDING_REVIEW'
+        if order.required_provider_count != 2:
+            return 'WAIT_ROUND_REVIEW'
         try:
-            _enter_assignment_scope(stack, order)
-        except ApplicationError:
-            return 'WAIT_POINTS_FUNDING_REVIEW'
-        state = (OrderGrabTeamRoundState.objects.select_for_update().select_related('round__pool')
-                 .filter(round__pool__order=order).order_by('-round__number').first())
+            state = latest_round_state(order.pk, seats=2, lock=True)
+        except GrabRoundReviewRequired as exc:
+            from .grab_review import report_invalid_round
+            report_invalid_round(order, exc)
+            return 'WAIT_ROUND_REVIEW'
         if not state or state.status not in ('OPEN', 'PARKED') or order.status != Order.Status.PENDING:
             return state.status if state else 'NOT_FOUND'
         now, precision, _ = _db_clock()

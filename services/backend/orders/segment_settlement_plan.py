@@ -9,11 +9,14 @@ from dataclasses import dataclass
 from dataclasses import asdict
 from datetime import timedelta
 
+from django.conf import settings
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from .models import (OrderOriginalAttribution, OrderOriginalShareTransfer,
                      OrderSegmentFinancialCoverage, OrderSegmentFinancialSnapshot,
                      OrderSegmentReport, OrderSegmentTransferBasis)
+from .points_funding_plan import PointsFundingPlanError
 from .settlement import SettlementError, compute_provider_income
 from .transfer_economics import allocate_same_rule_fixed_seat, allocate_transfer_basis
 
@@ -124,7 +127,7 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
         from .points_transfer_refund_access import permits
         if not _allow_recorded_refunds and not subsidy_internal and (not points_internal or not (getattr(settings, 'SERVICE_POINTS_TRANSFER_FUNDING_REVISION_TESTING', False)
                 or getattr(settings, 'SERVICE_POINTS_TRANSFER_SETTLEMENT_TESTING', False)
-                or permits(order, phase='report') or permits(order, phase='refund'))):
+                or any(permits(order, phase=phase) for phase in ('transfer', 'report', 'refund')))):
             _fail('未开始履约的资金测算尚未开放')
     if (not coverage or coverage.status != 'REVIEW' or coverage.review_reason != TRANSFER_RATE_REVIEW
             or (not points_internal and not subsidy_internal and (coverage.source != 'WALLET_NO_POINTS' or coverage.deal_amount != order.amount))
@@ -262,12 +265,16 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
             required[segment.provider_account_id].append(segment.pk)
     if points_internal and not order.refund_records.exists():
         from .models import OrderAddonHandover
-        from .addon_handover import verify_first_handover
+        from .addon_handover import verify_handover
         from rest_framework.exceptions import ValidationError
         from django.core.exceptions import ValidationError as DjangoValidationError
-        handovers = OrderAddonHandover.objects.filter(
-            payment__intent__order=order, status='ACCEPTED').select_related('payment__intent')
+        from django.db.models import OuterRef, Subquery
+        latest = OrderAddonHandover.objects.filter(payment_id=OuterRef('payment_id'), status='ACCEPTED').order_by('-version')
+        handovers = OrderAddonHandover.objects.filter(payment__intent__order=order,
+            pk=Subquery(latest.values('pk')[:1])).select_related('payment__intent')
         for handover in handovers:
+            if not handover.accepted_at:
+                _fail('加购接替缺少实际确认时间')
             try:
                 refunds = list(handover.payment.refund_records.order_by('created_at', 'pk'))
                 from .models import OrderAddonFundingReleaseRun
@@ -287,9 +294,11 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
                     from .models import OrderPointsFundingAllocation
                     witness = OrderPointsFundingAllocation.objects.filter(
                         redemption__order=order).order_by('pk').first()
-                    shares = verify_first_handover(handover.payment, handover,
-                        as_of=refunds[0].created_at if refunds else None,
-                        receipt_id=witness.receipt_id if witness else None)
+                    # Earlier refunds reduce the source shares inside verify_handover.
+                    # Only a later refund can be the upper bound for this handover.
+                    boundary = next((row.created_at for row in refunds if row.created_at > handover.accepted_at), None)
+                    shares = verify_handover(handover.payment, handover,
+                        as_of=boundary, receipt_id=witness.receipt_id if witness else None)
             except (ValidationError, DjangoValidationError) as exc:
                 raise SettlementError('加购接替凭证待核对') from exc
             for share in shares:
@@ -347,21 +356,40 @@ class SegmentSettlementPlanView(APIView):
     def get(self, request, order_id):
         from .segment_reports import enabled, supports
         from .models import Order
+        from .points_service_payment import needs_integrated_processing
         if not enabled():
             return Response({'code':404, 'msg':'当前不支持逐段收益核对'}, status=404)
         if not is_console_account(request.account) or not {'order:view', 'report:view'}.issubset(get_account_permissions(request.account)):
             return Response({'code':403, 'msg':'查看收益核对需要订单及报单查看权限'}, status=403)
         with transaction.atomic():
             order = Order.objects.select_for_update().filter(pk=order_id).first()
-            if not order or not supports(order):
+            if not order:
                 return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
             try:
                 from .segment_settlement import _ordinary_transfer_refund
-                if _ordinary_transfer_refund(order):
+                if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+                        and order.status in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
+                        and needs_integrated_processing(order)
+                        and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+                    from .addon_settlement import has_paid_addons
+                    from .points_transfer_funding import plan_points_transfer
+                    from .points_transfer_refund_access import after_transfer
+                    if (order.payment_status != Order.PaymentStatus.PAID or order.refund_records.exists()
+                            or has_paid_addons(order)):
+                        raise SettlementError('积分转单的付款、退款或加购须先核对，不能生成逐段收益')
+                    with after_transfer(order.pk, phase='report', read_only=True):
+                        plan = plan_points_transfer(order.pk, read_only=True).segments
+                elif not supports(order):
+                    return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
+                elif _ordinary_transfer_refund(order):
                     from .negotiation_transfer_settlement import build_locked
                     plan, _ = build_locked(order)
                 else:
                     plan = build_segment_settlement_plan(order)
-            except SettlementError as exc:
+            except ValidationError as exc:
+                detail = exc.detail
+                message = str(detail[0]) if isinstance(detail, list) and len(detail) == 1 else '积分转单凭证待核对'
+                return Response({'code':409, 'msg':message}, status=409)
+            except (SettlementError, PointsFundingPlanError) as exc:
                 return Response({'code':409, 'msg':str(exc)}, status=409)
             return Response({'code':0, 'data':asdict(plan)})

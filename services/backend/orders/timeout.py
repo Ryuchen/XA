@@ -80,7 +80,8 @@ def reserve_expired_direct_refund(order_id):
     _require_test_domain()
     from .direct_payment_models import DirectPaymentIntent
     from .direct_refund import reserve_full_refund
-    from .models import Order
+    from .grab_round_facts import pool_exists
+    from .models import Order, OrderGrabPoolOpeningIntent
     from club_accounts.models import ClubAccount
     from wallet.models import Wallet
 
@@ -90,6 +91,8 @@ def reserve_expired_direct_refund(order_id):
                 or order.auto_cancel_at > timezone.now()
                 or order.payment_status != Order.PaymentStatus.PAID
                 or order.provider_id or order.provider_account_id or order.providers.exists()):
+            return None
+        if pool_exists(order.pk) or OrderGrabPoolOpeningIntent.objects.filter(order=order).exists():
             return None
         intent = DirectPaymentIntent.objects.select_for_update().filter(order=order).first()
         if intent is None:

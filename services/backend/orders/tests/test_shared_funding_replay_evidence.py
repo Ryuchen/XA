@@ -1,11 +1,54 @@
+from contextlib import nullcontext
+from unittest.mock import patch
 from uuid import uuid4
 
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 
-from orders.models import OrderPointsFundingAllocation
+from orders.models import Order, OrderOriginalShareTransfer, OrderPointsFundingAllocation
 from orders.tests import test_points_checkout_integration as fixtures
 from stores import test_platform_pass_repayment as platform_tests
 from stores.context import store_context
+from stores.platform_points_funding import _addon_funding_scope
+
+
+@override_settings(SERVICE_POINTS_MYSQL_ENABLED=True)
+class PlatformTransferFundingScopeTests(SimpleTestCase):
+    def test_order_lock_precedes_classifying_transfer_for_read_and_write(self):
+        order = Order(pk=31)
+        for receipt_id, request_key, pending in ((None, None, None), (45, None, None), (45, 'points:original', 13)):
+            with (self.subTest(receipt_id=receipt_id, request_key=request_key),
+                  patch.object(Order.objects, 'select_for_update') as lock,
+                  patch.object(Order.objects, 'filter') as unlocked,
+                  patch.object(OrderOriginalShareTransfer.objects, 'filter') as history,
+                  patch('orders.points_service_payment.needs_integrated_processing', return_value=True),
+                  patch('orders.financial_lock.lock_existing_order_money') as read_guard,
+                  patch('stores.platform_points_funding.pending_handover_for_allocation_replay') as replay,
+                  patch('orders.points_transfer_refund_access.after_transfer', return_value=nullcontext()) as transferred,
+                  patch('orders.points_business_access.service_order') as untransferred):
+                locked_query = lock.return_value.filter.return_value
+                locked_query.first.return_value = order
+                unlocked.return_value.first.return_value = order
+
+                def history_after_lock(*, previous_segment__attribution__order):
+                    locked_query.first.assert_called_once_with()
+                    self.assertIs(previous_segment__attribution__order, order)
+                    return history.return_value
+
+                history.side_effect = history_after_lock
+                history.return_value.exists.return_value = True
+
+                def replay_after_lock(locked_order, original_receipt, original_key):
+                    locked_query.first.assert_called_once_with()
+                    self.assertEqual((locked_order, original_receipt, original_key), (order, receipt_id, request_key))
+                    return pending
+
+                replay.side_effect = replay_after_lock
+                with _addon_funding_scope(order.pk, receipt_id, request_key=request_key):
+                    transferred.assert_called_once_with(order.pk, phase='settlement', extra_receipt_id=receipt_id,
+                                                        pending_payment_id=pending, allocation_request_key=request_key)
+                lock.return_value.filter.assert_called_once_with(pk=order.pk)
+                untransferred.assert_not_called()
+                self.assertEqual(read_guard.call_count, int(receipt_id is None))
 
 
 @override_settings(**fixtures.PointsFundingPlatformRecoveryTests._overridden_settings)

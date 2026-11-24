@@ -2,7 +2,7 @@
 from collections.abc import Mapping
 
 from django.core import signing
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -88,7 +88,7 @@ class ConsolePasswordLoginView(APIView):
                 platform = authenticate_platform(username, password)
             except PlatformAuthError:
                 platform = None
-            except DatabaseError:
+            except (DatabaseError, InterfaceError):
                 return failure('平台登录服务暂不可用，请稍后重试', 503)
             if platform:
                 try:
@@ -153,7 +153,7 @@ class ConsolePasswordLoginView(APIView):
             return failure(str(error), error.status, error.error_code)
         except SmsUnavailable as error:
             return failure(str(error), 503, 'SMS_UNAVAILABLE')
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return failure('门店登录服务暂不可用，请稍后重试', 503)
 
 

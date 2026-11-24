@@ -643,8 +643,10 @@ def _settle_order(order, *, operator=None, operator_account=None, trace_id=None)
             reserve_locked(order)
             return []  # Individual earnings still require the corresponding verified posting.
         from .segment_addon_settlement import enabled as segment_addon_enabled
-        if (segment_addon_enabled() and OrderOriginalShareTransfer.objects.filter(
-                previous_segment__attribution__order=order).exists()):
+        from .points_transfer_refund_access import permits as points_transfer_permits
+        if (points_transfer_permits(order, phase='settlement')
+                or (segment_addon_enabled() and OrderOriginalShareTransfer.objects.filter(
+                    previous_segment__attribution__order=order).exists())):
             from .segment_settlement import settle_due_segment_people
             return settle_due_segment_people(order, operator=operator, operator_account=operator_account, trace_id=trace_id)
         from .points_settlement_test import settle_points_order
@@ -1008,6 +1010,13 @@ def missing_report_evidence(report):
     return missing
 
 
+def report_approval_evidence_error(order, report):
+    if order.settlement_mode != Order.SettlementMode.REPORT_APPROVAL and not settings.REQUIRE_ORDER_EVIDENCE_IMAGES:
+        return ''
+    missing = missing_report_evidence(report)
+    return '报单缺少：' + '、'.join(missing) if missing else ''
+
+
 def required_report_providers(order):
     rows = list(order.providers.all())
     funded_ids = set()
@@ -1128,12 +1137,9 @@ def _approve_order_report(report_id, *, operator, operator_account, lifecycle=No
     from .segment_financial_capture import transfer_income_pending
     if transfer_income_pending(order, report.provider_account_id):
         raise SettlementError('转单收益尚未完成逐段核对，暂不能审核')
-    missing = missing_report_evidence(report) if (
-        order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL
-        or settings.REQUIRE_ORDER_EVIDENCE_IMAGES
-    ) else []
-    if missing:
-        raise SettlementError('报单缺少：' + '、'.join(missing))
+    evidence_error = report_approval_evidence_error(order, report)
+    if evidence_error:
+        raise SettlementError(evidence_error)
     own_share = order.providers.filter(provider_id=report.provider_id).first()
     if not own_share and order.provider_id != report.provider_id:
         raise SettlementError('报单人不属于该订单')

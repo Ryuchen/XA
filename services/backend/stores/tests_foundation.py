@@ -53,19 +53,61 @@ class StoreContextTests(TestCase):
         self.a = resolve_store()
         self.b = store_b()
 
-    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
-                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_nested_context_routes_and_cleans_up(self):
-        self.assertIsNone(current_store())
-        with store_context(self.b):
-            self.assertEqual(current_database(), 'store_b')
-            self.assertIs(connection.cursor().db, django_connections['store_b'])
-            self.assertIs(connections['default'], django_connections['store_b'])
-            with store_context(self.a):
-                self.assertEqual(current_database(), 'default')
-            self.assertEqual(current_database(), 'store_b')
-        self.assertEqual(current_database(), 'default')
-        self.assertIsNone(current_store())
+        original = current_store()
+        with store_context(None):
+            self.assertIsNone(current_store())
+            with store_context(self.b):
+                self.assertEqual(current_database(), 'store_b')
+                with connection.cursor() as cursor:
+                    self.assertIs(cursor.db, django_connections['store_b'])
+                self.assertIs(connections['default'], django_connections['store_b'])
+                with self.assertRaisesMessage(RuntimeError, '中止内层操作'):
+                    with store_context(self.a):
+                        self.assertEqual(current_database(), 'default')
+                        raise RuntimeError('中止内层操作')
+                self.assertIs(current_store(), self.b)
+                self.assertEqual(current_database(), 'store_b')
+            self.assertEqual(current_database(), 'default')
+            self.assertIsNone(current_store())
+        self.assertIs(current_store(), original)
+
+    @override_settings(ISOLATED_CONTROL_PLANE=True)
+    def test_tenant_database_apis_refuse_control_database(self):
+        for store in (None, self.a):
+            with self.subTest(store=store), store_context(store):
+                for using in (None, 'default'):
+                    with self.subTest(using=using):
+                        with self.assertRaisesMessage(ValueError, '请先确定门店'):
+                            with transaction.atomic(using=using):
+                                pass
+                        with self.assertRaisesMessage(ValueError, '请先确定门店'):
+                            transaction.on_commit(lambda: self.fail('门店回调不得注册到平台库'), using=using)
+                with self.assertRaisesMessage(ValueError, '请先确定门店'):
+                    with connection.cursor():
+                        pass
+                with self.assertRaisesMessage(ValueError, '请先确定门店'):
+                    connections['default']
+                self.assertEqual(Store.objects.using('default').get(pk=self.b.pk).slug, self.b.slug)
+
+    @override_settings(ISOLATED_CONTROL_PLANE=True)
+    def test_tenant_transaction_and_callback_keep_the_selected_store(self):
+        observed = []
+        store_db = django_connections['store_b']
+        control_db = django_connections['default']
+        store_savepoints = len(store_db.savepoint_ids)
+        control_savepoints = len(control_db.savepoint_ids)
+        with self.captureOnCommitCallbacks(using='store_b', execute=True) as callbacks:
+            with store_context(self.b), transaction.atomic():
+                self.assertEqual(len(store_db.savepoint_ids), store_savepoints + 1)
+                self.assertEqual(len(control_db.savepoint_ids), control_savepoints)
+                transaction.on_commit(lambda: observed.append(current_store()))
+                with self.assertRaisesMessage(RuntimeError, '取消回调'):
+                    with transaction.atomic():
+                        transaction.on_commit(lambda: self.fail('回滚后的门店回调不得执行'))
+                        raise RuntimeError('取消回调')
+        self.assertEqual(len(callbacks), 1)
+        self.assertEqual(observed, [self.b])
 
     def test_directory_always_lives_on_default_database(self):
         with store_context(self.b):

@@ -114,16 +114,22 @@ def _check_person(order, posting, person, snapshot, assignment):
 
 def _addon_facts(order, posting):
     """Recover separately settled add-on obligations from the verified snapshot."""
-    from .models import OrderAddonPayment, OrderPointsFundingReleaseEvidence
+    from .models import OrderPointsFundingReleaseEvidence
     evidence = OrderPointsFundingReleaseEvidence.objects.get(posting=posting)
     from .points_refunded_funding import later_addon_runs
     runs = later_addon_runs(order, posting)
     latest = runs[-1] if runs else None
     history = (latest.refunded_main_snapshot['addon_history'] if latest else evidence.addon_funding_snapshot) or []
+    return _addon_facts_from_history(order, history)
+
+
+def _addon_facts_from_history(order, history):
+    """Match the verified history to each person's current add-on share."""
     if not history:
         return (0, 0, 0, 0, 0, 0), ()
     from .addon_funding import AddonFundingPart
     from .addon_handover import current_responsibilities
+    from .models import OrderAddonPayment
     payments = {row.pk: row for row in OrderAddonPayment.objects.select_for_update().filter(
         intent__order=order, pk__in=[item['payment_id'] for item in history])}
     parts = []

@@ -14,6 +14,8 @@ from console.capacity_config import save_capacity
 from console.grab_config import save_grab_window
 from coupons.models import UserCoupon
 from engagement.models import PointFundingLot, PointLedger
+from orders.capacity import current_capacity_rules
+from orders.grab_config import current_rules as current_grab_rules
 from orders.grab_team_flow import resolve
 from orders.models import (Order, OrderGrabPoolSnapshot, OrderGrabRound, OrderPointsRedemption,
                            OrderPointsRefund, OrderSegmentFinancialCoverage, OrderSegmentFinancialSnapshot)
@@ -44,10 +46,11 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.wallet.balance = 25000
         self.wallet.save(update_fields=['balance'])
         self.service.billing_provider_count = team_size
+        self.service.fulfillment_provider_count = team_size
         self.service.commission_policy = 'REGULAR'
-        self.service.save(update_fields=['billing_provider_count', 'commission_policy'])
-        save_grab_window(1, 0, lambda *args: None)
-        save_capacity(3, 0, lambda *args: None)
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count', 'commission_policy'])
+        save_grab_window(1, current_grab_rules()['version'], lambda *args: None)
+        save_capacity(3, current_capacity_rules()['version'], lambda *args: None)
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
             SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_' + tier, defaults={'value': '0'})
         if high_discount:
@@ -82,8 +85,11 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
                 PointFundingLot.objects.create(account=self.account, source_key=f'team-points-{kind}',
                                                kind=kind, remaining=amount)
             payload.update(gift_balance_amount=600, compensation_balance_amount=400)
+        else:
+            quote_fixture.seed_recharge(self.wallet)
         quote = self.client.post('/api/orders/quote/', payload, format='json')
         self.assertEqual(quote.status_code, 200, quote.data)
+        self.assertEqual(quote.data['code'], 0, quote.data)
         token = quote.data['data']['points_preview']['checkout_test_token']
         if before_payment:
             before_payment()
@@ -105,6 +111,94 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         confirm = self.clients[1].post(f'/api/orders/grab-team/invitations/{team_id}/confirm/',
             {'client_request_id': 'points-team-confirm'}, format='json')
         self.assertEqual(confirm.status_code, 200, confirm.data)
+
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_staff_review_cancellation_notice_uses_the_final_coin_and_points_refund(self):
+        from orders.grab_single_flow import resolve as resolve_single
+        from site_messages.models import CustomerCancellationNotice
+
+        actor = self.refund_points_after_owner_review()
+        intent = CustomerCancellationNotice.objects.get(order=self.order)
+        posting = OrderPointsRefund.objects.get(redemption=self.receipt)
+        self.assertEqual((intent.refund_id, intent.wallet_transaction_id),
+                         (posting.refund_id, posting.coin_transaction_id))
+        self.assertEqual(posting.points_ledger.operator_id, actor.pk)
+        self.assertTrue(intent.refunded_to_wallet and intent.refunded_points)
+        self.assertEqual(intent.skipped_reason, '')
+        self.assertEqual(intent.message.recipient_account_id, self.account.pk)
+        self.assertIn('抵扣积分已退回', intent.message.preview)
+        with self.settings(SERVICE_POINTS_MYSQL_ENABLED=True):
+            self.assertEqual(resolve_single(self.order.pk), 'CANCELLED')
+        self.assertEqual(OrderPointsRefund.objects.get(redemption=self.receipt).pk, posting.pk)
+
+    def test_team_points_cancelled_round_replays_without_assignment_scope(self):
+        self.refund_points_after_owner_review(team_size=2)
+        posting = OrderPointsRefund.objects.get(redemption=self.receipt)
+
+        with self.settings(SERVICE_POINTS_MYSQL_ENABLED=True):
+            self.assertEqual(resolve(self.order.pk), 'CANCELLED')
+        self.assertEqual(OrderPointsRefund.objects.get(redemption=self.receipt).pk, posting.pk)
+
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_staff_review_notice_rejects_a_short_points_return(self):
+        from site_messages.models import CustomerCancellationNotice
+        from site_messages.tasks import recover_customer_cancellation_notices
+
+        with patch('site_messages.order_customer_cancel_notice.deliver'):
+            self.refund_points_after_owner_review()
+        posting = OrderPointsRefund.objects.get(redemption=self.receipt)
+        fewer_points = posting.points_hundredths - 1
+        OrderPointsRefund.objects.filter(pk=posting.pk).update(points_hundredths=fewer_points)
+        PointLedger.objects.filter(pk=posting.points_ledger_id).update(amount=fewer_points)
+
+        self.assertEqual(recover_customer_cancellation_notices.run(), 1)
+        intent = CustomerCancellationNotice.objects.get(order=self.order)
+        self.assertIsNotNone(intent.completed_at)
+        self.assertTrue(intent.skipped_reason)
+        self.assertIsNone(intent.message_id)
+
+    def refund_points_after_owner_review(self, *, team_size=1):
+        from orders import grab_receipt_probe, grab_single_flow
+        from orders.models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
+        from orders.tests.factories import make_console_user
+
+        self.service.fulfillment_provider_count = team_size
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        self.prepare(team_size=team_size, mixed_sources=True)
+        states = OrderGrabTeamRoundState if team_size == 2 else OrderGrabSingleRoundState
+        arbitrate = resolve if team_size == 2 else grab_single_flow.resolve
+        round_state = states.objects.get(round__pool__order=self.order)
+        cutoff = round_state.round.total_deadline
+        before, after = cutoff - timedelta(seconds=1), cutoff + timedelta(seconds=1)
+        _, precision, driver = grab_receipt_probe._db_clock()
+        with patch.object(grab_receipt_probe, '_db_clock', side_effect=[
+                (before, precision, driver), (after, precision, driver)]):
+            requested = self.client.post(f'/api/orders/orders/{self.order.pk}/cancel/',
+                                         {'client_request_id': 'points-boss-review', 'reason': '申请核对'},
+                                         format='json')
+        self.assertEqual(requested.data.get('data'), {'status': 'PENDING'}, requested.data)
+        receipt = round_state.round.receipt_probes.get(kind='BOSS_CANCEL')
+        self.assertEqual((receipt.state, receipt.review_reason), ('REVIEW', 'CROSSED_CUTOFF'))
+        with patch.object(grab_receipt_probe, '_db_clock', return_value=(after, precision, driver)):
+            self.assertEqual(arbitrate(self.order.pk), 'WAIT_REVIEW')
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.payment_status), ('PENDING', 'PAID'))
+        self.assertFalse(self.order.providers.exists())
+        self.assertFalse(self.order.refund_records.exists())
+        self.assertFalse(OrderPointsRefund.objects.filter(redemption=self.receipt).exists())
+
+        user = make_console_user(['order:dispatch', 'order:refund'])
+        actor = get_or_create_account_for_legacy_user(user)
+        user.admin_membership.account = actor
+        user.admin_membership.save(update_fields=['account'])
+        staff = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(actor)[0])
+        action = staff.post(f'/api/admin/grab-reviews/{self.order.pk}/actions/',
+            {'action': 'CANCEL', 'reason': '查清原店币和抵扣积分', 'client_request_id': 'points-staff-review'},
+            format='json')
+        self.assertEqual(action.status_code, 200, action.data)
+        return actor
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')

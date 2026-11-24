@@ -52,6 +52,8 @@ class Store(DirectoryModel):
     ])
     currency_name = models.CharField(max_length=16, default='浪花')
     logo_url = models.CharField(max_length=500, blank=True, default='')
+    background_url = models.CharField(max_length=500, blank=True, default='')
+    introduction = models.TextField(max_length=2000, blank=True, default='')
     database_alias = models.CharField(max_length=64, unique=True, editable=False)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PROVISIONING, db_index=True)
     initialized_at = models.DateTimeField(null=True, blank=True)
@@ -109,7 +111,7 @@ class StoreRoutingRevision(DirectoryModel):
 
 
 class StoreProvisioningClaim(DirectoryModel):
-    """Private platform record used to verify an unfinished store database."""
+    """Private platform record of a store's database ownership and initial admin."""
 
     store = models.OneToOneField(Store, on_delete=models.PROTECT, related_name='provisioning_claim')
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -182,6 +184,25 @@ class PlatformAuditEvent(DirectoryModel):
     target_id = models.CharField(max_length=100, blank=True, default='')
     detail = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+
+class StoreBusinessCertificate(DirectoryModel):
+    """Original evidence confirmed by the platform and retained on replacement."""
+
+    store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='business_certificates')
+    confirmed_by = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT)
+    supersedes = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
+    client_request_id = models.UUIDField()
+    expires_on = models.DateField(null=True, blank=True)
+    document = models.BinaryField(editable=False)
+    content_type = models.CharField(max_length=20)
+    sha256 = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-id']
+        constraints = [models.UniqueConstraint(fields=['store', 'client_request_id'],
+                                               name='store_business_certificate_request_unique')]
 
 
 class PlatformWithdrawalAuditReceipt(DirectoryModel):
@@ -500,11 +521,12 @@ class StoreLicenseReceipt(DirectoryModel):
 
 
 class LicenseNotice(DirectoryModel):
-    """Durable control-plane outbox entry; never contains an activation secret."""
+    """Durable control-plane reminder with a single entitlement or certificate source."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event_key = models.CharField(max_length=120, unique=True)
     store = models.ForeignKey(Store, on_delete=models.PROTECT)
-    license_code = models.ForeignKey(StoreLicenseCode, on_delete=models.PROTECT)
+    license_code = models.ForeignKey(StoreLicenseCode, on_delete=models.PROTECT, null=True, blank=True)
+    business_certificate = models.ForeignKey(StoreBusinessCertificate, on_delete=models.PROTECT, null=True, blank=True)
     kind = models.CharField(max_length=16)
     deadline = models.DateTimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -515,8 +537,14 @@ class LicenseNotice(DirectoryModel):
     attempts = models.PositiveIntegerField(default=0)
 
     class Meta:
-        constraints = [models.CheckConstraint(condition=models.Q(kind__in=['CANCEL', 'D30', 'D7', 'D1', 'EXPIRY', 'GRACE_END']),
-                                               name='license_notice_kind_valid')]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(kind__in=['CANCEL', 'D30', 'D7', 'D1', 'EXPIRY', 'GRACE_END']),
+                                   name='license_notice_kind_valid'),
+            models.CheckConstraint(condition=(
+                models.Q(license_code__isnull=False, business_certificate__isnull=True)
+                | models.Q(license_code__isnull=True, business_certificate__isnull=False, kind__in=['D30', 'D7', 'D1'])
+            ), name='license_notice_single_source'),
+        ]
 
 
 class PlatformLicenseNotice(DirectoryModel):

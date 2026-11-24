@@ -31,9 +31,12 @@ def enabled():
 def supports(order):
     from .segment_financial_capture import transfer_income_pending
     from .ordinary_transfer_capability import enabled as ordinary_transfer_enabled
+    from .points_service_payment import needs_integrated_processing
     if (ordinary_transfer_enabled() and order.status in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
             and order.payment_status in (Order.PaymentStatus.PAID, Order.PaymentStatus.PARTIALLY_REFUNDED,
-                                         Order.PaymentStatus.REFUNDED)):
+                                         Order.PaymentStatus.REFUNDED)
+            and not (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+                     and needs_integrated_processing(order))):
         from rest_framework.exceptions import ValidationError
         from .models import NegotiationExecution, OrderTransferNegotiationEvidence
         from .ordinary_transfer_capability import permits

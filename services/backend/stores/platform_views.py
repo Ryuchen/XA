@@ -1,8 +1,9 @@
 from collections.abc import Mapping
 from uuid import UUID
 from django.conf import settings
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError, transaction
 
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -68,9 +69,16 @@ class PlatformPasswordLoginView(APIView):
             if sms or otp:
                 method = 'SMS' if sms else 'OTP'
                 code = request.data.get('smsCode') if sms else request.data.get('otpCode')
-                account, proof = verify_challenge(account, sms or otp, code, method)
-                access, refresh = issue_tokens(account, method, proof)
-                return Response({'code': 0, 'data': {'token': access, 'refresh': refresh, 'profile': profile(account)}})
+                with transaction.atomic(using='default'):
+                    try:
+                        account, proof = verify_challenge(account, sms or otp, code, method)
+                    except PlatformAuthError as error:
+                        # An incorrect code still uses up a verification attempt.
+                        return fail(str(error), error.status, error.code)
+                    access, refresh = issue_tokens(account, method, proof)
+                    return Response({'code': 0, 'data': {
+                        'token': access, 'refresh': refresh, 'profile': profile(account),
+                    }})
             result = start_challenge(account, use_sms=request.data.get('verificationMethod') == 'sms')
             result['identity_kind'] = 'platform'
             return Response({'code': 0, 'data': result})
@@ -78,7 +86,7 @@ class PlatformPasswordLoginView(APIView):
             return fail(str(error), error.status, error.code)
         except SmsUnavailable:
             return fail('短信服务暂不可用，请稍后重试', 503, 'SMS_UNAVAILABLE')
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return fail('平台登录服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
 
 
@@ -97,7 +105,7 @@ class PlatformRefreshView(APIView):
             return Response({'code': 0, 'data': {'token': str(token.access_token)}})
         except (TokenError, ValueError, TypeError):
             return fail('平台登录已过期，请重新登录', 401)
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return fail('平台登录服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
 
 
@@ -164,8 +172,14 @@ class PlatformDashboardView(APIView):
         from .platform_dashboard import aggregate_dashboard
         try:
             data = aggregate_dashboard(request.platform_account)
+            # Store reads can finish after the platform session is invalidated.
+            account_for_token(request.auth)
         except PermissionError:
             return fail('无平台汇总权限', 403, 'PLATFORM_FORBIDDEN')
+        except (DatabaseError, InterfaceError):
+            return fail('平台汇总暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
+        except TokenError as error:
+            raise AuthenticationFailed('平台登录已失效，请重新登录') from error
         return Response({'code': 0, 'data': data})
 
 

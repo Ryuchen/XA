@@ -1,16 +1,15 @@
-"""Test-only funding basis after one fully evidenced points negotiation."""
+"""Funding basis after one fully evidenced points negotiation."""
 from django.conf import settings
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 
 from stores.db import transaction
-from .models import (Order, OrderOriginalShareTransfer, OrderPointsFundingReleaseEvidence,
-                     PointsNegotiationPosting)
+from .models import Order, OrderOriginalShareTransfer, PointsNegotiationPosting
 from .points_checkout_test import require_isolated_checkout
 from .points_funding_plan import PointsFundingPlanError
 
 
-def later_addon_runs(order, posting, *, before=None):
+def later_addon_runs(order, posting, *, before=None, _verified_first_release=None, _verified_rows=None):
     """Verify add-on events after refund one and before a later main refund."""
     from .models import OrderAddonFundingReleaseRun, OrderAddonPayment, OrderAddonRefund, OrderAddonHandover
     following = PointsNegotiationPosting.objects.filter(
@@ -68,12 +67,18 @@ def later_addon_runs(order, posting, *, before=None):
         raise ValidationError('加购资金版本与实际事件顺序不一致')
     from .addon_funding_release import verify_run
     for run in runs:
-        verify_run(run)
+        verify_run(run, _verified_first_release=_verified_first_release, _verified_rows=_verified_rows)
     return runs
 
 
 def plan_refunded_order(order_id, *, allow_finalized=False):
     """Return verified post-refund cash needs, not an allocation or payout."""
+    plan, _, _ = first_refund_funding_basis(order_id, allow_finalized=allow_finalized)
+    return plan
+
+
+def first_refund_funding_basis(order_id, *, allow_finalized=False, _verified_rows=None):
+    """Return the plan, its release evidence and the verified later add-on runs."""
     from .points_business_access import permits
     formal = (permits(phase='payment', kind='addon') or any(permits(phase=phase, kind=kind)
               for kind in ('service', 'addon') for phase in ('funding', 'refund', 'report', 'settlement')))
@@ -110,16 +115,12 @@ def plan_refunded_order(order_id, *, allow_finalized=False):
     if len(postings) != 1:
         raise PointsFundingPlanError('退款后协商记录待核对')
     try:
-        posting = verify_termination_locked(postings[0])
-        evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
-        if not evidence:
-            raise ValidationError('退款后补资释放凭证缺失')
-        from .points_funding_release import verify_release_locked
-        original = verify_release_locked(evidence)
-        runs = later_addon_runs(order, posting)
+        posting, evidence, original = verify_termination_locked(postings[0], include_release=True)
+        # Both verifiers run under this order's money lock without intervening writes.
+        runs = later_addon_runs(order, posting, _verified_first_release=evidence, _verified_rows=_verified_rows)
         if not runs:
-            return original
+            return original, evidence, runs
         from .points_negotiation_preview import RefundedFunding
-        return RefundedFunding(**runs[-1].refunded_main_snapshot['funding'])
+        return RefundedFunding(**runs[-1].refunded_main_snapshot['funding']), evidence, runs
     except ValidationError as exc:
         raise PointsFundingPlanError('退款后资金与协商凭证待核对') from exc

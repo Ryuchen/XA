@@ -1,11 +1,14 @@
 """Cross-store, real-API coverage for transfer funding revisions."""
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest import skipUnless
-from unittest.mock import patch
+from unittest.mock import call, patch
 from uuid import uuid4
 
 from django.conf import settings
-from django.test import TestCase, override_settings
+from django.db.migrations.recorder import MigrationRecorder
+from django.test import SimpleTestCase, TestCase, override_settings
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -20,6 +23,89 @@ from stores.context import store_context
 from stores.db import transaction
 from users.models import PassRefundRepaymentReceipt
 from wallet.models import Transaction
+
+
+class PointsTransferRevisionScopeTests(SimpleTestCase):
+    def test_report_and_settlement_reuse_verification_only_for_the_same_order(self):
+        from orders import points_transfer_revision as revisions
+        from orders.points_business_access import _bind, permits
+
+        store = SimpleNamespace(slug='scoped-store', database_alias='default')
+        connection = SimpleNamespace(alias=store.database_alias, in_atomic_block=True)
+        order = Order(pk=1, customer_account_id=10, service_id=20)
+        other = Order(pk=2, customer_account_id=10, service_id=20)
+
+        def verify(candidate, *, allow_missing_last):
+            self.assertIs(candidate, order)
+            self.assertTrue(permits(order, phase='refund', kind='transfer'))
+            self.assertFalse(allow_missing_last)
+            return ({3: 10}, None)
+
+        with (patch('orders.points_business_access.configured', return_value=True),
+              patch('orders.points_business_access.current_store', return_value=store),
+              patch.object(revisions, 'current_store', return_value=store),
+              patch.object(transaction, 'get_connection', return_value=connection),
+              patch.object(revisions, 'require_isolated_checkout', side_effect=ValidationError('requires isolated checkout')),
+              patch.object(revisions, '_verify_revisions_locked', side_effect=verify) as read):
+            for phase in ('report', 'settlement'):
+                with self.subTest(phase=phase), _bind(phase=phase, kind='transfer', order_id=order.pk,
+                        account_id=order.customer_account_id, service_id=order.service_id):
+                    self.assertEqual(revisions.verify_revisions_locked(order), ({3: 10}, None))
+                    self.assertTrue(permits(order, phase=phase, kind='transfer'))
+                    self.assertFalse(permits(order, phase='refund', kind='transfer'))
+                    with self.assertRaisesMessage(ValidationError, 'requires isolated checkout'):
+                        revisions.verify_revisions_locked(other)
+            self.assertEqual(read.call_count, 2)
+
+    def test_repeated_receipt_shares_usage_but_checks_each_platform_action(self):
+        import hashlib
+        import json
+        from orders.points_transfer_revision import _verify_allocation
+        from stores import models
+        from stores.platform_pass_repayment import RepaymentError
+
+        store = SimpleNamespace(slug='scoped-store')
+        order = SimpleNamespace(pk=1)
+        receipts = [SimpleNamespace(pk=pk, usage_version=1) for pk in (3, 3, 4)]
+        claims = {pk: SimpleNamespace(pk=uuid4(), tenant_receipt_id=pk) for pk in (3, 4)}
+        operations, actions, allocations = [], [], []
+        for number, receipt in enumerate(receipts, start=1):
+            operation_id = uuid4()
+            claim = claims[receipt.pk]
+            key = f'points:{operation_id.hex}'
+            amount = number * 10
+            payload = json.dumps([str(claim.pk), order.pk, amount], separators=(',', ':'))
+            operations.append(SimpleNamespace(claim=claim, claim_id=claim.pk, actor_id=number,
+                completed_at=number, rejected_at=None, voided_at=None, tenant_action_id=number,
+                payload_digest=hashlib.sha256(payload.encode()).hexdigest()))
+            actions.append(SimpleNamespace(pk=number, allocation_id=number, actor=str(number), result={
+                'receipt_id': receipt.pk, 'allocation_id': number, 'order_id': order.pk, 'amount': amount}))
+            allocations.append(SimpleNamespace(pk=number, receipt=receipt, receipt_id=receipt.pk, amount=amount,
+                request_key=key, allocated_by=str(number), redemption_id=1, service_order_id=None,
+                redemption=SimpleNamespace(order_id=order.pk)))
+
+        proof_a, proof_b = object(), object()
+        cache = {}
+        with (patch('orders.points_transfer_revision.current_store', return_value=store),
+              patch.object(models.PlatformPointsFundingOperation.objects, 'using') as platform,
+              patch('orders.points_transfer_revision.OrderPointsFundingAction.objects.filter') as tenant,
+              patch('stores.platform_pass_repayment._claimed_receipt') as claimed,
+              patch('stores.platform_points_funding._verified_receipt') as verified,
+              patch('users.receipt_usage_guard.capture_allocation_usage_locked',
+                    side_effect=[proof_a, proof_b]) as capture):
+            platform.return_value.select_related.return_value.filter.return_value.first.side_effect = operations
+            tenant.return_value.first.side_effect = actions
+            verified.side_effect = [None, None, RepaymentError('验收账目不一致')]
+            self.assertEqual(_verify_allocation(order, allocations[0], verified_receipts=cache), 1)
+            self.assertEqual(_verify_allocation(order, allocations[1], verified_receipts=cache), 2)
+            with self.assertRaisesMessage(PointsFundingPlanError, '转单补资原到账凭证异常'):
+                _verify_allocation(order, allocations[2], verified_receipts=cache)
+            self.assertEqual(capture.call_args_list, [call(receipts[0]), call(receipts[2])])
+            self.assertIs(verified.call_args_list[1].args[1], receipts[0])
+            self.assertEqual(verified.call_args_list, [call(claims[3], receipts[0], verified_usage=proof_a),
+                call(claims[3], receipts[0], verified_usage=proof_a), call(claims[4], receipts[2], verified_usage=proof_b)])
+            self.assertEqual(claimed.call_count, 3)
+            self.assertEqual(list(cache), [3])
 
 
 @skipUnless('store_b' in settings.DATABASES, 'Requires two isolated store databases')
@@ -163,9 +249,14 @@ class PointsTransferRevisionTests(TestCase):
                     missing = {OrderPointsTransferFundingRevision._meta.db_table,
                                OrderPointsTransferFundingRelease._meta.db_table}
                     tables = [name for name in connection.introspection.table_names() if name not in missing]
-                    with patch.object(connection.introspection, 'table_names', return_value=tables):
-                        with self.assertRaises(DatabaseError):
-                            receipt_points_used_locked(receipt)
+                    with transaction.atomic():
+                        # The fast test runner synchronizes models without recording this migration.
+                        MigrationRecorder(connection).migration_qs.get_or_create(
+                            app='orders', name='0141_orderpointstransferfundingrevision_and_more')
+                        with patch.object(connection.introspection, 'table_names', return_value=tables):
+                            with self.assertRaises(DatabaseError):
+                                receipt_points_used_locked(receipt)
+                        transaction.set_rollback(True)
                 with transaction.atomic():
                     from orders.models import OrderPointsFundingAllocation
                     from rest_framework.exceptions import ValidationError

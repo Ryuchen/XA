@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from orders.models import GameCategory, Gameplay, Reservation, ServiceItem
 from orders.tests.factories import make_service_category
-from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase
+from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase, slot
 from users.models import EscortSchedule, ProviderQualification
 
 
@@ -70,9 +70,10 @@ class ReservationCatalogEligibilityTest(ReservationApiTestBase):
         profile.service_items.add(self.service)
         profile.status = profile.Status.OFFLINE
         profile.save(update_fields=['status'])
-        now = timezone.localtime()
+        start = timezone.localtime(slot(hour=10))
+        start_minute = start.hour * 60 + start.minute
         EscortSchedule.objects.create(provider=self.provider, account=self.provider_account,
-            weekday=(now.weekday() + 1) % 7, start_minute=0, end_minute=60)
+            weekday=start.weekday(), start_minute=start_minute, end_minute=start_minute + 120)
         result = self.post()
         self.assertNotEqual(result['code'], 0, result)
         self.assertIn('离线', result['msg'])

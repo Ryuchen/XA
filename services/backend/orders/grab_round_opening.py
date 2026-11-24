@@ -119,60 +119,84 @@ def _observe_activation(evidence_id, order_id, alias, slug, driver):
 
 
 def _resume_waiting(round_id):
-    from .grab_receipt_probe import finalize_opening_waiters
-    finalize_opening_waiters(round_id)
-    round_ = OrderGrabRound.objects.select_related('pool__order').filter(pk=round_id).first()
-    if not round_:
+    from .grab_clock_contract import production_enabled, round_identity_valid
+    from .grab_customer_review import has_pending_review
+    from .grab_receipt_probe import _lock_round, finalize_opening_waiters
+    from .grab_round_facts import current_pending_round_state
+
+    if not production_enabled():
         return
-    # Reopened rounds remove the original pass visibility delay. Only wake
-    # unsent group notices once this round's activation is durable.
-    if round_.number > 1 and OrderGrabRoundOpeningEvidence.objects.filter(
-            round=round_, state='OBSERVED').exists():
-        from .dispatching import reschedule_pool_dispatch
-        try:
-            reschedule_pool_dispatch(round_.pool.order_id)
-        except Exception:
-            # Group delivery is independent of receipt resolution; the
-            # periodic dispatcher retries its persisted pending records.
-            logger.exception('重开抢单群发重排待恢复 order=%s', round_.pool.order_id)
+    finalize_opening_waiters(round_id)
     try:
-        deadline = cutoff_bounds(round_, 'OPEN')[1] + timedelta(seconds=1)
+        with transaction.atomic():
+            order, round_ = _lock_round(round_id)
+            state = current_pending_round_state(order, round_id)
+            if (not state or state.status not in ('OPEN', 'PARKED')
+                    or has_pending_review(order.pk, lock=True) or not round_identity_valid(round_, lock=True)):
+                return
+            deadline = cutoff_bounds(round_, 'OPEN', lock=True)[1] + timedelta(seconds=1)
+            if round_.number > 1:
+                from .dispatching import reschedule_pool_dispatch
+                try:
+                    reschedule_pool_dispatch(order.pk)
+                except Exception:
+                    # The periodic dispatcher can still recover pending group records.
+                    logger.exception('重开抢单群发重排待恢复 order=%s', order.pk)
+            if order.required_provider_count == 1:
+                from .grab_single_flow import enabled, enqueue
+            else:
+                from .grab_team_flow import enabled, enqueue
+            if enabled():
+                transaction.on_commit(lambda: enqueue(order.pk, expected_round_id=round_id), robust=True)
+                transaction.on_commit(lambda: enqueue(order.pk, eta=deadline, expected_round_id=round_id), robust=True)
     except ValueError:
         return
-    if round_.pool.required_provider_count == 1:
-        from .grab_single_flow import enabled, enqueue
-    else:
-        from .grab_team_flow import enabled, enqueue
-    if enabled():
-        enqueue(round_.pool.order_id)
-        enqueue(round_.pool.order_id, eta=deadline)
 
 
-def opening_bounds(round_):
-    """Return conservative bounds, never an invented opening instant."""
-    from .grab_clock_contract import TOLERANCE_NS, database_id, valid_bounds
-    evidence = OrderGrabRoundOpeningEvidence.objects.filter(round=round_).first()
+def _observed_opening(round_, *, lock):
+    observations = OrderGrabRoundOpeningEvidence.objects.filter(round=round_)
+    evidence = (observations.select_for_update() if lock else observations).first()
+    return validated_opening(evidence)
+
+
+def validated_opening(evidence, *, identity=None):
+    from .grab_clock_contract import database_id, valid_bounds
     if (not evidence or evidence.state != 'OBSERVED' or not evidence.upper_at
             or not evidence.activation_lower_at or not evidence.activation_upper_at or evidence.reason):
         raise ValueError('抢单轮次提交时间待核对')
-    identity = database_id()
+    identity = database_id() if identity is None else identity
     if not valid_bounds(evidence.lower_at, evidence.upper_at, evidence.clock_evidence, identity=identity):
         raise ValueError('抢单轮次提交时钟证据异常')
     if not valid_bounds(evidence.activation_lower_at, evidence.activation_upper_at,
                         evidence.activation_clock_evidence, identity=identity):
         raise ValueError('抢单轮次激活提交时钟证据异常')
+    return evidence
+
+
+def _opening_interval(evidence):
+    from .grab_clock_contract import TOLERANCE_NS
+
     precision = timedelta(microseconds=TOLERANCE_NS // 1000)
     return evidence.activation_lower_at - precision, evidence.activation_upper_at + precision
 
 
+def opening_bounds(round_, *, lock=False):
+    """Return conservative bounds, never an invented opening instant."""
+    return _opening_interval(_observed_opening(round_, lock=lock))
+
+
 def provisional_opening_lower(round_):
     """Return only a lower bound while activation acknowledgement is pending."""
-    from .grab_clock_contract import TOLERANCE_NS, database_id, valid_bounds
     evidence = OrderGrabRoundOpeningEvidence.objects.filter(round=round_).first()
+    return provisional_lower(evidence)
+
+
+def provisional_lower(evidence, *, identity=None):
+    from .grab_clock_contract import TOLERANCE_NS, database_id, valid_bounds
     if (not evidence or evidence.state != 'PREPARED' or evidence.reason or not evidence.upper_at
             or not evidence.activation_lower_at or not isinstance(evidence.activation_clock_evidence, dict)):
         raise ValueError('抢单轮次激活提交证据待核对')
-    identity = database_id()
+    identity = database_id() if identity is None else identity
     sample = evidence.activation_clock_evidence.get('lower')
     if (not valid_bounds(evidence.lower_at, evidence.upper_at, evidence.clock_evidence, identity=identity)
             or not isinstance(sample, dict) or sample.get('database_identity') != identity
@@ -181,8 +205,46 @@ def provisional_opening_lower(round_):
     return evidence.activation_lower_at - timedelta(microseconds=TOLERANCE_NS // 1000)
 
 
-def cutoff_bounds(round_, phase):
+def _verified_reopen(previous, cutoff, reopened_at, *, lock):
+    from .grab_cutoff_watermark import verified_reopen_seal
+    from .models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
+    state_model = OrderGrabSingleRoundState if previous.pool.required_provider_count == 1 else OrderGrabTeamRoundState
+    states = state_model.objects.filter(round=previous)
+    state = (states.select_for_update() if lock else states).first()
+    if not state or state.status != 'REOPENED':
+        return None
+    return verified_reopen_seal(previous, cutoff=cutoff, reopened_at=reopened_at, lock=lock)
+
+
+def _sealed_reopen_lower(previous, reopened, evidence, *, cutoff, total_lower, read_seal):
+    if (not reopened.simultaneous_visibility or reopened.opened_at <= cutoff
+            or not reopened.opened_at <= evidence.lower_at <= evidence.upper_at <= evidence.activation_lower_at):
+        return None
+    mark = read_seal(previous, cutoff, reopened.opened_at)
+    if not mark:
+        return None
+    precision = timedelta(microseconds=mark.precision_us)
+    if reopened.opened_at + precision >= total_lower:
+        return None
+    # The order lock places this round after the original seal, even if the
+    # expanded activation interval overlaps the preceding deadline.
+    return mark.observed_at - precision
+
+
+def cutoff_bounds(round_, phase, *, lock=False):
     """Derive earliest/latest cutoff from real opening commit bounds."""
+    def read_rounds():
+        rounds = round_.pool.rounds.filter(number__lte=round_.number).order_by('number')
+        return list(rounds.select_for_update() if lock else rounds)
+
+    return cutoff_bounds_from_rounds(
+        round_, phase, read_rounds,
+        read_opening=lambda row: _observed_opening(row, lock=lock),
+        read_seal=lambda previous, cutoff, reopened_at: _verified_reopen(previous, cutoff, reopened_at, lock=lock),
+    )
+
+
+def cutoff_bounds_from_rounds(round_, phase, read_rounds, *, read_opening, read_seal):
     if phase not in ('OPEN', 'PARKED'):
         raise ValueError('抢单轮次状态待核对')
     pool = round_.pool
@@ -191,16 +253,21 @@ def cutoff_bounds(round_, phase):
             or type(pool.window_seconds) is not int or not 1 <= pool.window_seconds <= 86400
             or pool.original_total_deadline != pool.opened_at + timedelta(minutes=timeout_minutes)):
         raise ValueError('抢单总等待快照待核对')
-    rows = list(pool.rounds.filter(number__lte=round_.number).order_by('number'))
+    rows = read_rounds()
     if len(rows) != round_.number or not rows or rows[-1].pk != round_.pk:
         raise ValueError('抢单轮次历史待核对')
-    total_lower = total_upper = previous_deadline_upper = None
+    total_lower = total_upper = deadline_upper = previous = None
     for number, row in enumerate(rows, 1):
         if row.number != number:
             raise ValueError('抢单轮次历史待核对')
-        lower, upper = opening_bounds(row)
-        if previous_deadline_upper is not None and lower < previous_deadline_upper:
-            raise ValueError('重开时间与上轮截止区间交叉，待核对')
+        evidence = read_opening(row)
+        lower, upper = _opening_interval(evidence)
+        if previous is not None and lower < deadline_upper:
+            sealed_lower = _sealed_reopen_lower(previous, row, evidence, cutoff=deadline_upper,
+                                               total_lower=total_lower, read_seal=read_seal)
+            if sealed_lower is None or sealed_lower > upper:
+                raise ValueError('重开时间与上轮截止区间交叉，待核对')
+            lower = max(lower, sealed_lower)
         deadline_lower = lower + timedelta(seconds=pool.window_seconds)
         deadline_upper = upper + timedelta(seconds=pool.window_seconds)
         if number == 1:
@@ -209,11 +276,11 @@ def cutoff_bounds(round_, phase):
         else:
             total_lower = max(total_lower, deadline_lower)
             total_upper = max(total_upper, deadline_upper)
-        previous_deadline_upper = deadline_upper
+        previous = row
     return (deadline_lower, deadline_upper) if phase == 'OPEN' else (total_lower, total_upper)
 
 
-def classify_window(*, lower, upper, precision_us, round_, phase, cancellation=False):
+def classify_window(*, lower, upper, precision_us, round_, phase, cancellation=False, lock=False):
     """Compare a commit interval with a cutoff interval, preserving ambiguity."""
     from datetime import datetime
     if (not isinstance(lower, datetime) or lower.utcoffset() is None
@@ -221,8 +288,10 @@ def classify_window(*, lower, upper, precision_us, round_, phase, cancellation=F
             or type(precision_us) is not int or not 1 <= precision_us <= 1_000_000
             or type(cancellation) is not bool):
         raise ValueError('登记时间证据无效')
-    earliest, latest = cutoff_bounds(round_, phase)
+    earliest, latest = cutoff_bounds(round_, phase, lock=lock)
     quantum = timedelta(microseconds=precision_us)
+    if lower - quantum < round_.opened_at:
+        return 'REVIEW', 'CROSSED_OPENING'
     if (upper + quantum <= earliest if cancellation else upper + quantum < earliest):
         return 'BEFORE', ''
     if (lower - quantum > latest if cancellation else lower - quantum >= latest):

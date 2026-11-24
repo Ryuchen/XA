@@ -997,21 +997,62 @@ class PointsFundingPlatformRecoveryTests(TestCase):
         self.assertEqual(self.verify().status_code, 200)
         self.assertEqual(self.fund().status_code, 200)
 
+    def test_failed_settlement_wakeup_keeps_the_committed_funding_receipt(self):
+        from kombu.exceptions import OperationalError
+        from orders.models import OrderPointsFundingAction, OrderPointsFundingAllocation
+        from stores.models import PlatformAuditEvent, PlatformPointsFundingOperation
+
+        self.assertEqual(self.verify().status_code, 200)
+
+        def broker_unavailable(**kwargs):
+            operation = PlatformPointsFundingOperation.objects.get()
+            self.assertIsNotNone(operation.completed_at)
+            with store_context(self.second):
+                action = OrderPointsFundingAction.objects.get(pk=operation.tenant_action_id)
+                self.assertEqual(action.allocation.funding_order_id, self.order.pk)
+            raise OperationalError('isolated settlement broker unavailable')
+
+        callback = 'engagement.tasks.process_funded_order.apply_async'
+        with (patch(callback, side_effect=broker_unavailable) as publish,
+              self.assertLogs('stores.platform_points_funding', 'ERROR') as errors):
+            with self.captureOnCommitCallbacks(using='default', execute=True):
+                funded = self.fund()
+                publish.assert_not_called()
+            publish.assert_called_once_with(args=[self.order.pk], headers={'store_slug': 'xinan'},
+                                            retry=False, ignore_result=True)
+        self.assertEqual(funded.status_code, 200, funded.data)
+        self.assertEqual(funded.data['data']['status'], 'COMPLETED')
+        self.assertIn('awaits the periodic settlement scan', errors.output[0])
+
+        with patch(callback), self.captureOnCommitCallbacks(using='default', execute=True):
+            replayed = self.fund()
+        self.assertEqual(replayed.data, funded.data)
+        self.assertEqual(PlatformAuditEvent.objects.filter(action='points_funding.allocate_completed').count(), 1)
+        with store_context(self.second):
+            self.assertEqual((OrderPointsFundingAction.objects.count(), OrderPointsFundingAllocation.objects.count()), (1, 1))
+            self.assertFalse(self.order.transactions.filter(tx_type='INCOME').exists())
+
     def test_tenant_commit_directory_failure_replays_exactly_once(self):
         from django.db import DatabaseError
+        from stores import platform_points_funding
         from stores.models import PlatformAuditEvent, PlatformPointsFundingOperation
         from stores import test_platform_pass_repayment as platform_tests
         from orders.models import OrderPointsFundingAction, OrderPointsFundingAllocation
         self.assertEqual(self.verify().status_code, 200)
-        original = PlatformAuditEvent.objects.create
-        def fail_completion(**kwargs):
-            if kwargs.get('action') == 'points_funding.allocate_completed':
-                raise DatabaseError('simulated directory failure')
-            return original(**kwargs)
-        with patch('stores.platform_points_funding.PlatformAuditEvent.objects.create', side_effect=fail_completion):
+        enqueue = platform_points_funding._enqueue_settlement_after_commit
+
+        def fail_before_commit(slug, order_id):
+            enqueue(slug, order_id)
+            raise DatabaseError('simulated directory failure before commit')
+
+        publish_path = 'engagement.tasks.process_funded_order.apply_async'
+        with (patch.object(platform_points_funding, '_enqueue_settlement_after_commit', side_effect=fail_before_commit),
+              patch(publish_path) as publish, self.captureOnCommitCallbacks(using='default', execute=True)):
             failed = self.fund()
+        publish.assert_not_called()
         self.assertEqual((failed.status_code, failed.data['errorCode']), (503, 'POINTS_FUNDING_UNCERTAIN'))
         self.assertIsNone(PlatformPointsFundingOperation.objects.get().tenant_action_id)
+        self.assertFalse(PlatformAuditEvent.objects.filter(action='points_funding.allocate_completed').exists())
         with store_context(self.second):
             self.assertEqual((OrderPointsFundingAction.objects.count(), OrderPointsFundingAllocation.objects.count()), (1, 1))
         reconciliation = platform_tests.PlatformPassRepaymentTests.reconciliation(self)
@@ -1023,14 +1064,19 @@ class PointsFundingPlatformRecoveryTests(TestCase):
                                        HTTP_AUTHORIZATION='Bearer ' + self.token)
         self.assertEqual(cannot_void.data['errorCode'], 'RECOVERY_EVIDENCE_EXISTS')
         _, other_token = platform_tests.PlatformPassRepaymentTests.other_finance(self)
-        recovered = self.client.post(recovery_url + '/recover', {}, format='json',
-                                     HTTP_AUTHORIZATION='Bearer ' + other_token)
+        with patch(publish_path) as publish, self.captureOnCommitCallbacks(using='default', execute=True):
+            recovered = self.client.post(recovery_url + '/recover', {}, format='json',
+                                         HTTP_AUTHORIZATION='Bearer ' + other_token)
+            publish.assert_not_called()
+        publish.assert_called_once_with(args=[self.order.pk], headers={'store_slug': 'xinan'},
+                                        retry=False, ignore_result=True)
         self.assertEqual(recovered.status_code, 200, recovered.data)
         self.assertEqual(recovered.data['data']['status'], 'COMPLETED')
         replay = self.fund()
         self.assertEqual(replay.status_code, 200, replay.data)
+        self.assertEqual(replay.data['data'], recovered.data['data'])
         self.assertEqual(self.fund().data, replay.data)
-        self.assertTrue(PlatformAuditEvent.objects.filter(action='points_funding.allocate_recovered').exists())
+        self.assertEqual(PlatformAuditEvent.objects.filter(action='points_funding.allocate_recovered').count(), 1)
         with store_context(self.second):
             self.assertEqual((OrderPointsFundingAction.objects.count(), OrderPointsFundingAllocation.objects.count()), (1, 1))
 
@@ -1396,6 +1442,7 @@ class PointsSettlementTwoStoreTests(TestCase):
         with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
             with store_context(self.second):
                 assignment = OrderProvider.objects.get(order_id=self.order.pk)
+                get_wallet(user=assignment.provider, account=assignment.provider_account)
                 player = APIClient(HTTP_HOST='xa.esports.club',
                     HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(assignment.provider_account)[0])
                 for action, key in (('start', 'entry_image'), ('complete', 'completion_image')):
@@ -1407,16 +1454,67 @@ class PointsSettlementTwoStoreTests(TestCase):
                 self.assertEqual(result.data['code'], 0, result.data)
                 result = player.post(f'/api/wallet/reports/{report.pk}/submit/', {}, format='json')
                 self.assertEqual(result.data['code'], 0, result.data)
-                admin = make_console_user(['report:view', 'report:audit'])
+                admin = make_console_user(['dashboard:view', 'report:view', 'report:audit'])
                 account = get_or_create_account_for_legacy_user(admin)
                 admin.admin_membership.account = account; admin.admin_membership.save(update_fields=['account'])
                 reviewer = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+                report_url = f'/api/admin/reports/{report.pk}/'
+                money_fields = ('amount', 'commission_rate', 'expected_income', 'payout_amount')
+
+                def review_queue():
+                    rows = reviewer.get('/api/admin/reports/', {
+                        'status': 'PENDING', 'order_blocked': 1, 'exclude_direct_test': 1,
+                    }).data['data']['list']
+                    stats = reviewer.get('/api/admin/dashboard/stats').data['data']
+                    return [row['id'] for row in rows], stats['pending_report_order_blocked_total']
+
+                with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, SERVICE_POINTS_REPORT_TESTING=False,
+                                    SERVICE_POINTS_SETTLEMENT_TESTING=False, SERVICE_ORDINARY_FUNDING_TESTING=False),
+                      patch('orders.points_business_access.configured', return_value=True)):
+                    pending = reviewer.get(report_url).data['data']
+                    self.assertEqual([pending[key] for key in money_fields], [6000, 20, 4800, None])
+                    self.assertEqual(pending['order_approval_block_reason'], '')
+                    self.assertEqual(review_queue(), ([], 0))
+                    for field, value, message in (
+                        ('amount', 6001, '待核对'), ('completion_image', '', '报单缺少：结单截图'),
+                    ):
+                        with self.subTest(field=field), transaction.atomic():
+                            ProviderReport.objects.filter(pk=report.pk).update(**{field: value})
+                            blocked = reviewer.get(report_url).data['data']
+                            self.assertIn(message, blocked['order_approval_block_reason'])
+                            self.assertEqual(review_queue(), ([report.pk], 1))
+                            with patch('wallet.reporting.formal_points_report_fields') as display_read:
+                                rejected = reviewer.post(report_url + 'approve/?order_blocked=1', {}, format='json')
+                                self.assertEqual(rejected.data['code'], 400)
+                            display_read.assert_not_called()
+                            self.assertEqual(ProviderReport.objects.get(pk=report.pk).status, 'PENDING')
+                            transaction.set_rollback(True)
                 approved = reviewer.post(f'/api/admin/reports/{report.pk}/approve/', {}, format='json')
                 self.assertEqual(approved.data['code'], 0, approved.data)
                 report.refresh_from_db()
                 matured = report.submitted_at + timedelta(hours=73)
                 shown = player.get('/api/wallet/reports/').data['data'][0]
                 self.assertTrue(shown['platform_funding_insufficient'])
+                # Exercise the formal GET while leaving the SQLite write
+                # fixture unchanged. Only the MySQL environment check is replaced.
+                with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, SERVICE_POINTS_REPORT_TESTING=False,
+                                    SERVICE_POINTS_SETTLEMENT_TESTING=False, SERVICE_ORDINARY_FUNDING_TESTING=False),
+                      patch('orders.points_business_access.configured', return_value=True)):
+                    formal = player.get('/api/wallet/reports/', {'order_id': self.order.pk}).data['data'][0]
+                    self.assertEqual((formal['id'], formal['amount'], formal['commission_rate'],
+                                      formal['expected_income'], formal['payout_amount']),
+                                     (report.pk, 6000, 20, 4800, 4800))
+                    self.assertIs(formal['platform_funding_insufficient'], True)
+                    console = reviewer.get(report_url).data['data']
+                    self.assertEqual([console[key] for key in money_fields], [6000, 20, 4800, 4800])
+                    self.assertIs(console['platform_funding_insufficient'], True)
+                    with transaction.atomic():
+                        ProviderReport.objects.filter(pk=report.pk).update(payout_amount=4801)
+                        damaged = player.get('/api/wallet/reports/', {'order_id': self.order.pk}).data['data'][0]
+                        for field in ('amount', 'commission_rate', 'expected_income', 'payout_amount',
+                                      'platform_funding_insufficient'):
+                            self.assertIsNone(damaged[field], field)
+                        transaction.set_rollback(True)
                 profile = assignment.provider.escort_profile
                 deposit_before = profile.deposit_paid
                 with patch('django.utils.timezone.now', return_value=matured):
@@ -1599,6 +1697,7 @@ class PointsSettlementTwoStoreTests(TestCase):
         from orders.points_redemption_config import current_rules
         from orders.tests.factories import make_boss_type, make_console_user
         from orders.tests.test_release_flow import screenshot
+        from stores.db import transaction
         from wallet.models import ProviderReport, Wallet
         with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media), store_context(self.second):
             buyer, inviter = make_user(), make_user()
@@ -1644,6 +1743,19 @@ class PointsSettlementTwoStoreTests(TestCase):
             reviewer = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
             result = reviewer.post(f'/api/admin/reports/{report.pk}/approve/', {}, format='json')
             self.assertEqual(result.data['code'], 0, result.data)
+
+            def assert_formal_display(status, settled_at):
+                # Replace only the MySQL prerequisite so SQLite can exercise
+                # the production settlement reads with the test gate closed.
+                with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, SERVICE_POINTS_SETTLEMENT_TESTING=False,
+                                    SERVICE_ORDINARY_FUNDING_TESTING=False),
+                      patch('orders.points_business_access.configured', return_value=True)):
+                    rows = player.get('/api/wallet/reports/').data['data']
+                    self.assertEqual([(row['settlement_status'], row['settled_at']) for row in rows],
+                                     [(status, settled_at)])
+                    detail = player.get(f'/api/orders/orders/{order.pk}/').data['data']
+                    self.assertEqual(detail['settlement_status'], status)
+
             with patch('django.utils.timezone.now', return_value=report.submitted_at + timedelta(hours=73)):
                 self.assertFalse(process_order(order.pk))
                 settlement = OrderPointsSettlement.objects.get(order=order)
@@ -1655,11 +1767,22 @@ class PointsSettlementTwoStoreTests(TestCase):
                 self.assertEqual((lot.account_id, lot.kind, lot.remaining), (inviter_account.pk, 'PREPAID', 597))
                 self.assertEqual(settlement.inviter_transaction.amount, 597)
                 self.assertEqual(settlement.store_transaction.amount, 573)
-                self.assertEqual(player.get('/api/wallet/reports/').data['data'][0]['settlement_status'], 'SETTLED')
+                row = player.get('/api/wallet/reports/').data['data'][0]
+                self.assertEqual(row['settlement_status'], 'SETTLED')
+                self.assertIsNotNone(row['settled_at'])
+                assert_formal_display('SETTLED', row['settled_at'])
                 self.assertFalse(process_order(order.pk))
                 self.assertEqual(PointFundingLot.objects.filter(pk=lot.pk).count(), 1)
+                with transaction.atomic():
+                    Transaction.objects.create(order=order, wallet=inviter_wallet, amount=1,
+                                               tx_type=Transaction.TxType.INCOME, remark=f'订单收入：{order.order_no}',
+                                               balance_before=inviter_wallet.balance,
+                                               balance_after=inviter_wallet.balance + 1)
+                    assert_formal_display('REVIEW', None)
+                    transaction.set_rollback(True)
                 PointFundingLot.objects.filter(pk=lot.pk).update(kind='GIFT')
                 self.assertEqual(player.get('/api/wallet/reports/').data['data'][0]['settlement_status'], 'REVIEW')
+                assert_formal_display('REVIEW', None)
 
     @override_settings(SERVICE_POINTS_CONSUMPTION_TESTING=True)
     @skipUnless(os.environ.get('XA_POINTS_GRAB_RECEIPT_FORMAL') == '1',

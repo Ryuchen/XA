@@ -3,12 +3,13 @@ import os
 from unittest import skipUnless
 from io import StringIO
 from urllib.parse import parse_qs, urlsplit
-import uuid
+from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
+from django.core import signing
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
@@ -18,7 +19,6 @@ from club_accounts.tokens import issue_account_tokens
 
 from .context import current_store, resolve_store, store_context
 from .hosts import request_store_slug, store_entry_url
-from .media import encode_login_scene
 from .models import Store, StorePlatformGrant
 from .permissions import may_manage_stores
 from .tests_foundation import admin
@@ -30,7 +30,7 @@ def xinan_store():
         boss_url='http://xa.esports.club/boss', provider_url='http://xa.esports.club/player')
 
 
-class BoundStoreLinkTest(SimpleTestCase):
+class BoundStoreLinkTest(TestCase):
     def test_bound_entries_remove_store_hints_and_keep_path_route_and_other_query(self):
         url = store_entry_url('https://sl.esports.club/boss?campaign=qa&store=xinan#/orders', 'shenglang')
         self.assertEqual(url, 'https://sl.esports.club/boss?campaign=qa#/orders')
@@ -42,8 +42,8 @@ class BoundStoreLinkTest(SimpleTestCase):
     def test_integration_base_is_rebound_to_the_current_store_origin(self):
         self.assertEqual(store_entry_url('https://sl.esports.club/player#/orders', 'xinan'),
                          'https://xa.esports.club/player#/orders')
-        self.assertEqual(parse_qs(urlsplit(store_entry_url('http://localhost:13101/#/home', 'xinan')).query),
-                         {'store': ['xinan']})
+        self.assertEqual(store_entry_url('http://localhost:13101/#/home', 'xinan'),
+                         'http://xa.esports.club/#/home')
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
@@ -59,7 +59,8 @@ class BoundStoreLinkTest(SimpleTestCase):
                 request_store_slug('sl.esports.club', header, query)
 
 
-@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'],
+                   STORE_DATABASE_ALIASES=('store_b',))
 class BoundStoreHttpTest(TestCase):
     databases = {'default', 'store_b'}
 
@@ -78,6 +79,7 @@ class BoundStoreHttpTest(TestCase):
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_host_selects_its_database_without_a_selector_or_existing_login(self):
+        original = current_store()
         for host, store in [('sl.esports.club', self.first), ('xa.esports.club', self.second)]:
             with self.subTest(host=host):
                 response = self.client.get('/api/stores/current/', HTTP_HOST=host)
@@ -89,9 +91,9 @@ class BoundStoreHttpTest(TestCase):
                 response = self.client.get('/api/users/me/', HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer ' + token)
                 self.assertEqual(response.status_code, 200, response.data)
                 self.assertEqual(response.data['data']['nickname'], store.name + '老板')
-        self.assertIsNone(current_store())
+        self.assertIs(current_store(), original)
 
-    def test_query_header_duplicates_and_login_scenes_cannot_override_the_host(self):
+    def test_query_and_header_selectors_cannot_override_the_host(self):
         for path, headers in [('/api/stores/current/?store=xinan', {}),
                               ('/api/stores/current/', {'HTTP_X_STORE_SLUG': 'xinan'}),
                               ('/api/stores/current/?store=shenglang&store=xinan', {}),
@@ -99,14 +101,55 @@ class BoundStoreHttpTest(TestCase):
                               ('/api/stores/current/?store=', {})]:
             with self.subTest(path=path, headers=headers):
                 self.assertEqual(self.client.get(path, HTTP_HOST='sl.esports.club', **headers).status_code, 400)
-        with store_context(self.second):
-            scene = encode_login_scene(uuid.uuid4())
-        response = self.client.post('/api/users/web-login/session/', {'ticket': scene},
-            format='json', HTTP_HOST='sl.esports.club')
-        self.assertEqual(response.status_code, 400)
         response = self.client.get('/api/stores/current/', HTTP_HOST='sl.esports.club',
                                    HTTP_X_FORWARDED_HOST='xa.esports.club')
         self.assertEqual(response.data['data']['slug'], 'shenglang')
+
+    @override_settings(DEBUG=True, WECHAT_H5_APPID='wx-test', WECHAT_H5_SECRET='test-secret',
+        WECHAT_H5_ALLOWED_ORIGINS=['https://sl.esports.club', 'https://xa.esports.club'])
+    def test_h5_poll_ticket_is_validated_in_the_host_store(self):
+        start_url = '/api/users/h5-login/start/'
+        status_url = '/api/users/h5-login/status/'
+        for own_host, other_host, own_store, other_store in (
+            ('sl.esports.club', 'xa.esports.club', self.first, self.second),
+            ('xa.esports.club', 'sl.esports.club', self.second, self.first),
+        ):
+            with self.subTest(host=own_host):
+                started = self.client.post(start_url, {
+                    'audience': 'boss', 'return_origin': 'https://' + own_host,
+                }, format='json', HTTP_HOST=own_host)
+                self.assertEqual(started.status_code, 200)
+                flow = started.data['data']
+                self.assertEqual(flow['store']['slug'], own_store.slug)
+                proof = {'ticket': flow['ticket'], 'poll_token': flow['poll_token']}
+                pending = self.client.get(status_url, proof, HTTP_HOST=own_host)
+                self.assertEqual(pending.status_code, 200, pending.content)
+                self.assertEqual(pending['X-Store-Slug'], own_store.slug)
+                self.assertEqual(pending.data['data'], {'status': 'PENDING'})
+
+                for host, store, submitted in (
+                    (own_host, own_store, {**proof, 'poll_token': 'wrong-secret'}),
+                    (own_host, own_store, {**proof, 'ticket': 'malformed'}),
+                    (other_host, other_store, proof),
+                ):
+                    denied = self.client.get(status_url, submitted, HTTP_HOST=host)
+                    self.assertEqual(denied.status_code, 400)
+                    self.assertEqual(denied['X-Store-Slug'], store.slug)
+                    self.assertEqual(denied.data['errorCode'], 'WECHAT_H5_INVALID')
+                    self.assertNotIn('data', denied.data)
+
+                callback = '/api/users/h5-login/callback/'
+                state = parse_qs(urlsplit(flow['authorization_url']).query)['state'][0]
+                callback_on_other_host = self.client.get(callback, {'state': state}, HTTP_HOST=other_host)
+                self.assertEqual(callback_on_other_host.status_code, 400)
+                self.assertNotIn('X-Store-Slug', callback_on_other_host)
+                expired_at = timezone.now().timestamp() - 601
+                with patch('django.core.signing.time.time', return_value=expired_at):
+                    expired = signing.dumps({'store_slug': own_store.slug}, salt='xa.wechat-h5.login.v1')
+                for rejected_state in (state + 'tampered', expired):
+                    invalid = self.client.get(callback, {'state': rejected_state}, HTTP_HOST=own_host)
+                    self.assertEqual(invalid.status_code, 400)
+                    self.assertNotIn('X-Store-Slug', invalid)
 
     def test_unknown_domains_never_accept_valid_store_hints(self):
         for host in ('unknown.esports.club', 'nested.sl.esports.club', 'esports.club'):
@@ -147,7 +190,8 @@ class BoundStoreHttpTest(TestCase):
         self.assertEqual(response.data['data']['provider_url'], 'http://xa.esports.club/player')
 
 
-@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'],
+                   STORE_DATABASE_ALIASES=('store_b',))
 class PlatformSuperAdministratorTest(TestCase):
     databases = {'default', 'store_b'}
 
@@ -215,7 +259,9 @@ class PlatformSuperAdministratorTest(TestCase):
         self.assertFalse(may_manage_stores(account))
 
 
-@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'],
+                   CHANNEL_LAYERS={'default': {'BACKEND': 'stores.channels.StoreChannelLayer'}},
+                   STORE_CHANNEL_LAYER={'BACKEND': 'channels.layers.InMemoryChannelLayer'})
 class BoundStoreWebsocketTest(TransactionTestCase):
     databases = {'default', 'store_b'}
 

@@ -13,6 +13,9 @@ def _resolve_addon_locked(order, event, *, request_id, actor_id, outcome, reason
     source_id = event.event_key.removeprefix('addon:').removesuffix(':achievement')
     if not source_id.isdigit() or event.event_key != f'addon:{int(source_id)}:achievement':
         raise ValidationError('加购成就来源待核对')
+    if outcome == 'ALLOW':
+        from orders.financial_lock import lock_existing_order_money
+        lock_existing_order_money()
     addon = (OrderAddonConsumption.objects.select_for_update().select_related(
         'payment__intent', 'payment__buyer_transaction__wallet').filter(pk=int(source_id)).first())
     evidence = event.license_evidence
@@ -36,8 +39,6 @@ def _resolve_addon_locked(order, event, *, request_id, actor_id, outcome, reason
         return AchievementLicenseReview.objects.create(event=event, request_id=request_id,
             platform_actor_id=actor_id, outcome=outcome, reason=reason, granted_ids=[])
 
-    from orders.financial_lock import lock_existing_order_money
-    lock_existing_order_money()
     from orders.addon_payment import verify_receipt
     verify_receipt(payment)
     # The immutable aggregate has no source list. Prove the first add-on's
@@ -155,6 +156,9 @@ def resolve_locked(event_id, *, request_id, actor_id, outcome, reason):
         return review
     if AchievementLicenseReview.objects.filter(request_id=request_id).exists():
         raise ValidationError('请求编号已用于其他成就核对')
+    if outcome == 'ALLOW':
+        from stores.certificate_admission import require_original_certificate
+        require_original_certificate(event.license_evidence)
     if event.sales_snapshot and outcome == 'ALLOW':
         # A third-round points transfer requires the same finalized manifest
         # and funding verifier as settlement, not merely a sales snapshot.

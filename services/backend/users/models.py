@@ -390,9 +390,17 @@ class EscortProfile(models.Model):
             return True
         return self.level_rank >= required.sort_order
 
+    def open_refund_deficits(self, *, lock=False):
+        from wallet.models import RefundDepositDeficit
+        rows = RefundDepositDeficit.objects.filter(account_id=self.account_id, remaining__gt=0)
+        if lock:
+            rows = rows.select_for_update().order_by('created_at', 'pk')
+        return list(rows.values('profile_id', 'remaining', 'created_at'))
+
     def order_acceptance_error(self, service=None, *, club_rules_enabled=None, provider_gender="ANY", allow_refund_recovery=False,
                                refund_recovery_order_id=None, deposit_required_override=None, reservation_confirmed_at=None,
-                               lock_refund_recovery=False, require_current_schedule=True):
+                               lock_refund_recovery=False, require_current_schedule=True, refund_deficits=None,
+                               recovery_offer_read=None):
         """老板指定、客服派单和抢单共用准入；BUSY 不替代并发名额校验。"""
         account = self.account if self.account_id else None
         if (account and (not account.is_active or not account.can_login)) or not self.user.is_active:
@@ -413,12 +421,16 @@ class EscortProfile(models.Model):
         from wallet.refund_deposit import protection_enabled
         recovery_eligible = False
         if protection_enabled() and self.account_id:
-            from wallet.models import RefundDepositDeficit
-            deficit_query = RefundDepositDeficit.objects.filter(account_id=self.account_id, remaining__gt=0)
-            if lock_refund_recovery:
-                deficit_query = deficit_query.select_for_update().order_by('created_at', 'pk')
-            deficits = list(deficit_query.values('profile_id', 'remaining', 'created_at'))
-            if deficits:
+            deficits = refund_deficits
+            if lock_refund_recovery or reservation_confirmed_at is not None or refund_recovery_order_id is not None:
+                recovery_offer_read = None
+            if recovery_offer_read is None:
+                if lock_refund_recovery or deficits is None:
+                    deficits = self.open_refund_deficits(lock=lock_refund_recovery)
+                has_deficit = bool(deficits)
+            else:
+                has_deficit = recovery_offer_read.has_account_deficit
+            if has_deficit:
                 if (reservation_confirmed_at is not None
                         and all(row['profile_id'] == self.pk and row['created_at'] > reservation_confirmed_at
                                 for row in deficits)
@@ -432,7 +444,8 @@ class EscortProfile(models.Model):
                 else:
                     from wallet.refund_recovery_order import eligibility_error
                     reason = eligibility_error(self, existing_order_id=refund_recovery_order_id,
-                                               lock_current=lock_refund_recovery)
+                                               lock_current=lock_refund_recovery, offer_read=recovery_offer_read,
+                                               deposit_required_override=deposit_required_override)
                     if reason:
                         return reason
                     recovery_eligible = True
@@ -460,8 +473,14 @@ class EscortProfile(models.Model):
 
     def wechat_acceptance_error(self):
         account = self.account if self.account_id else None
-        if not account or not account.is_openid_bound or not (account.openid or account.wechat_identities.exists()):
+        if not account or not account.is_openid_bound:
             return '请先绑定本人微信后接单'
+        if not account.openid:
+            has_identity = getattr(self, 'has_wechat_identity', None)
+            if has_identity is None:
+                has_identity = account.wechat_identities.exists()
+            if not has_identity:
+                return '请先绑定本人微信后接单'
         if not (self.wechat_avatar_legacy_exempt or self.wechat_avatar_verified_at):
             return '首次接单前请从本人微信获取头像'
         return ''

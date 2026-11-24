@@ -3,6 +3,9 @@ from contextvars import ContextVar
 
 from django.conf import settings
 
+from .dynamic_database import (discover_store_connection, ensure_store_connection,
+                               uses_dynamic_connection)
+
 
 _store = ContextVar('xa_current_store', default=None)
 
@@ -40,9 +43,8 @@ class store_context(ContextDecorator):
         self._tokens = []
 
     def __enter__(self):
-        from .dynamic_database import alias_for_slug, enabled, materialize
-        if enabled() and self.store is not None and self.store.database_alias == alias_for_slug(self.store.slug):
-            materialize(self.store.slug, expected_alias=self.store.database_alias)
+        if self.store is not None:
+            ensure_store_connection(self.store)
         self._tokens.append(_store.set(self.store))
         return self.store
 
@@ -50,6 +52,10 @@ class store_context(ContextDecorator):
         _store.reset(self._tokens.pop())
 
     async def __aenter__(self):
+        if (self.store is not None and uses_dynamic_connection(self.store)
+                and getattr(self.store, '_verified_database_fingerprint', None) is None):
+            from channels.db import database_sync_to_async
+            await database_sync_to_async(ensure_store_connection)(self.store)
         return self.__enter__()
 
     async def __aexit__(self, *exc):
@@ -71,7 +77,7 @@ def _fetch_store(slug):
 
 
 def resolve_store(slug=None, *, require_active=True, allow_cached=False):
-    from django.db import DatabaseError, transaction
+    from django.db import DatabaseError, InterfaceError, transaction
 
     slug = default_store_slug() if slug is None else slug
     cached = False
@@ -79,7 +85,9 @@ def resolve_store(slug=None, *, require_active=True, allow_cached=False):
         # A failed control read must not poison a caller's outer transaction.
         with transaction.atomic(using='default'):
             store = _fetch_store(slug)
-    except DatabaseError:
+            if store is not None:
+                discover_store_connection(store)
+    except (DatabaseError, InterfaceError):
         if not getattr(settings, 'ISOLATED_CONTROL_PLANE', False) or not allow_cached:
             raise
         from .routing_snapshot import lookup
@@ -87,12 +95,13 @@ def resolve_store(slug=None, *, require_active=True, allow_cached=False):
         if store is None:
             raise
         cached = True
+    except ValueError as exc:
+        raise StoreUnavailable('门店数据库尚未配置，请联系平台管理员') from exc
     if store is None:
         raise StoreNotFound('门店不存在，请检查门店链接')
-    from .dynamic_database import alias_for_slug, enabled, materialize
-    if enabled() and store.database_alias == alias_for_slug(store.slug):
+    if cached:
         try:
-            materialize(store.slug, expected_alias=store.database_alias)
+            ensure_store_connection(store)
         except ValueError as exc:
             raise StoreUnavailable('门店数据库尚未配置，请联系平台管理员') from exc
     if (not cached and getattr(settings, 'ISOLATED_CONTROL_PLANE', False)

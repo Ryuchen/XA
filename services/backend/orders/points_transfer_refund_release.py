@@ -13,7 +13,7 @@ from stores.db import transaction
 from .models import OrderPointsFundingAllocation, OrderPointsFundingRelease, OrderPointsFundingReleaseEvidence
 from .points_checkout_test import require_isolated_checkout
 from .points_funding_allocation import PointsFundingAllocationError, plan_release
-from .points_funding_release import _digest
+from .points_funding_release import _digest, first_release_hash_matches
 from .points_negotiation_preview import funding_after_refund
 from .points_transfer_refund_evidence import reconstruct_funding_locked, verify_transfer_revisions_after_refund_locked
 
@@ -75,9 +75,14 @@ def _add_addon_history(posting, main):
                        .select_related('payment', 'proposal', 'order').order_by('created_at', 'pk'))
         if len({item.created_at for item in refunds}) != len(refunds):
             raise ValidationError('此前加购退款事件顺序无法区分')
+        from .points_returned_addon_refund import before_first_main_refund, verify_funding
         try:
-            for item in refunds:
-                addon_refund_facts(item, read_receipt_id=witness, _event_history=False)
+            returned = before_first_main_refund(order) if refunds else None
+            if returned:
+                verify_funding(order, returned, receipt_id=witness)
+            else:
+                for item in refunds:
+                    addon_refund_facts(item, read_receipt_id=witness, _event_history=False)
         except Exception as exc:
             from django.core.exceptions import ValidationError as DjangoValidationError
             if isinstance(exc, (DjangoValidationError, ValidationError)):
@@ -188,9 +193,7 @@ def _verify_release_from_verified_facts(evidence, posting, prior, original):
             or any(type(value) is not int for value in item)
             or item[0] <= 0 or item[1] <= 0 or item[2] <= 0 or not 0 <= item[3] <= item[1] for item in items)
             or len({item[0] for item in items}) != len(items) or items != sorted(items, key=lambda item: item[0])
-            or evidence.evidence_hash != _digest(posting, items, evidence.original_provider_income,
-                None, evidence.expected_release, evidence.addon_funding_snapshot,
-                evidence.prior_addon_release_snapshot)):
+            or not first_release_hash_matches(evidence, posting)):
         raise ValidationError('转单退款补资释放快照异常')
     owner = Q(redemption__order=order) | Q(service_order=order)
     allocations = list(OrderPointsFundingAllocation.objects.select_for_update().filter(
@@ -274,11 +277,11 @@ def record_release_locked(posting, calculation):
         expected_release=actual.release_units, addon_funding_snapshot=addon_snapshot,
         prior_addon_release_snapshot=prior_addon,
         evidence_hash=_digest(posting, items, original.provider_income_units, None, actual.release_units,
-                              addon_snapshot, prior_addon))
+                              addon_snapshot, prior_addon, sort_keys=True))
     OrderPointsFundingRelease.objects.bulk_create([OrderPointsFundingRelease(posting=posting,
         allocation_id=part.allocation_id, amount=part.amount) for part in parts])
-    verified = verify_release_locked(evidence, _skip_usage=True)
-    _usage_scope_locked(evidence, verify_ledger=False)
+    # Checking the original allocations reads the whole receipt ledger, which
+    # must already include events for the release rows written in this transaction.
     from .points_transfer_refund_access import permits
     if permits(order, phase='refund') or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_RECEIPT_USAGE_TESTING', False):
         from users.receipt_usage_sources import record_transfer_refund_release_locked as record_usage, verify_allocations_locked
@@ -290,4 +293,6 @@ def record_release_locked(posting, calculation):
                 touched.add(row.allocation.receipt_id)
         for receipt_id in sorted(touched):
             verify_allocations_locked(receipt_id)
+    verified = verify_release_locked(evidence, _skip_usage=True)
+    _usage_scope_locked(evidence, verify_ledger=False)
     return verified

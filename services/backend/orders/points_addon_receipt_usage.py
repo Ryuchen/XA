@@ -5,16 +5,67 @@ receipt lock, never acquire another order's locks from this module.
 """
 import hashlib
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
+from copy import deepcopy
 from dataclasses import asdict
 
 from django.conf import settings
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 
+from stores.context import current_store
 from stores.db import transaction
 from .models import (OrderAddonPayment, OrderOriginalShareTransfer, OrderPointsFundingAllocation,
                      OrderPrestartHandoff, OrderSegmentFinancialSnapshot)
+from .points_business_access import _scope as _points_scope
 from .points_checkout_test import require_isolated_checkout
+
+
+_history_reads = ContextVar('points_addon_history_reads', default=None)
+
+
+@contextmanager
+def reuse_history_locked(order, receipt_ids):
+    """Share historical facts while reading one locked order and its locked receipts."""
+    connection = transaction.get_connection()
+    if not connection.in_atomic_block or order._state.db != connection.alias:
+        raise RuntimeError('加购历史复用须在本单事务内执行')
+    state = (connection, tuple(connection.atomic_blocks), current_store(), _points_scope.get(),
+             order.pk, frozenset(receipt_ids), {})
+    token = _history_reads.set(state)
+    try:
+        yield
+    finally:
+        _history_reads.reset(token)
+
+
+def _history_scope(read_receipt_id, record):
+    state = _history_reads.get()
+    if state is None:
+        return None
+    connection, blocks, store, capability, locked_order_id, receipts, results = state
+    if (read_receipt_id not in receipts or record._state.db != connection.alias
+            or transaction.get_connection() is not connection or tuple(connection.atomic_blocks) != blocks
+            or current_store() is not store or _points_scope.get() != capability):
+        return None
+    return locked_order_id, results
+
+
+def _read_history(rebuild, record, *, read_receipt_id, _event_history):
+    scope = _history_scope(read_receipt_id, record)
+    if scope is None:
+        return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    locked_order_id, results = scope
+    order_id = record.order_id if rebuild is _refund_facts else record.intent.order_id
+    if order_id != locked_order_id:
+        return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    key = (rebuild, record.pk, read_receipt_id, _event_history)
+    if key in results:
+        return deepcopy(results[key])
+    result = rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    results[key] = deepcopy(result)
+    return result
 
 
 def _prestart_snapshot_at(order, at):
@@ -72,7 +123,7 @@ def _prior_addon_events(order, at, *, read_receipt_id=None):
     return result
 
 
-def eligible(order):
+def eligible(order, *, payment_id=None):
     from .points_business_access import permits
     formal = permits(order, phase='refund', kind='addon')
     if not formal and not getattr(settings, 'SERVICE_POINTS_ADDON_REFUND_USAGE_TESTING', False):
@@ -112,11 +163,13 @@ def eligible(order):
     after_transfer_refund = (formal and transferred and transfer_permits(order, phase='refund')
                              and (order.refund_records.count() == 1 or transfer_followup))
     transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).order_by('pk'))
+    from .points_returned_addon_refund import returned_handover
     supported_handover = formal and (independent_refund_after_handovers(order, transfers)
                                      or first_handover_refund(order, transfers)
                                      or single_post_refund_handover(order, pending_payment_id=pending_scope)
                                      or post_refund_handover_history(order, pending_payment_id=pending_scope)
-                                     or post_transfer_history)
+                                     or post_transfer_history
+                                     or returned_handover(order, payment_id=payment_id, transfers=transfers))
     if formal and transfer_followup and postsecond_payment:
         supported_handover = supported_handover or OrderAddonFundingReleaseRun.objects.filter(
             handover__payment__intent__order=order, handover__status='ACCEPTED',
@@ -156,11 +209,18 @@ def eligible(order):
         if order.refund_records.count() == 2 and not payments.filter(handovers__isnull=False).exists():
             paid_plain_followup = OrderPointsFollowupFundingRevision.objects.filter(
                 posting__points_refund__redemption__order=order, paid_person__isnull=False).exists()
+    provider_count = order.providers.count()
+    providers_valid = provider_count in (1, 2) or (formal and transferred
+                                                   and 1 <= provider_count <= 3 * order.required_provider_count)
+    if (not providers_valid and formal and not transferred and not prestart_after_payment
+            and order.required_provider_count == 2 and OrderPrestartHandoff.objects.filter(order=order).exists()):
+        from .points_service_participation import service_snapshots
+        snapshots = service_snapshots(order)
+        providers_valid = len(snapshots) == 2 and len({row.segment.provider_account_id for row in snapshots}) == 2
     return bool(needs_integrated_processing(order) and not order.is_gift_snapshot and not order.source_order_id
         and (not order.refund_records.exists() or (formal and order.refund_records.count() == 1)
              or team_followup or transfer_followup or paid_plain_followup)
-        and (order.providers.count() in (1, 2) or (formal and transferred
-             and 1 <= order.providers.count() <= 3 * order.required_provider_count))
+        and providers_valid
         and bool(payment_rows)
         and (supported_handover or not payments.filter(handovers__isnull=False).exists())
         and (not transferred or (formal and (not order.refund_records.exists() or after_transfer_refund)))
@@ -168,7 +228,7 @@ def eligible(order):
         and (formal or order.addon_refunds.count() <= 1))
 
 
-def prelock(order):
+def prelock(order, *, payment_id=None):
     """The caller holds order and money locks; take receipts before wallet facts."""
     from .points_business_access import permits
     formal = permits(order, phase='refund', kind='addon')
@@ -190,13 +250,14 @@ def prelock(order):
     for receipt in receipts:
         if receipt.usage_version is not None:
             involved = True
-            if not eligible(order):
+            if not eligible(order, payment_id=payment_id):
                 from .models import OrderAddonFundingReleaseRun
                 if not OrderAddonFundingReleaseRun.objects.filter(refund__order=order,
                         points_addon_snapshot__isnull=False).exists():
                     raise ValidationError('该加购退款到账用途尚未接入')
             try:
-                isolated_allocation_state_locked(receipt)
+                with reuse_history_locked(order, {receipt.pk}):
+                    isolated_allocation_state_locked(receipt)
             except DjangoValidationError as exc:
                 raise ValidationError('加购退款到账用途凭证异常') from exc
     return involved
@@ -209,6 +270,10 @@ def digest(snapshot):
 
 def facts(refund, *, read_receipt_id=None, _event_history=True):
     """Rebuild the narrow frozen facts without SELECT FOR UPDATE."""
+    return _read_history(_refund_facts, refund, read_receipt_id=read_receipt_id, _event_history=_event_history)
+
+
+def _refund_facts(refund, *, read_receipt_id, _event_history):
     from .addon_payment import verify_receipt
     from .points_funding_plan import plan_service_funding, PointsFundingPlanError
     from .settlement import ProviderShare
@@ -650,6 +715,10 @@ def facts(refund, *, read_receipt_id=None, _event_history=True):
 
 def payment_facts(payment, *, read_receipt_id=None, _event_history=True):
     """Rebuild original main/add-on payment facts by receipt-local current read."""
+    return _read_history(_payment_facts, payment, read_receipt_id=read_receipt_id, _event_history=_event_history)
+
+
+def _payment_facts(payment, *, read_receipt_id, _event_history):
     from users.receipt_usage_sources import _require_current_unlocked_reads
     from .addon_payment import verify_receipt
     from .points_funding_plan import plan_service_funding, PointsFundingPlanError
