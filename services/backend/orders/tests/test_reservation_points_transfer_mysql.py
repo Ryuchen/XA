@@ -2458,6 +2458,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
         ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+    def test_paid_room_hands_over_existing_addon_before_confirmation(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(self.exercise_paid_room_addon_handover)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
     def test_room_addon_refund_before_confirmation_can_be_read_back_after_settlement(self):
         self.room_service = self.room_addon_purchase = True
         self.run_in_stores(self.exercise_room_addon_refund_before_confirmation)
@@ -2747,6 +2753,62 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
         self.join_replacement(replacement, change)
         return original, replacement, change
+
+    def exercise_paid_room_addon_handover(self):
+        payment = self.pay_consultation_addon(self.original, addon=self.room_addon)
+        former, replacement, transfer = self.transfer_and_enter_room()
+        path = f'/api/orders/orders/{self.order_id}/'
+        boss, staff = self.api(self.buyer), self.api(self.staff)
+        self.assertEqual((self.ok(former.get(path + 'room/'))['role'],
+                          self.ok(replacement.get(path + 'room/'))['id']), ('FORMER_PROVIDER', self.room_id))
+        wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
+        confirm = f'{path}room/completion-requests/{wait.request_id}/confirm/'
+        key = {'client_request_id': 'room-confirm-after-addon-handover'}
+        blocked = boss.post(confirm, key, format='json')
+        self.assertEqual(blocked.status_code, 409, blocked.data)
+        wait.refresh_from_db()
+        self.assertEqual(wait.status, 'RUNNING')
+
+        handover_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/handovers/'
+        payload = {'request_id': 'room-existing-addon-handover', 'target_provider_account_id': self.replacement.pk,
+                   'retained_basis_raw': 400, 'completed_work': '原陪玩已完成前段加购',
+                   'remaining_work': '接替陪玩完成剩余加购'}
+        proposal = self.ok(staff.post(handover_url, payload, format='json'))
+        decision = f'{path}addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
+        for actor, state in ((boss, 'PENDING'), (former, 'PENDING'), (replacement, 'ACCEPTED')):
+            self.assertEqual(self.ok(actor.post(decision, {'accepted': True}, format='json'))['status'], state)
+        handover = OrderAddonHandover.objects.get(pk=proposal['id'])
+        expected_addon = [(transfer.previous_segment_id, 320), (transfer.next_segment_id, 420)]
+        self.assertCountEqual(handover.shares.values_list('segment_id', 'income'), expected_addon)
+        self.assertEqual((handover.funding_release_run.required_amount, handover.funding_release_run.released_amount),
+                         (1140, 60))
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual(self.ok(boss.post(confirm, key, format='json'))['confirmation']['status'], 'CONFIRMED')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.room.pk, order.settled_at), (Order.Status.COMPLETED, self.room_id, None))
+        income = order.transactions.filter(tx_type=Transaction.TxType.INCOME)
+        self.assertFalse(income.exists())
+
+        original_report = self.approve_report(self.original, transfer.previous_segment_id)
+        current_report = self.approve_report(self.replacement, transfer.next_segment_id)
+        due = max(original_report.submitted_at, current_report.submitted_at) + timedelta(hours=order.service_freeze_hours)
+        with patch('django.utils.timezone.now', return_value=due):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        self.assertCountEqual(payment.segment_settlements.values_list('segment_id', 'amount'), expected_addon)
+        self.assertCountEqual(income.values_list('wallet__account_id', 'amount'),
+            [(self.original.pk, 3200), (self.replacement.pk, 4200),
+             (self.original.pk, 320), (self.replacement.pk, 420)])
+        order.refresh_from_db()
+        self.assertEqual(order.settlement_store_funding, 1140)
+        self.assertEqual((payment.consumption.paid_units, payment.consumption.refunded_units), (1000, 0))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        replay = self.ok(staff.post(handover_url, payload, format='json'))
+        self.assertEqual((replay['id'], replay['status'], payment.handovers.count()), (handover.pk, 'ACCEPTED', 1))
+        print(f'{self.store.slug} room={self.room_id} order={order.pk} addon={payment.pk} '
+              f'addon_wallet_tx={payment.buyer_transaction_id} handover={handover.pk} '
+              f'addon_income={[amount for _, amount in expected_addon]} funding={order.settlement_store_funding}',
+              flush=True)
 
     def exercise_paid_transfer_room_confirmation(self):
         original, _, _ = self.transfer_and_enter_room()
