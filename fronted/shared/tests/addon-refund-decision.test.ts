@@ -99,6 +99,43 @@ test("provider signs only their own decision and server errors preserve the orig
   assert.throws(() => ownAddonRefundDecision(proposal, 13, "provider"), /本人确认记录/)
 })
 
+test("an unknown refund amount in the latest pending proposal keeps the original decision without posting", async () => {
+  const { proposal, storage, decision, options } = fixture()
+  Object.assign(proposal, { amount_raw: null })
+  let posts = 0
+  const client = {
+    async get<T>() { return proposal as T },
+    async post<T>() {
+      posts++
+      proposal.decisions[0].accepted = true
+      return proposal as T
+    },
+  }
+  await assert.rejects(recordAddonRefundDecision({ ...options, client }), /方案金额暂无法核对/)
+  assert.equal(posts, 0)
+  assert.deepEqual(readAddonRefundDecision(storage, options.key), decision)
+})
+
+test("a provider cannot sign when their latest burden or retained income is unknown", async () => {
+  for (const field of ["provider_burden_raw", "provider_income_retained_raw"]) {
+    const { proposal, storage, decision, options } = fixture()
+    proposal.decisions[1].accepted = null
+    Object.assign(proposal, { [field]: null })
+    let posts = 0
+    const client = {
+      async get<T>() { return proposal as T },
+      async post<T>() {
+        posts++
+        proposal.decisions[1].accepted = true
+        return proposal as T
+      },
+    }
+    await assert.rejects(recordAddonRefundDecision({ ...options, role: "provider", accountId: 12, client }), /方案金额暂无法核对/)
+    assert.equal(posts, 0)
+    assert.deepEqual(readAddonRefundDecision(storage, options.key), decision)
+  }
+})
+
 test("missing or unknown own decision, wrong proposal and damaged stored intents prevent a POST", async () => {
   for (const variant of ["missing", "wrong", "damaged", "unknownStatus", "unknownDecision"]) {
     const { storage, proposal, options } = fixture()
@@ -120,6 +157,7 @@ test("an opposite decision recorded by another tab clears the obsolete local int
   const { proposal, storage, decision, options } = fixture()
   proposal.status = "REJECTED"
   proposal.decisions[0].accepted = false
+  Object.assign(proposal, { amount_raw: null })
   storage.setItem(options.key, JSON.stringify(decision))
   const client = {
     async get<T>() { return proposal as T },
@@ -134,6 +172,7 @@ test("a terminated proposal with no own decision clears the obsolete intent with
   for (const status of ["ACCEPTED", "REJECTED", "SUPERSEDED"] as const) {
     const { proposal, storage, decision, options } = fixture()
     proposal.status = status
+    Object.assign(proposal, { amount_raw: null })
     storage.setItem(options.key, JSON.stringify(decision))
     const client = {
       async get<T>() { return proposal as T },
@@ -149,6 +188,7 @@ test("a recorded refusal is read back without changing to agreement or executing
   const { proposal, options } = fixture()
   proposal.status = "REJECTED"
   proposal.decisions[0].accepted = false
+  Object.assign(proposal, { amount_raw: null })
   const client = {
     async get<T>() { return proposal as T },
     async post<T>(): Promise<T> { throw new Error("must only read the existing refusal") },

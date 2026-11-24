@@ -71,6 +71,11 @@ export function ownAddonRefundDecision(proposal: AddonRefundProposal, accountId:
   return own[0].accepted
 }
 
+export function addonRefundAmountsKnown(proposal: AddonRefundProposal, role: "boss" | "provider") {
+  return [proposal.amount_raw, ...(role === "provider" ? [proposal.provider_burden_raw, proposal.provider_income_retained_raw] : [])]
+    .every(value => Number.isSafeInteger(value) && value >= 0)
+}
+
 /** Reconcile the original decision before replaying its immutable payment/proposal target. */
 export async function recordAddonRefundDecision({ client, storage, key, orderId, accountId, role, decision }: {
   client: DecisionClient
@@ -98,6 +103,8 @@ export async function recordAddonRefundDecision({ client, storage, key, orderId,
       storage.removeItem(key)
       throw new Error("原方案已结束或被替换，请查看当前方案。")
     }
+    if (!addonRefundAmountsKnown(proposal, role))
+      throw new Error("方案金额暂无法核对，请联系客服。")
     proposal = await client.post<AddonRefundProposal>(path, { accepted: decision.accepted })
     if (proposal.id !== decision.proposalId || proposal.payment_id !== decision.paymentId ||
         ownAddonRefundDecision(proposal, accountId, role) !== decision.accepted)

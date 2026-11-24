@@ -7,6 +7,7 @@ import { useResource } from "./hooks"
 import { useRealtime } from "./realtime"
 import {
   addonRefundProposalPath,
+  addonRefundAmountsKnown,
   loadAddonRefundProposal,
   loadAddonRefundProposalTargets,
   ownAddonRefundDecision,
@@ -102,8 +103,7 @@ function SelectedAddonRefundProposal({ api, role, orderId, accountId, target, st
   const original = pending && pending !== "invalid" && pending.paymentId === target.paymentId && pending.proposalId === target.proposalId ? pending : null
   const own = proposal ? ownAddonRefundDecision(proposal, accountId, role) : null
   const selected = proposal && choice?.paymentId === proposal.payment_id && choice.proposalId === proposal.id ? choice : null
-  const amountsKnown = proposal && [proposal.amount_raw, ...(role === "provider" ? [proposal.provider_burden_raw, proposal.provider_income_retained_raw] : [])]
-    .every(value => Number.isSafeInteger(value) && value >= 0)
+  const amountsKnown = proposal && addonRefundAmountsKnown(proposal, role)
 
   async function submit(decision: AddonRefundDecision) {
     if (submitting.current || load.loading || load.error) return
