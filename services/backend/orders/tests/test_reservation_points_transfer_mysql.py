@@ -119,6 +119,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.service.save(update_fields=['room_enabled'])
         if self.room_addon_purchase:
             self.room_addon = self.make_consultation_addon()
+            profile.service_items.add(self.service)
+            replacement.escort_profile.service_items.add(self.service)
         self.ok(self.recharge())
         self.points, _ = MemberProfile.objects.update_or_create(
             account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon else 15000})
