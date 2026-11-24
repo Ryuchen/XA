@@ -10,8 +10,23 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { amountToXaCoin, formatDateTime } from "@/lib/format"
 import { checkedFirstProposal, firstProposalBlocker, integerCoinRefund, parseFirstIntent, positiveId, proposalsForCase, submitFirstProposal, validScope, type AddonFirstIntent, type AddonProposalTarget } from "@/lib/addon-first-proposal"
 import { useAdminAuth } from "@/lib/auth"
+import AddonExecutionPanel from "@/components/AddonExecutionPanel"
+import { readExecutedAddonProposal } from "@/lib/addon-execution"
 
 const money = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0 ? `${amountToXaCoin(Number(value))} ${coinUnit()}` : "待核对"
+
+function AddonExecutionReceipt({ proposal, target }: { proposal: Row; target: AddonProposalTarget }) {
+  if (proposal.refund_executed !== true) return null
+  try {
+    const proof = readExecutedAddonProposal(proposal, target).execution_receipt
+    return <dl className="grid gap-2 rounded-md bg-muted/30 p-3 sm:grid-cols-2">
+      <div><dt className="text-xs text-muted-foreground">已核对退款编号</dt><dd>#{proof.refund_id}</dd></div>
+      <div><dt className="text-xs text-muted-foreground">老板返款流水</dt><dd>#{proof.buyer_transaction_id}</dd></div>
+      <div><dt className="text-xs text-muted-foreground">实退金额</dt><dd>{money(proof.amount_raw)}</dd></div>
+      <div><dt className="text-xs text-muted-foreground">退款时间</dt><dd>{formatDateTime(proof.executed_at)}</dd></div>
+    </dl>
+  } catch { return <Feedback message="该方案退款及老板返款流水凭证待核对，请保留原方案并重新读取。" /> }
+}
 
 export default function AddonFirstProposal({ orderId, ticket }: { orderId: number; ticket: Row }) {
   const auth = useAdminAuth()
@@ -113,11 +128,13 @@ export default function AddonFirstProposal({ orderId, ticket }: { orderId: numbe
         {rows?.map(proposal => <article key={proposal.id} className="space-y-3 rounded-lg border p-4 text-sm">
           <div className="flex flex-wrap items-center gap-2"><h3 className="font-medium">加购方案 #{proposal.id}</h3><Status value={proposal.status} /></div>
           <p>原付款 #{proposal.payment_id} · 售后 #{proposal.case_id} · {formatDateTime(proposal.created_at)}</p>
-          <p>拟退老板：{money(proposal.amount_raw)}。实际退款：{proposal.refund_executed === true ? "服务端记录已执行" : proposal.refund_executed === false ? "尚未执行" : "待核对"}。</p>
+          <p>拟退老板：{money(proposal.amount_raw)}。实际退款：{proposal.refund_executed === true ? "退款记录存在，请核对下方凭证" : proposal.refund_executed === false ? "尚未执行" : "待核对"}。</p>
+          <AddonExecutionReceipt proposal={proposal} target={target} />
           <p className="whitespace-pre-wrap break-words">协商说明：{proposal.explanation || "待核对"}</p>
           {Array.isArray(proposal.participants) && <ul className="space-y-1">{proposal.participants.map((person: Row) => <li key={person.account_id}>陪玩账号 #{person.account_id} · 责任段 {Array.isArray(person.share_plan) ? person.share_plan.map((share: Row) => `#${share.segment_id}`).join("、") : "待核对"} · 拟承担 {money(person.burden_raw)}</li>)}</ul>}
           {Array.isArray(proposal.decisions) && <ul className="space-y-1" aria-label={`方案 ${proposal.id} 各方签字`}>{proposal.decisions.map((decision: Row) => <li key={`${decision.role}:${decision.account_id}`}>{decision.role === "BOSS" ? "老板" : "陪玩"}账号 #{decision.account_id}：{decision.accepted === true ? "已同意" : decision.accepted === false ? "有异议" : decision.accepted === null ? "等待确认" : "待核对"}</li>)}</ul>}
         </article>)}
+        <AddonExecutionPanel target={target} proposals={result.data} loading={result.loading} readError={result.error} blocked={busy || !!pending || !!restored.error} onLoaded={result.setData} />
       </DialogContent>
     </Dialog>
   </>
