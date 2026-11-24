@@ -1008,9 +1008,11 @@ class OrderSerializer(EntityNumberModelSerializer):
                 if obj.escort_mode != 'DOUBLE' or not team_evidence_submitted(obj,account,'entry_image'):
                     actions.append('START')
             if participant and obj.status == Order.Status.IN_SERVICE:
-                pending = [segment for segment in self._my_participation(obj) if segment.attribution.status == 'ACTIVE'
+                segments = self._my_participation(obj)
+                pending = [segment for segment in segments if segment.attribution.status == 'ACTIVE'
                            and segment.is_service_transfer and not segment.released_at and not segment.started_at]
-                if points and obj.payment_status == Order.PaymentStatus.PAID and len(pending) == 1 and user:
+                if (points and obj.payment_status == Order.PaymentStatus.PAID and len(pending) == 1 and user
+                        and sum(segment.released_at is None for segment in segments) == 1):
                     assignment = self._requester_assignment(obj)
                     if (assignment and not assignment.released_at and assignment.provider_account_id == account.pk
                             and assignment.provider_id == user.pk):

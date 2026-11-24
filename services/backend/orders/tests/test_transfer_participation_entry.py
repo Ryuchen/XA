@@ -28,10 +28,14 @@ class TransferEntryActionTest(SimpleTestCase):
         assignment = SimpleNamespace(provider_id=8, provider_account_id=account.pk, released_at=None)
         with (patch.object(serializer, '_has_points_evidence', return_value=True),
               patch('orders.points_checkout_test.assignment_enabled', return_value=False),
-              patch.object(serializer, '_my_participation', return_value=[segment]),
+              patch.object(serializer, '_my_participation', return_value=[segment]) as participation,
               patch.object(serializer, '_requester_assignment', return_value=assignment),
               patch.object(serializer, '_points_fulfillment_available', return_value=False)):
             self.assertEqual(serializer.get_allowed_actions(order), ['START_PARTICIPATION'])
+            participation.return_value.append(SimpleNamespace(attribution=segment.attribution,
+                is_service_transfer=False, released_at=None, started_at=object()))
+            self.assertEqual(serializer.get_allowed_actions(order), [])
+            participation.return_value.pop()
             assignment.provider_id = 10
             self.assertEqual(serializer.get_allowed_actions(order), [])
             assignment.provider_id = 8
