@@ -6,6 +6,7 @@ import {
 import { coinText, coinUnit, OrderJourney, OrderSource, OrderSyncBar, orderLifecycle } from "@xa/shared"
 import { AdminPageSkeleton } from "@/components/AdminPageSkeleton"
 import PrivateImage from "@/components/PrivateImage"
+import RoomCompletionRequests from "@/components/RoomCompletionRequests"
 import { useEffect, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router"
 import { toast } from "sonner"
@@ -185,6 +186,7 @@ export default function OrdersPage() {
             )}
           </PageHeader>
           <div className="xa-role-scope"><strong>本店订单统一工作区</strong><span>客服代下单与老板 H5 下单共用订单状态 · 报名不等于接单</span></div>
+          {auth.hasPerm("order:view") && auth.hasPerm("support:edit") && <RoomCompletionRequests key={auth.revision} onReviewed={() => void result.reload()} />}
           <OrderSyncBar loading={result.loading} error={result.error} snapshot={result.data} reload={result.reload} />
           <Feedback message={result.error} retry={result.reload} />
           <DataTable snapshotAvailable={!!result.data}
