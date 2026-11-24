@@ -2405,6 +2405,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_paid_team_transfer_room_requires_both_current_screenshots_before_auto_confirmation(self):
         self.room_transfer = True
         self.team_returned_addon = True
+        self.defer_funding = True
         self.run_in_stores(self.exercise_paid_transfer_room_confirmation)
 
     def exercise_paid_transfer_room_confirmation(self):
@@ -2447,6 +2448,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         wait = OrderRoomConfirmation.objects.get(request_id=room_request_id)
         self.assertEqual(wait.status, 'RUNNING')
         if self.teammate:
+            funding = self.ok(self.finance_client.get(f'/api/admin/platform/points-funding/{self.store.slug}/orders/{order.pk}'))
+            self.assertGreater(funding['remaining_units'], 0)
+            self.assertEqual(funding['allocated_units'], 0)
             with patch('django.utils.timezone.now', return_value=wait.deadline):
                 self.assertEqual(process_one(wait.pk), 'confirmed')
                 self.assertEqual(process_one(wait.pk), 'skip')
