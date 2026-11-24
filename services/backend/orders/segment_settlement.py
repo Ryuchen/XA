@@ -217,20 +217,21 @@ def _points_transfer_terms_verified(order):
             plan, terms, _ = prepare_locked(order.pk, allow_recorded=True, allow_finalized=bool(order.settled_at))
             return plan, terms['points_funding']
         from rest_framework.exceptions import ValidationError
-        from .models import OrderPointsFundingRelease, PointsNegotiationPosting, PointsPostRefundTransferRelease
+        from .models import PointsNegotiationPosting
         from .points_transfer_refunded_plan import build_refunded_plan
-        from .points_transfer_refund_evidence import verify_transfer_revisions_after_refund_locked
         try:
             plan, funding = build_refunded_plan(order)
-            verified = verify_order_funding(order.pk, allow_finalized=True)
-            allocations = verified_order_allocations_locked(order)
-            posting = PointsNegotiationPosting.objects.get(points_refund__redemption__order=order)
-            transferred = verify_transfer_revisions_after_refund_locked(order.pk, posting.participants,
-                refund_id=posting.points_refund.refund_id)
+            verified = verify_order_funding(order.pk, allow_finalized=True, include_net_allocations=True)
         except (PointsFundingPlanError, ValidationError, PointsNegotiationPosting.DoesNotExist) as exc:
             raise SettlementError('转单退款后的补资或收益凭证待核对') from exc
         if not verified.fully_funded:
             return plan, None
+        if not isinstance(verified, VerifiedOrderFundingWithAllocations):
+            raise SettlementError('转单退款后的逐笔补资凭证缺失')
+        try:
+            posting = PointsNegotiationPosting.objects.get(points_refund__redemption__order=order)
+        except PointsNegotiationPosting.DoesNotExist as exc:
+            raise SettlementError('转单退款后的协商凭证缺失') from exc
         from .models import PointsPostRefundTransferRevision, OrderAddonPayment
         version = PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first()
         addon_history = (version.snapshot.get('addon_history') if version else
@@ -327,16 +328,8 @@ def _points_transfer_terms_verified(order):
                 else:
                     merged_parts[key]['provider_income_units'] += part['provider_income_units']
             addon_parts = list(merged_parts.values())
-        from .addon_funding_release import addon_release_totals
-        addon_released = addon_release_totals(allocations)
-        items = []
-        for row in allocations:
-            refunded = sum(OrderPointsFundingRelease.objects.filter(allocation=row).values_list('amount', flat=True))
-            post_refund = sum(PointsPostRefundTransferRelease.objects.filter(allocation=row).values_list('amount', flat=True))
-            net = row.amount - transferred.get(row.pk, 0) - refunded - post_refund - addon_released.get(row.pk, 0)
-            if net < 0:
-                raise SettlementError('转单退款后的补资释放超过原分配')
-            items.append({'id': row.pk, 'receipt_id': row.receipt_id, 'amount': net})
+        items = [{'id': allocation_id, 'receipt_id': receipt_id, 'amount': amount}
+                 for allocation_id, receipt_id, amount in verified.net_allocations]
         calculation = asdict(funding)
         for key in ('allocated_units', 'release_units', 'remaining_units'):
             calculation.pop(key)

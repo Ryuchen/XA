@@ -626,8 +626,11 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                 from .models import PointsPostRefundTransferRelease, PointsFollowupTransferRelease
                 released += sum(PointsPostRefundTransferRelease.objects.filter(
                     allocation=allocation).values_list('amount', flat=True))
-                released += sum(PointsFollowupTransferRelease.objects.filter(
+                followup_released = sum(PointsFollowupTransferRelease.objects.filter(
                     allocation=allocation).values_list('amount', flat=True))
+                if include_net_allocations and followup_released and order.refund_records.count() == 1:
+                    raise PointsFundingPlanError('首次转单退款存在追加轮次的补资释放')
+                released += followup_released
             if released > allocation.amount:
                 raise PointsFundingPlanError('补资释放金额超过原分配')
             net_amount = allocation.amount - released
