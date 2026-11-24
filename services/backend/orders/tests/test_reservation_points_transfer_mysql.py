@@ -942,6 +942,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
                        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
     def exercise_shared_refund_and_allocation(self, *, refund_first):
+        from stores.models import PlatformPointsFundingOperation
+
         self.transfer_and_join()
         transfer = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
         replacement = self.api(self.replacement)
@@ -956,7 +958,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
         self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
         case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
-            **self.consultation_payload(message), 'reason': '双方案退部分主服务',
+            **self.consultation_payload(message), 'reason': '双方确认退部分主服务',
             'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
         admin = f'/api/admin/aftersales/{case["id"]}/'
         proposal = self.ok(staff.post(admin + 'negotiation-proposal/', {
@@ -986,9 +988,27 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             first, second = refund, allocate
             pause = self.pause_refund_race(PassReceiptUsageEvent._meta.db_table, 'insert into', 'RELEASE', held, resume)
         else:
-            first, second = allocate, refund
-            pause = self.pause_refund_race(PassRefundRepaymentReceipt._meta.db_table, 'for update',
-                                           self.funding_receipt.pk, held, resume)
+            writing = Event()
+            operation_table = PlatformPointsFundingOperation._meta.db_table
+            pause_receipt = self.pause_refund_race(PassRefundRepaymentReceipt._meta.db_table, 'for update',
+                                                  self.funding_receipt.pk, held, resume)
+
+            def observe_operation(execute, sql, params, many, context):
+                result = execute(sql, params, many, context)
+                if f'`{operation_table}`' in sql.lower() and 'for update' in sql.lower():
+                    writing.set()
+                return result
+
+            def allocate_first():
+                with connections['default'].execute_wrapper(observe_operation):
+                    return allocate()
+
+            def pause(execute, sql, params, many, context):
+                if writing.is_set():
+                    return pause_receipt(execute, sql, params, many, context)
+                return execute(sql, params, many, context)
+
+            first, second = allocate_first, refund
         attempts = Queue()
         money_table = OrderFinancialLock._meta.db_table
         observer = self.observe_lock_attempt(attempts, money_table, 'for update', account_id=1)
@@ -1014,6 +1034,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         if not refund_first:
             self.assertEqual((allocation_response.status_code, allocation_response.data['msg']),
                              (409, '分配金额超过到账未分配余额'))
+            operation = PlatformPointsFundingOperation.objects.get(request_id=allocation_payload['request_id'])
+            self.assertIsNotNone(operation.rejected_at)
+            self.assertIsNone(operation.tenant_action_id)
             rejected = allocate()
             self.assertEqual((rejected.status_code, rejected.data), (409, allocation_response.data))
             allocation_payload['request_id'] = str(uuid4())
