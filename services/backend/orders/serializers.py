@@ -785,7 +785,7 @@ class OrderSerializer(EntityNumberModelSerializer):
             'provider_gender',
             'remark',
             'support_contact',
-            'source_order', 'source_order_no', 'is_gift_snapshot',
+            'source_order', 'source_order_no', 'is_gift_snapshot', 'room_required_snapshot',
             'service',
             'customer',
             'provider',

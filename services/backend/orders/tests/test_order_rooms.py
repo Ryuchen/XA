@@ -102,6 +102,30 @@ class OrderRoomTests(APITestCase):
         self.assign(new_order, [(self.provider, self.provider_account)])
         self.assertFalse(OrderRoom.objects.filter(order=new_order).exists())
 
+    def test_order_list_and_detail_preserve_room_requirement_snapshot(self):
+        room_order = self.order()
+        self.service.room_enabled = False
+        self.service.save(update_fields=['room_enabled'])
+        ordinary_order = self.order()
+        legacy_order = self.order()
+        Order.objects.filter(pk=legacy_order.pk).update(room_required_snapshot=None)
+        snapshots = {room_order.pk: True, ordinary_order.pk: False, legacy_order.pk: None}
+        for order in (room_order, ordinary_order, legacy_order):
+            self.assign(order, [(self.provider, self.provider_account)])
+
+        for role, client in (('BOSS', self.boss_client), ('PROVIDER', self.provider_client)):
+            with self.subTest(role=role):
+                paginated = role == 'PROVIDER'
+                listing = client.get('/api/orders/orders/', {'page': 1} if paginated else {})
+                self.assertEqual(listing.status_code, 200, listing.data)
+                payload = listing.data['data']
+                rows = {row['id']: row for row in (payload['list'] if paginated else payload)}
+                for order_id, snapshot in snapshots.items():
+                    self.assertIs(rows[order_id]['room_required_snapshot'], snapshot)
+                    detail = client.get(f'/api/orders/orders/{order_id}/')
+                    self.assertEqual(detail.status_code, 200, detail.data)
+                    self.assertIs(detail.data['data']['room_required_snapshot'], snapshot)
+
     def test_room_configuration_is_not_available_for_gifts_or_addons(self):
         from console.serializers import AdminServiceItemSerializer
         for service in (make_service(is_addon=True), make_service(service_category=make_service_category(is_gift=True))):
