@@ -70,6 +70,8 @@ class RoomTransferConfirmationTest(APITransactionTestCase):
 
     def test_successful_transfer_invalidates_old_confirmation_but_preserves_room(self):
         wait = self.verify_application()
+        incomes = Transaction.objects.filter(order=self.order, tx_type=Transaction.TxType.INCOME,
+                                             status=Transaction.Status.SUCCESS)
         self.set_confirmation_rule(20, 2)
         self.service.commission_override = True
         self.service.commission_rate = 30
@@ -83,6 +85,8 @@ class RoomTransferConfirmationTest(APITransactionTestCase):
         self.assertTrue(OrderRoom.objects.filter(pk=self.room.pk, order=self.order).exists())
         self.order.refresh_from_db()
         self.assertEqual(self.order.provider_account_id, self.new_account.pk)
+        self.assertIsNone(self.order.settled_at)
+        self.assertFalse(incomes.exists())
         rates = OrderParticipationSegment.objects.filter(attribution__order=self.order).order_by('pk').values_list(
             'financial_snapshot__commission_rate', flat=True)
         self.assertEqual(list(rates), [20, 30])
@@ -98,6 +102,20 @@ class RoomTransferConfirmationTest(APITransactionTestCase):
             {'decision': 'VERIFIED', 'note': '重新核实', 'client_request_id': 'replacement-review'}, format='json')
         self.assertEqual(review.status_code, 200, review.data)
         self.assertEqual(OrderRoomConfirmation.objects.get(request_id=new_pk).config_minutes, 20)
+        self.order.refresh_from_db()
+        self.assertIsNone(self.order.settled_at)
+        self.assertFalse(incomes.exists())
+
+        self.login(self.boss)
+        requests = self.ok(self.client.get(self.application_url))['list']
+        by_id = {row['id']: row['confirmation'] for row in requests}
+        former_wait = by_id[self.application.pk]
+        self.assertEqual((former_wait['status'], former_wait['invalidation_reason']), ('INVALIDATED', 'TRANSFER'))
+        self.assertIsNone(former_wait['deadline'])
+        current_wait = by_id[new_pk]
+        self.assertEqual((current_wait['status'], current_wait['config_minutes'], current_wait['config_version']),
+                         ('RUNNING', 20, 2))
+        self.assertIsNotNone(current_wait['deadline'])
 
     def complete_replacement(self, client):
         segment = OrderParticipationSegment.objects.get(attribution__order=self.order,
