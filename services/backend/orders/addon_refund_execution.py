@@ -295,7 +295,7 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator, re
         raise ValidationError('订单不存在')
     lock_order_money()
     from .points_addon_receipt_usage import prelock as prelock_addon_receipts
-    usage_receipts = prelock_addon_receipts(order)
+    usage_receipts = prelock_addon_receipts(order, payment_id=payment_id)
     from .ordinary_addon_production import eligible as ordinary_addon_eligible
     production_addon = ordinary_addon_eligible(order, allow_open=True)
     from .ordinary_transfer_capability import permits as ordinary_transfer_permits

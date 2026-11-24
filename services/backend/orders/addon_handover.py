@@ -630,7 +630,7 @@ def assert_no_pending_handover(payment):
         raise ValidationError('加购负责人变更正在等待确认，请先处理')
 
 
-def verify_transferred_handover_funding(order, payment, proposal):
+def verify_transferred_handover_funding(order, payment, proposal, *, before=None, receipt_id=None):
     from .addon_funding_release import verify_run
     from .models import OrderAddonFundingReleaseRun, OrderPointsFundingAllocation
 
@@ -639,12 +639,19 @@ def verify_transferred_handover_funding(order, payment, proposal):
     funded = OrderPointsFundingAllocation.objects.filter(
         redemption__order=order, created_at__lte=proposal.accepted_at).exists()
     run = OrderAddonFundingReleaseRun.objects.filter(handover=proposal).first()
+    if before and (proposal.accepted_at >= before or (run and run.created_at >= before)):
+        raise ValidationError('加购接替与退款资金时序待核对')
     if funded and (not run or not run.points_handover_snapshot or not run.points_handover_hash):
         raise ValidationError('加购接替资金凭证缺失，请先核对')
     if run:
-        verify_run(run)
-    else:
+        if before is None:
+            verify_run(run)
+        else:
+            verify_run(run, _skip_usage=True, witness_receipt_id=receipt_id)
+    elif before is None:
         verify_handover(payment, proposal)
+    else:
+        verify_handover(payment, proposal, as_of=before, receipt_id=receipt_id)
 
 
 def _payment_locked(order_id, payment_id, *, funding_first=False):

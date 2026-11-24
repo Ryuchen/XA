@@ -72,6 +72,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     retirement_race = False
     team_returned_addon = False
     teammate_paid_addon = False
+    same_seat_paid_addon = False
     defer_funding = False
 
     def prepare(self):
@@ -304,6 +305,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_unfunded_team_returned_addon_refund_preserves_teammate_paid_addon(self):
         self.team_returned_addon = True
         self.teammate_paid_addon = True
+        self.defer_funding = True
+        self.run_in_stores(self.exercise_returned_addon_consultation)
+
+    def test_team_returned_addon_refund_selects_one_of_two_same_seat_payments(self):
+        self.team_returned_addon = True
+        self.same_seat_paid_addon = True
+        self.run_in_stores(self.exercise_returned_addon_consultation)
+
+    def test_unfunded_team_returned_addon_refund_selects_one_of_two_same_seat_payments(self):
+        self.team_returned_addon = True
+        self.same_seat_paid_addon = True
         self.defer_funding = True
         self.run_in_stores(self.exercise_returned_addon_consultation)
 
@@ -918,6 +930,14 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         required_funding = expected_main - 6000 - 260
         addon = self.make_consultation_addon()
         payment = self.pay_consultation_addon(self.original, addon=addon)
+        same_seat_payment = None
+        if self.same_seat_paid_addon:
+            same_seat_payment = payment
+            payment = self.pay_consultation_addon(
+                self.original, addon=addon, request_id='consultation-same-seat-addon-confirm')
+            required_funding -= 260
+            same_seat_allocation_fields = ('pk', 'lot_id', 'kind', 'amount', 'refunded_amount')
+            same_seat_allocations = list(same_seat_payment.allocations.order_by('pk').values_list(*same_seat_allocation_fields))
         teammate_payment = None
         if self.teammate_paid_addon:
             teammate_payment = self.pay_consultation_addon(
@@ -932,13 +952,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         dispatch = self.api(self.staff)
         buyer, original, replacement = (self.api(account) for account in (self.buyer, self.original, self.replacement))
         path = f'/api/orders/orders/{self.order_id}/'
-        handover_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/handovers/'
-
-        def hand_over(target, retained, request_id):
+        def hand_over(paid, target, retained, request_id):
+            handover_url = f'/api/admin/orders/{self.order_id}/addons/payments/{paid.pk}/handovers/'
             proposal = self.ok(dispatch.post(handover_url, {'request_id': request_id,
                 'target_provider_account_id': target.pk, 'retained_basis_raw': retained,
                 'completed_work': '已完成的加购内容', 'remaining_work': '接替人继续完成剩余加购'}, format='json'))
-            decision = path + f'addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
+            decision = path + f'addons/payments/{paid.pk}/handovers/{proposal["id"]}/decision/'
             for actor in (buyer, original, replacement):
                 self.ok(actor.post(decision, {'accepted': True}, format='json'))
             return OrderAddonHandover.objects.get(pk=proposal['id'], status='ACCEPTED')
@@ -950,7 +969,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.ok(original.post(path + 'participation-evidence/', {'segment_id': transfer_out.previous_segment_id,
             'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-first-leg-evidence'},
             format='multipart'))
-        first = hand_over(self.replacement, 400, 'consultation-addon-first-handover')
+        first = hand_over(payment, self.replacement, 400, 'consultation-addon-first-handover')
+        if same_seat_payment:
+            same_seat_first = hand_over(same_seat_payment, self.replacement, 400, 'consultation-other-addon-first-handover')
         self.ok(dispatch.post(f'/api/admin/orders/{self.order_id}/transfer/', {
             'reason': '由原陪玩接回剩余服务', 'transfers': [{
                 'old_provider_id': self.replacement.pk, 'new_provider_id': self.original.pk,
@@ -961,20 +982,14 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         revisions = OrderPointsTransferFundingRevision.objects.filter(order_id=self.order_id).order_by('pk')
         self.assertEqual(list(revisions.values_list('last_transfer_id', flat=True)),
                          [] if self.defer_funding else [transfer_out.pk, transfer_back.pk])
-        self.ok(replacement.post(path + 'participation-evidence/', {'segment_id': transfer_back.previous_segment_id,
-            'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-second-leg-evidence'},
-            format='multipart'))
         self.join_replacement(original, transfer_back)
-        second = hand_over(self.original, 200, 'consultation-addon-return-handover')
+        second = hand_over(payment, self.original, 200, 'consultation-addon-return-handover')
         self.assertEqual((first.target_segment_id, second.previous_id, second.target_segment_id),
                          (transfer_back.previous_segment_id, first.pk, transfer_back.next_segment_id))
         shares = [(transfer_out.previous_segment_id, self.original.pk, 400, 320),
                   (transfer_back.previous_segment_id, self.replacement.pk, 200, 140),
                   (transfer_back.next_segment_id, self.original.pk, 400, 280)]
         self.assertCountEqual(second.shares.values_list('segment_id', 'segment__provider_account_id', 'basis', 'income'), shares)
-        handover_runs = OrderAddonFundingReleaseRun.objects.filter(handover__in=[first, second]).order_by('pk')
-        handover_hashes = list(handover_runs.values_list('pk', 'points_handover_hash'))
-        self.assertEqual(len(handover_hashes), 0 if self.defer_funding else 2)
         def complete(actor, request_id):
             return self.ok(actor.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
                 'client_request_id': request_id}, format='multipart'))
@@ -998,6 +1013,25 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         case_payload = {**self.consultation_payload(message),
             'addon_payment_id': payment.pk, 'affected_provider_account_ids': [self.original.pk],
             'affected_segment_ids': [transfer_back.next_segment_id]}
+        handover_replays = [(first, replacement), (second, original)]
+        if same_seat_payment:
+            denied = staff.post(case_url, case_payload, format='json')
+            self.assertEqual(denied.status_code, 400, denied.data)
+            self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
+            same_seat_second = hand_over(same_seat_payment, self.original, 200, 'consultation-other-addon-return-handover')
+            self.assertEqual((same_seat_second.previous_id, same_seat_second.target_segment_id),
+                             (same_seat_first.pk, transfer_back.next_segment_id))
+            self.assertCountEqual(same_seat_second.shares.values_list(
+                'segment_id', 'segment__provider_account_id', 'basis', 'income'), shares)
+            handover_replays.extend([(same_seat_first, replacement), (same_seat_second, original)])
+            ledger = list(usage.values_list('pk', 'kind', 'amount'))
+        self.ok(replacement.post(path + 'participation-evidence/', {'segment_id': transfer_back.previous_segment_id,
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-second-leg-evidence'},
+            format='multipart'))
+        handover_runs = OrderAddonFundingReleaseRun.objects.filter(
+            handover__in=[handover for handover, _ in handover_replays]).order_by('pk')
+        handover_hashes = list(handover_runs.values_list('pk', 'points_handover_hash'))
+        self.assertEqual(len(handover_hashes), 0 if self.defer_funding else len(handover_replays))
         for wrong_segments in ([transfer_out.previous_segment_id], None):
             denied = staff.post(case_url, {**case_payload, 'affected_segment_ids': wrong_segments}, format='json')
             self.assertEqual(denied.status_code, 400, denied.data)
@@ -1018,6 +1052,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         opened = self.ok(staff.post(case_url, case_payload, format='json'))
         self.assertEqual(opened['affected_segment_ids'], [transfer_back.next_segment_id])
         self.assertEqual(self.ok(staff.post(case_url, case_payload, format='json'))['id'], opened['id'])
+        if same_seat_payment:
+            swapped = staff.post(case_url, {**case_payload, 'addon_payment_id': same_seat_payment.pk}, format='json')
+            self.assertEqual(swapped.status_code, 409, swapped.data)
         if teammate_client:
             detail = self.ok(teammate_client.get(path))
             self.assertEqual(detail['aftersale_status'], '')
@@ -1026,8 +1063,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         proposal_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/'
         proposal_payload = {'request_id': 'consultation-returned-addon-refund', 'case_id': opened['id'],
                             'amount_raw': 100, 'explanation': '只退转回后未完成的加购部分'}
-        if teammate_payment:
-            wrong_payment_url = f'/api/admin/orders/{self.order_id}/addons/payments/{teammate_payment.pk}/refund-proposals/'
+        other_payment = teammate_payment or same_seat_payment
+        if other_payment:
+            wrong_payment_url = f'/api/admin/orders/{self.order_id}/addons/payments/{other_payment.pk}/refund-proposals/'
             denied = staff.post(wrong_payment_url, proposal_payload, format='json')
             self.assertEqual(denied.status_code, 400, denied.data)
         over = staff.post(proposal_url, {**proposal_payload, 'amount_raw': 290}, format='json')
@@ -1096,6 +1134,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(self.ok(staff.post(case_url, case_payload, format='json'))['id'], opened['id'])
         repeat_case = staff.post(case_url, {**case_payload, 'client_request_id': 'new-returned-addon-case'}, format='json')
         self.assertEqual(repeat_case.status_code, 400, repeat_case.data)
+        if same_seat_payment:
+            other_case = staff.post(case_url, {**case_payload, 'addon_payment_id': same_seat_payment.pk,
+                'client_request_id': 'new-case-other-same-seat-payment'}, format='json')
+            self.assertEqual(other_case.status_code, 400, other_case.data)
 
         reporting = [
             (self.original, transfer_out.previous_segment_id), (self.replacement, transfer_back.previous_segment_id),
@@ -1130,6 +1172,15 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                         source.update(refunded_amount=0)
             run = refund.funding_release_run
             runs = OrderAddonFundingReleaseRun.objects.filter(pk=run.pk)
+            if same_seat_payment and not self.defer_funding:
+                other_runs = handover_runs.filter(handover=same_seat_second)
+                other_hash = other_runs.values_list('points_handover_hash', flat=True).get()
+                other_runs.update(points_handover_hash='0' * 64)
+                try:
+                    self.assert_returned_refund_blocks_settlement(
+                        order, staff, execute_url, funding_url, '积分加购接替补资快照异常')
+                finally:
+                    other_runs.update(points_handover_hash=other_hash)
             allocation_error = '转回段加购退款的补资分配时序或范围异常'
             if self.defer_funding:
                 payload, result = funding_receipts[0]
@@ -1201,11 +1252,26 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                              [('ORDER', required_funding - 10), ('ORDER', 10)])
         self.assertEqual(payment.refund_records.count(), 1)
         self.assertEqual(AdminAuditLog.objects.filter(path=execute_url, resource='addon-refund', status_code=200).count(), 1)
-        for handover, actor in ((first, replacement), (second, original)):
-            handover_response = self.ok(actor.post(path + f'addons/payments/{payment.pk}/handovers/{handover.pk}/decision/',
+        for handover, actor in handover_replays:
+            handover_response = self.ok(actor.post(path + f'addons/payments/{handover.payment_id}/handovers/{handover.pk}/decision/',
                 {'accepted': True}, format='json'))
             self.assertEqual((handover_response['id'], handover_response['status']), (handover.pk, 'ACCEPTED'))
         self.assertEqual(list(handover_runs.values_list('pk', 'points_handover_hash')), handover_hashes)
+        if same_seat_payment:
+            self.assertFalse(same_seat_payment.refund_records.exists())
+            self.assertFalse(same_seat_payment.refund_proposals.exists())
+            self.assertFalse(same_seat_payment.refund_earning_deductions.exists())
+            self.assertEqual(list(same_seat_payment.allocations.order_by('pk').values_list(*same_seat_allocation_fields)),
+                             same_seat_allocations)
+            self.assertCountEqual(same_seat_payment.segment_settlements.values_list(
+                'segment_id', 'amount', 'income_transaction__amount', 'income_transaction__wallet__account_id'),
+                [(segment, income, income, account) for segment, account, _, income in shares])
+            untouched = OrderAddonConsumption.objects.get(payment=same_seat_payment)
+            self.assertEqual((untouched.paid_units, untouched.refunded_units), (1000, 0))
+            print(f'{self.store.slug} order={order.pk} same_seat_payment={same_seat_payment.pk} '
+                  f'same_seat_handovers={[same_seat_first.pk, same_seat_second.pk]} '
+                  f'original_debit={same_seat_payment.buyer_transaction_id} '
+                  f'income={list(same_seat_payment.segment_settlements.values_list("income_transaction_id", "amount"))}', flush=True)
         print(f'{self.store.slug} order={order.pk} consultation={message.pk} payment={payment.pk} '
               f'handovers={[first.pk, second.pk]} segments={shares} case={opened["id"]} proposal={proposal["id"]} '
               f'refund={refund.pk} buyer_transaction={refund.buyer_transaction_id} '

@@ -760,11 +760,13 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
     if len(payments) > 1:
         if len(transfers) == 2:
             if len(payments) == 2 and allow_successive and pending_intent_id is None:
-                from .points_returned_addon_refund import returned_handover, verify_funding
+                from .points_returned_addon_refund import other_returned_handover, returned_handover, verify_funding
                 returned = returned_handover(order, transfers=transfers)
                 if returned and returned.payment.refund_records.exists():
                     if pending_payment_id and not _pending_allowed(returned.payment_id, pending_payment_id):
-                        return False
+                        other = other_returned_handover(order, returned)
+                        if not other or not _pending_allowed(other.payment_id, pending_payment_id):
+                            return False
                     if verify:
                         from .addon_payment import verify_receipt
                         for payment in payments:

@@ -123,7 +123,7 @@ def _prior_addon_events(order, at, *, read_receipt_id=None):
     return result
 
 
-def eligible(order):
+def eligible(order, *, payment_id=None):
     from .points_business_access import permits
     formal = permits(order, phase='refund', kind='addon')
     if not formal and not getattr(settings, 'SERVICE_POINTS_ADDON_REFUND_USAGE_TESTING', False):
@@ -168,7 +168,8 @@ def eligible(order):
                                      or first_handover_refund(order, transfers)
                                      or single_post_refund_handover(order, pending_payment_id=pending_scope)
                                      or post_refund_handover_history(order, pending_payment_id=pending_scope)
-                                     or post_transfer_history or returned_handover(order, transfers=transfers))
+                                     or post_transfer_history
+                                     or returned_handover(order, payment_id=payment_id, transfers=transfers))
     if formal and transfer_followup and postsecond_payment:
         supported_handover = supported_handover or OrderAddonFundingReleaseRun.objects.filter(
             handover__payment__intent__order=order, handover__status='ACCEPTED',
@@ -227,7 +228,7 @@ def eligible(order):
         and (formal or order.addon_refunds.count() <= 1))
 
 
-def prelock(order):
+def prelock(order, *, payment_id=None):
     """The caller holds order and money locks; take receipts before wallet facts."""
     from .points_business_access import permits
     formal = permits(order, phase='refund', kind='addon')
@@ -249,7 +250,7 @@ def prelock(order):
     for receipt in receipts:
         if receipt.usage_version is not None:
             involved = True
-            if not eligible(order):
+            if not eligible(order, payment_id=payment_id):
                 from .models import OrderAddonFundingReleaseRun
                 if not OrderAddonFundingReleaseRun.objects.filter(refund__order=order,
                         points_addon_snapshot__isnull=False).exists():

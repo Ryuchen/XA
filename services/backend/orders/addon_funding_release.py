@@ -271,8 +271,8 @@ def verify_run(run, *, _skip_usage=False, witness_receipt_id=None, _verified_fir
                     and run.required_amount != run.points_addon_snapshot['required'])):
             raise ValidationError('积分加购退款补资快照异常')
         if run.refunded_main_snapshot is None and 'handover_refund' in run.points_addon_snapshot:
-            from .points_returned_addon_refund import verify_allocation_history
-            verify_allocation_history(run.refund, [item[0] for item in normalized])
+            from .points_returned_addon_refund import verify_history
+            verify_history(run.refund, [item[0] for item in normalized], receipt_id=witness_receipt_id)
     if run.points_handover_snapshot is not None or run.points_handover_hash:
         from .points_addon_receipt_usage import digest
         first = OrderPointsFundingAllocation.objects.filter(pk__in=[item[0] for item in snapshot]).first()
