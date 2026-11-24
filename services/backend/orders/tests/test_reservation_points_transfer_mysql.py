@@ -2732,9 +2732,20 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         if deposit_recovery:
             from django.contrib.auth import get_user_model
             username = f'isolated-missing-platform-{uuid4().hex}'
-            with override_settings(PLATFORM_SYSTEM_USERNAME=username):
+            writes = []
+
+            def observe_writes(execute, sql, params, many, context):
+                verb = sql.lstrip().split(maxsplit=1)[0].upper()
+                if verb in ('INSERT', 'UPDATE', 'DELETE', 'REPLACE'):
+                    writes.append(verb)
+                return execute(sql, params, many, context)
+
+            with (override_settings(PLATFORM_SYSTEM_USERNAME=username),
+                  connections[self.store.database_alias].execute_wrapper(observe_writes),
+                  connections['default'].execute_wrapper(observe_writes)):
                 denied = self.api(self.staff).get(preview_url)
             self.assertEqual(denied.status_code, 409, denied.data)
+            self.assertEqual(writes, [], denied.data)
             self.assertFalse(get_user_model().objects.filter(username=username).exists())
             self.assertEqual(deposit_share.deposit_deficit.source_store_transaction.wallet.user.username,
                              settings.PLATFORM_SYSTEM_USERNAME)
