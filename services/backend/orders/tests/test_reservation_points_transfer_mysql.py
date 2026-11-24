@@ -2775,17 +2775,27 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                    'remaining_work': '接替陪玩完成剩余加购'}
         proposal = self.ok(staff.post(handover_url, payload, format='json'))
         decision = f'{path}addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
-        for actor, state in ((boss, 'PENDING'), (former, 'PENDING'), (replacement, 'ACCEPTED')):
-            self.assertEqual(self.ok(actor.post(decision, {'accepted': True}, format='json'))['status'], state)
+        for actor in (boss, former):
+            self.assertEqual(self.ok(actor.post(decision, {'accepted': True}, format='json'))['status'], 'PENDING')
+        attempts = Queue()
+        table = Order._meta.db_table
+        observer = self.observe_lock_attempt(attempts, table, 'for update', account_id=self.order_id)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with transaction.atomic(using=self.store.database_alias):
+                signed = self.ok(replacement.post(decision, {'accepted': True}, format='json'))
+                self.assertEqual(signed['status'], 'ACCEPTED')
+                competing = pool.submit(self.independent_request,
+                    lambda: staff.post(handover_url, payload, format='json'), observer)
+                waited = self.wait_for_lock(competing, attempts, table=table)
+                self.assertEqual(self.ok(boss.post(confirm, key, format='json'))['confirmation']['status'], 'CONFIRMED')
+            replay = self.ok(competing.result(timeout=10))
+        self.assertEqual((replay['id'], replay['status']), (proposal['id'], 'ACCEPTED'))
         handover = OrderAddonHandover.objects.get(pk=proposal['id'])
         expected_addon = [(transfer.previous_segment_id, 320), (transfer.next_segment_id, 420)]
         self.assertCountEqual(handover.shares.values_list('segment_id', 'income'), expected_addon)
         self.assertEqual((handover.funding_release_run.required_amount, handover.funding_release_run.released_amount),
                          (1140, 60))
         order = Order.objects.get(pk=self.order_id)
-        self.assertEqual(self.ok(staff.post(handover_url, payload, format='json'))['id'], handover.pk)
-        self.assertEqual(self.ok(boss.post(confirm, key, format='json'))['confirmation']['status'], 'CONFIRMED')
-        order.refresh_from_db()
         self.assertEqual((order.status, order.room.pk, order.settled_at), (Order.Status.COMPLETED, self.room_id, None))
         income = order.transactions.filter(tx_type=Transaction.TxType.INCOME)
         self.assertFalse(income.exists())
@@ -2813,7 +2823,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          (1, 1, 4, self.balance_before - 1000))
         print(f'{self.store.slug} room={self.room_id} order={order.pk} addon={payment.pk} '
               f'addon_wallet_tx={payment.buyer_transaction_id} handover={handover.pk} '
-              f'addon_income={[amount for _, amount in expected_addon]} funding={order.settlement_store_funding}',
+              f'addon_income={[amount for _, amount in expected_addon]} funding={order.settlement_store_funding} '
+              f'waiting_session={waited}',
               flush=True)
 
     def exercise_paid_transfer_room_confirmation(self):

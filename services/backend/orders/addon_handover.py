@@ -129,11 +129,11 @@ def _points_handover_scope(method):
             payment_id = args[0] if args else kwargs.get('payment_id')
             handover_id = args[1] if len(args) > 1 else kwargs.get('handover_id')
             creation = len(args) < 2 and kwargs.get('handover_id') is None
-            if handover_id is not None:
-                # Another final decision can commit while this request waits.
-                order = Order.objects.select_for_update().filter(pk=order_id).first()
-                if not order:
-                    raise ValidationError('订单不存在')
+            # Classify retries after locking the same order used to accept a
+            # handover and confirm the room.
+            order = Order.objects.select_for_update().filter(pk=order_id).first()
+            if not order:
+                raise ValidationError('订单不存在')
             if (creation and payment_id and order.refund_records.count() == 2
                     and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
                 replay = _replay_followup_create(request, order_id, payment_id)
