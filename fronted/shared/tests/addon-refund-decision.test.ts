@@ -99,18 +99,49 @@ test("provider signs only their own decision and server errors preserve the orig
   assert.throws(() => ownAddonRefundDecision(proposal, 13, "provider"), /本人确认记录/)
 })
 
-test("missing own decision, wrong proposal and damaged stored intents prevent a POST", async () => {
-  for (const variant of ["missing", "wrong", "damaged"]) {
+test("missing or unknown own decision, wrong proposal and damaged stored intents prevent a POST", async () => {
+  for (const variant of ["missing", "wrong", "damaged", "unknownStatus", "unknownDecision"]) {
     const { storage, proposal, options } = fixture()
     if (variant === "missing") proposal.decisions = []
     if (variant === "wrong") proposal.payment_id = 6
     if (variant === "damaged") storage.setItem(options.key, "bad json")
+    if (variant === "unknownStatus") Object.assign(proposal, { status: "UNKNOWN" })
+    if (variant === "unknownDecision") Object.assign(proposal.decisions[0], { accepted: undefined })
     const client = {
       async get<T>() { return proposal as T },
       async post<T>(): Promise<T> { throw new Error("POST must not run") },
     }
     await assert.rejects(recordAddonRefundDecision({ ...options, client }), /本人确认记录|原加购退款方案|原确认凭证/)
     assert.notEqual(readAddonRefundDecision(storage, options.key), null)
+  }
+})
+
+test("an opposite decision recorded by another tab clears the obsolete local intent without posting", async () => {
+  const { proposal, storage, decision, options } = fixture()
+  proposal.status = "REJECTED"
+  proposal.decisions[0].accepted = false
+  storage.setItem(options.key, JSON.stringify(decision))
+  const client = {
+    async get<T>() { return proposal as T },
+    async post<T>(): Promise<T> { throw new Error("must not repeat an opposite recorded decision") },
+  }
+  await assert.rejects(recordAddonRefundDecision({ ...options, client }), /本人已记录相反决定/)
+  assert.equal(readAddonRefundDecision(storage, options.key), null)
+  assert.equal(proposal.decisions[0].accepted, false)
+})
+
+test("a terminated proposal with no own decision clears the obsolete intent without posting", async () => {
+  for (const status of ["ACCEPTED", "REJECTED", "SUPERSEDED"] as const) {
+    const { proposal, storage, decision, options } = fixture()
+    proposal.status = status
+    storage.setItem(options.key, JSON.stringify(decision))
+    const client = {
+      async get<T>() { return proposal as T },
+      async post<T>(): Promise<T> { throw new Error("must not post to a terminated proposal") },
+    }
+    await assert.rejects(recordAddonRefundDecision({ ...options, client }), /方案已结束或被替换/)
+    assert.equal(readAddonRefundDecision(storage, options.key), null)
+    assert.equal(proposal.decisions[0].accepted, null)
   }
 })
 

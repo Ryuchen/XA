@@ -44,7 +44,8 @@ export async function loadAddonRefundProposalTargets(client: Pick<DecisionClient
 export async function loadAddonRefundProposal(client: Pick<DecisionClient, "get">, orderId: number,
   paymentId: number, proposalId: number, accountId: number, role: "boss" | "provider") {
   const proposal = await client.get<AddonRefundProposal>(addonRefundProposalPath(orderId, paymentId, proposalId))
-  if (proposal.id !== proposalId || proposal.payment_id !== paymentId)
+  if (!proposal || proposal.id !== proposalId || proposal.payment_id !== paymentId ||
+      !["PENDING", "ACCEPTED", "REJECTED", "SUPERSEDED"].includes(proposal.status))
     throw new Error("原加购退款方案暂无法核对，请联系客服。")
   ownAddonRefundDecision(proposal, accountId, role)
   return proposal
@@ -65,7 +66,8 @@ export function readAddonRefundDecision(storage: DecisionStorage, key: string): 
 
 export function ownAddonRefundDecision(proposal: AddonRefundProposal, accountId: number, role: "boss" | "provider") {
   const own = proposal.decisions?.filter(decision => decision.account_id === accountId && decision.role === role.toUpperCase())
-  if (own?.length !== 1) throw new Error("本人确认记录暂无法核对，请联系客服。")
+  if (own?.length !== 1 || (own[0].accepted !== null && typeof own[0].accepted !== "boolean"))
+    throw new Error("本人确认记录暂无法核对，请联系客服。")
   return own[0].accepted
 }
 
@@ -86,7 +88,16 @@ export async function recordAddonRefundDecision({ client, storage, key, orderId,
   storage.setItem(key, JSON.stringify(decision))
   const path = addonRefundProposalPath(orderId, decision.paymentId, decision.proposalId)
   let proposal = await loadAddonRefundProposal(client, orderId, decision.paymentId, decision.proposalId, accountId, role)
-  if (ownAddonRefundDecision(proposal, accountId, role) !== decision.accepted) {
+  const recorded = ownAddonRefundDecision(proposal, accountId, role)
+  if (recorded !== decision.accepted) {
+    if (typeof recorded === "boolean") {
+      storage.removeItem(key)
+      throw new Error("本人已记录相反决定，请核对方案或联系客服。")
+    }
+    if (proposal.status !== "PENDING") {
+      storage.removeItem(key)
+      throw new Error("原方案已结束或被替换，请查看当前方案。")
+    }
     proposal = await client.post<AddonRefundProposal>(path, { accepted: decision.accepted })
     if (proposal.id !== decision.proposalId || proposal.payment_id !== decision.paymentId ||
         ownAddonRefundDecision(proposal, accountId, role) !== decision.accepted)
