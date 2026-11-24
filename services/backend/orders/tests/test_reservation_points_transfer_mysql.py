@@ -2804,7 +2804,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((payment.consumption.paid_units, payment.consumption.refunded_units), (1000, 0))
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
         replay = self.ok(staff.post(handover_url, payload, format='json'))
-        self.assertEqual((replay['id'], replay['status'], payment.handovers.count()), (handover.pk, 'ACCEPTED', 1))
+        self.assertEqual((replay['id'], replay['status']), (handover.pk, 'ACCEPTED'))
+        conflict = staff.post(handover_url, {**payload, 'retained_basis_raw': 300}, format='json')
+        self.assertEqual((conflict.status_code, conflict.data['msg']), (400, '请求编号已用于其他换人方案'))
+        self.assertEqual((payment.handovers.count(), OrderAddonFundingReleaseRun.objects.filter(handover=handover).count(),
+                          income.count(), Wallet.objects.get(account=self.buyer).balance),
+                         (1, 1, 4, self.balance_before - 1000))
         print(f'{self.store.slug} room={self.room_id} order={order.pk} addon={payment.pk} '
               f'addon_wallet_tx={payment.buyer_transaction_id} handover={handover.pk} '
               f'addon_income={[amount for _, amount in expected_addon]} funding={order.settlement_store_funding}',
