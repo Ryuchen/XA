@@ -60,6 +60,25 @@ export function readExecutedAddonProposal(proposal: Data, target: AddonProposalT
   return verifiedAddonExecution(proposal, { target, proposalId: proposal.id, amountRaw: proposal.amount_raw,
     explanation: proposal.explanation, acceptedAt: proposal.accepted_at, signatures: accepted })
 }
+/** Historical receipts get their scope from the authorized case history, never from the proposal alone. */
+export function readAddonReceiptTarget(proposal: Data, current: AddonProposalTarget, history: unknown): AddonProposalTarget {
+  if (proposal?.payment_id !== current.paymentId || proposal.case_id !== current.caseId ||
+    typeof proposal.case_request_id !== "string" || !proposal.case_request_id.trim()) throw new Error("历史方案的原工单及付款归属待核对。")
+  if (proposal.case_request_id === current.caseRequestId) {
+    if (!validScope(current)) throw new Error("当前工单范围待核对。")
+    verifyProposalScope(proposal, current)
+    return current
+  }
+  if (!Array.isArray(history)) throw new Error("原工单历史尚未读取，历史退款凭证待核对。")
+  const openings = history.filter(entry => entry?.status === "OPEN" && entry.client_request_id === proposal.case_request_id)
+  if (openings.length !== 1 || openings[0].addon_payment_id !== current.paymentId ||
+    !Array.isArray(openings[0].affected_provider_account_ids) || !Array.isArray(openings[0].affected_segment_ids)) throw new Error("历史方案缺少唯一且匹配原付款的开案记录。")
+  const original: AddonProposalTarget = { ...current, caseRequestId: openings[0].client_request_id,
+    accounts: [...openings[0].affected_provider_account_ids], segments: [...openings[0].affected_segment_ids] }
+  if (!validScope(original)) throw new Error("原工单历史的人员及履约段范围待核对。")
+  verifyProposalScope(proposal, original)
+  return original
+}
 interface ExecutionIo {
   read: () => Promise<unknown>
   save: (intent: AddonExecutionIntent) => void

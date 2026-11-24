@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import test from "node:test"
 import assert from "node:assert/strict"
-import { captureAddonExecution, checkAddonExecution, executeAddonExecution, readExecutedAddonProposal, sameSignedProposal, parseAddonExecution, verifiedAddonExecution, type AddonExecutionIntent } from "./addon-execution.ts"
+import { captureAddonExecution, checkAddonExecution, executeAddonExecution, readAddonReceiptTarget, readExecutedAddonProposal, sameSignedProposal, parseAddonExecution, verifiedAddonExecution, type AddonExecutionIntent } from "./addon-execution.ts"
 
 const target = { orderId: 3, paymentId: 8, caseId: 12, caseRequestId: "case-cycle-1", accounts: [20], segments: [32] }
 const signed = { id: 50, payment_id: 8, case_id: 12, case_request_id: "case-cycle-1", status: "ACCEPTED", amount_raw: 500, explanation: "核对原付款", accepted_at: "2026-11-24T12:00:00Z", participants: [{ account_id: 20, share_plan: [{ segment_id: 32 }] }], decisions: [{ role: "BOSS", account_id: 10, accepted: true, decided_at: "2026-11-24T11:00:00Z" }, { role: "PROVIDER", account_id: 20, accepted: true, decided_at: "2026-11-24T12:00:00Z" }], refund_executed: false, execution_available: true }
@@ -68,4 +68,30 @@ test("刷新后的已执行GET没有本地待核对记录或创建人原号，�
   assert.equal(readExecutedAddonProposal(done, target).execution_receipt.refund_id, 80)
   assert.throws(() => readExecutedAddonProposal({ ...done, execution_receipt: null }, target))
   assert.throws(() => readExecutedAddonProposal({ ...done, case_request_id: "other-cycle" }, target))
+})
+
+const reopenedTarget = { ...target, caseRequestId: "case-cycle-2", accounts: [21], segments: [33] }
+const originalOpening = { status: "OPEN", client_request_id: target.caseRequestId, addon_payment_id: target.paymentId, affected_provider_account_ids: target.accounts, affected_segment_ids: target.segments }
+test("同ID重开后的旧轮次退款仅凭唯一OPEN原工单历史核对只读回执", () => {
+  const history = [originalOpening, { ...originalOpening, status: "RESOLVED" }, { ...originalOpening, client_request_id: reopenedTarget.caseRequestId, affected_provider_account_ids: [21], affected_segment_ids: [33] }]
+  const original = readAddonReceiptTarget(executed, reopenedTarget, history)
+  assert.deepEqual(original, target)
+  assert.equal(readExecutedAddonProposal(executed, original).execution_receipt.refund_id, 60)
+  assert.deepEqual(reopenedTarget.accounts, [21])
+  assert.throws(() => captureAddonExecution(signed, reopenedTarget))
+})
+test("旧轮次缺失、重复OPEN或付款/人员/履约段历史不符时维持未知，不信任方案自声明", () => {
+  for (const history of [undefined, [], [originalOpening, originalOpening], [{ ...originalOpening, status: "RESOLVED" }], [{ ...originalOpening, addon_payment_id: 9 }], [{ ...originalOpening, affected_provider_account_ids: [99] }], [{ ...originalOpening, affected_segment_ids: [30] }]]) assert.throws(() => readAddonReceiptTarget(executed, reopenedTarget, history))
+  assert.throws(() => readAddonReceiptTarget({ ...executed, payment_id: 9 }, reopenedTarget, [originalOpening]))
+  assert.throws(() => readAddonReceiptTarget({ ...executed, case_id: 99 }, reopenedTarget, [originalOpening]))
+})
+test("当前新轮次仍使用当前工单范围，旧历史不会授予旧方案执行能力", () => {
+  const current = { ...signed, id: 51, case_request_id: reopenedTarget.caseRequestId, participants: [{ account_id: 21, share_plan: [{ segment_id: 33 }] }], decisions: [signed.decisions[0], { ...signed.decisions[1], account_id: 21 }] }
+  assert.equal(captureAddonExecution(current, reopenedTarget).proposalId, 51)
+  assert.deepEqual(readAddonReceiptTarget(current, reopenedTarget, undefined), reopenedTarget)
+  const currentDone = { ...current, refund_executed: true, execution_available: false, execution_receipt: { ...executed.execution_receipt, refund_id: 61, buyer_transaction_id: 71 } }
+  assert.equal(readExecutedAddonProposal(currentDone, readAddonReceiptTarget(currentDone, reopenedTarget, [originalOpening])).execution_receipt.refund_id, 61)
+  assert.throws(() => readAddonReceiptTarget({ ...current, participants: signed.participants }, reopenedTarget, [originalOpening]))
+  readAddonReceiptTarget(executed, reopenedTarget, [originalOpening])
+  assert.throws(() => captureAddonExecution(signed, reopenedTarget))
 })
