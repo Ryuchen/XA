@@ -2460,7 +2460,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.room_service = self.room_addon_purchase = True
         self.run_in_stores(self.exercise_room_addon_refund_before_confirmation)
 
-    def exercise_room_addon_refund_before_confirmation(self):
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+    def test_room_main_refund_after_addon_refund_keeps_original_receipts(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
+
+    def exercise_room_addon_refund_before_confirmation(self, *, refund_main=False):
         former, replacement, transfer = self.transfer_and_enter_room()
         payment = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
         wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
@@ -2501,9 +2507,70 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
         print(f'{self.store.slug} order={order.pk} room={self.room_id} addon={payment.pk} refund={refund.pk} '
               f'buyer_refund_transaction={refund.buyer_transaction_id}', flush=True)
+        if refund_main:
+            self.exercise_room_main_refund_after_addon(staff, message, transfer, refund, execute, posted)
+            return
         settled = self.settle_consultation_addon_refund(staff, transfer, refund)
         print(f'{self.store.slug} order={order.pk} addon_net_income_transaction={settled.income_transaction_id}:'
               f'{settled.amount} refund_replay={refund.pk}', flush=True)
+
+    def exercise_room_main_refund_after_addon(self, staff, message, transfer, addon_refund, addon_url, addon_receipt):
+        order = Order.objects.get(pk=self.order_id)
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'client_request_id': 'room-main-case-after-addon',
+            'reason': '另行处理主单的部分退款', 'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
+        self.assertIsNone(AfterSale.objects.get(pk=case['id']).addon_payment_id)
+        admin = f'/api/admin/aftersales/{case["id"]}/'
+        preview = self.ok(staff.get(admin + 'negotiation-preview/', {'refund_units': 1000}))
+        self.assertTrue(preview['agreement_available'], preview)
+        self.assertTrue(preview['execution_available'], preview)
+        self.assertEqual([(term['account_id'], term['retained_units']) for term in preview['provider_terms']],
+                         [(self.replacement.pk, 3200)])
+        proposed = self.ok(staff.post(admin + 'negotiation-proposal/', {
+            'request_id': 'room-main-proposal-after-addon', 'expected_version': 0, 'refund_units': 1000,
+            'provider_terms': [{'account_id': self.replacement.pk, 'retained_units': 3200}],
+            'explanation': '退部分主服务及关联积分'}, format='json'))
+        decision = f'/api/orders/orders/{order.pk}/negotiation-proposal/'
+        for actor in (self.buyer, self.replacement):
+            self.ok(self.api(actor).post(decision, {'proposal_id': proposed['id'], 'accepted': True}, format='json'))
+        execute = admin + 'negotiation-execution/'
+        payload = {'proposal_id': proposed['id'], 'client_request_id': 'room-main-refund-after-addon'}
+        original_run = addon_refund.funding_release_run
+        points_before = MemberProfile.objects.get(account=self.buyer).points_balance
+        recorded = self.ok(staff.post(execute, payload, format='json'))
+        posting = PointsNegotiationPosting.objects.get(pk=recorded['execution_id'])
+        main = posting.points_refund
+        self.assertEqual((main.equivalent_units, main.coin_transaction.amount, main.points_ledger.amount),
+                         (1000, 600, 1000))
+        self.assertEqual(posting.funding_release_evidence.expected_release, 400)
+        self.assertEqual((Wallet.objects.get(account=self.buyer).balance,
+                          MemberProfile.objects.get(account=self.buyer).points_balance),
+                         (self.balance_before + 100, points_before + 1000))
+        self.assertEqual(order.room.pk, self.room_id)
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        reports = [self.approve_report(account, segment_id) for account, segment_id in
+                   ((self.original, transfer.previous_segment_id), (self.replacement, transfer.next_segment_id))]
+        due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
+        with patch('django.utils.timezone.now', return_value=due):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        order.refresh_from_db()
+        self.assertEqual((order.provider_income, order.settlement_store_funding), (6400, 700))
+        payment = addon_refund.payment
+        settled_addon = payment.segment_settlements.select_related('income_transaction__wallet').get()
+        self.assertEqual((settled_addon.segment_id, settled_addon.amount,
+                          settled_addon.income_transaction.wallet.account_id), (transfer.next_segment_id, 200, self.replacement.pk))
+        self.assertCountEqual(order.transactions.filter(tx_type=Transaction.TxType.INCOME)
+                              .values_list('wallet__account_id', 'amount'),
+                              [(self.original.pk, 3200), (self.replacement.pk, 3200), (self.replacement.pk, 200)])
+        self.assertEqual(self.ok(staff.post(execute, payload, format='json'))['execution_id'], posting.pk)
+        self.assertEqual(self.ok(staff.post(addon_url, {}, format='json')), addon_receipt)
+        self.assertEqual((order.refund_records.count(), payment.refund_records.count()), (1, 1))
+        self.assertEqual(OrderAddonFundingReleaseRun.objects.get(refund=addon_refund).points_addon_hash,
+                         original_run.points_addon_hash)
+        print(f'{self.store.slug} room={self.room_id} order={order.pk} addon_refund={addon_refund.pk} '
+              f'main_refund={main.refund_id} main_wallet_tx={main.coin_transaction_id} points_tx={main.points_ledger_id} '
+              'settled=3200+3200+200 funding=700', flush=True)
 
     def assert_room_addon_unavailable_before_entry(self):
         buyer = self.api(self.buyer)
