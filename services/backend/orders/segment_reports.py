@@ -163,16 +163,21 @@ def _entry_enabled(order_id):
     return enabled_for_order(Order.objects.filter(pk=order_id).first())
 
 
-def enter_points_transfer_report_scope(scopes, order):
+def enter_points_report_scope(scopes, order, *, include_untransferred=False):
     if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is not True:
         return order
     from .points_service_payment import needs_integrated_processing
     from .models import OrderOriginalShareTransfer
-    if not needs_integrated_processing(order) or not OrderOriginalShareTransfer.objects.filter(
-            previous_segment__attribution__order=order).exists():
+    if not needs_integrated_processing(order):
         return order
-    from .points_transfer_refund_access import after_transfer
-    return scopes.enter_context(after_transfer(order.pk, phase='report'))
+    if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
+        from .points_transfer_refund_access import after_transfer
+        return scopes.enter_context(after_transfer(order.pk, phase='report'))
+    if include_untransferred:
+        from .points_business_access import service_order
+        has_paid_addons = order.addon_intents.filter(payment__isnull=False).exists()
+        return scopes.enter_context(service_order(order.pk, phase='report', addon=has_paid_addons))
+    return order
 
 
 def _latest(report):
@@ -261,7 +266,7 @@ class SegmentReportActionView(APIView):
             order = Order.objects.select_for_update().filter(pk=order_id).first()
             if not order:
                 return Response({'code':409, 'msg':'订单当前不支持逐段报单'}, status=409)
-            order = enter_points_transfer_report_scope(scopes, order)
+            order = enter_points_report_scope(scopes, order)
             if not supports(order):
                 return Response({'code':409, 'msg':'订单当前不支持逐段报单'}, status=409)
             if order.settled_at:
@@ -380,7 +385,7 @@ class SegmentReportReviewView(APIView):
             order = Order.objects.select_for_update().filter(pk=order_id).first()
             if not order:
                 return Response({'code':409, 'msg':'订单当前不支持逐段审核'}, status=409)
-            order = enter_points_transfer_report_scope(scopes, order)
+            order = enter_points_report_scope(scopes, order)
             if not supports(order):
                 return Response({'code':409, 'msg':'订单当前不支持逐段审核'}, status=409)
             segment = OrderParticipationSegment.objects.select_for_update().filter(pk=segment_id, attribution__order=order).first()

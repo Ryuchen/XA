@@ -2074,7 +2074,7 @@ class CompleteOrderView(APIView):
             side_effect(order)
             complete_fulfillment(order, operator=request.legacy_user, operator_account=request.account)
 
-        from .segment_reports import enter_points_transfer_report_scope
+        from .segment_reports import enter_points_report_scope
         try:
             if room_order:
                 with transaction.atomic(), ExitStack() as scopes:
@@ -2087,7 +2087,8 @@ class CompleteOrderView(APIView):
                             confirmation__status__in=['RUNNING', 'PAUSED']).exists():
                         raise IllegalTransitionError('结单申请已核实，凭证不能再修改')
                     pre_check(order)
-                    order = enter_points_transfer_report_scope(scopes, order)
+                    order = enter_points_report_scope(
+                        scopes, order, include_untransferred=order.payment_status == Order.PaymentStatus.PAID)
                     side_effect(order)
                     from .work_stints import personal_completion
                     personal_completion(order, request.account.pk)
@@ -2097,7 +2098,7 @@ class CompleteOrderView(APIView):
             with transaction.atomic(), ExitStack() as scopes:
                 def check_completion(order):
                     pre_check(order)
-                    enter_points_transfer_report_scope(scopes, order)
+                    enter_points_report_scope(scopes, order)
 
                 order = transition(
                     order_id,

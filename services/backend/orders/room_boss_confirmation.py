@@ -39,18 +39,18 @@ def preflight_confirmation(order, room, row, wait):
 def complete_confirmation_locked(order, row, wait, participants, *, actor, legacy_actor, key, at, automatic=False):
     """Persist one confirmation and finish fulfilment in the caller's transaction."""
     from .services import complete_fulfillment
-    from .segment_reports import enter_points_transfer_report_scope
+    from .segment_reports import enter_points_report_scope
     from .points_funding_plan import PointsFundingPlanError
     with ExitStack() as scopes:
         if order.payment_status == Order.PaymentStatus.PAID:
             try:
-                order = enter_points_transfer_report_scope(scopes, order)
+                order = enter_points_report_scope(scopes, order, include_untransferred=True)
                 from .points_transfer_refund_access import permits
                 if permits(order, phase='report'):
                     from .points_funding_evidence import verify_order_funding
                     verify_order_funding(order.pk)
             except (ValidationError, PointsFundingPlanError) as exc:
-                raise SettlementError('积分转单履约和资金凭证待核对') from exc
+                raise SettlementError('积分订单履约和资金凭证待核对') from exc
         wait.status, wait.confirmed_at, wait.confirmed_by = ('AUTO' if automatic else 'CONFIRMED'), at, actor
         wait.confirmation_request_id = key
         wait.save(update_fields=['status', 'confirmed_at', 'confirmed_by', 'confirmation_request_id'])
