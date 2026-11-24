@@ -2454,6 +2454,57 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.room_service = self.room_addon_purchase = True
         self.run_in_stores(self.exercise_paid_transfer_room_addon)
 
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+    def test_room_addon_refund_before_confirmation_can_be_read_back_after_settlement(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(self.exercise_room_addon_refund_before_confirmation)
+
+    def exercise_room_addon_refund_before_confirmation(self):
+        former, replacement, transfer = self.transfer_and_enter_room()
+        payment = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
+        wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'addon_payment_id': payment.pk,
+            'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
+        path = f'/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/'
+        proposal = self.ok(staff.post('/api/admin' + path, {'request_id': 'room-addon-refund', 'amount_raw': 500,
+            'case_id': case['id'], 'explanation': '部分加购服务未履行'}, format='json'))
+        decision = f'/api/orders{path}{proposal["id"]}/'
+        execute = f'/api/admin{path}{proposal["id"]}/execute/'
+        boss = self.api(self.buyer)
+        self.assertEqual(self.ok(boss.post(decision, {'accepted': True}, format='json'))['status'], 'PENDING')
+        self.assertEqual(self.ok(replacement.post(decision, {'accepted': True}, format='json'))['status'], 'ACCEPTED')
+        posted = self.ok(staff.post(execute, {}, format='json'))
+        self.assertEqual(self.ok(staff.post(execute, {}, format='json')), posted)
+        refund = payment.refund_records.select_related('buyer_transaction').get()
+        self.assertEqual((refund.amount, refund.buyer_transaction.amount, refund.addon_pending_deduction), (500, 500, 500))
+        self.assertEqual(list(refund.earning_deductions.values_list('payment_id', 'segment_id', 'amount')),
+                         [(payment.pk, transfer.next_segment_id, 500)])
+        self.assertEqual(list(payment.allocations.values_list('kind', 'amount', 'refunded_amount')),
+                         [('PREPAID', 1000, 500)])
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 500)
+        self.ok(self.api(self.staff).post(f'/api/admin/aftersales/{case["id"]}/resolve/',
+            {'resolution': '已退指定加购，本次主单继续'}, format='json'))
+        order = Order.objects.get(pk=self.order_id)
+        wait.refresh_from_db()
+        self.assertEqual((order.status, order.payment_status, order.room.pk, wait.status),
+                         (Order.Status.IN_SERVICE, Order.PaymentStatus.PAID, self.room_id, 'RUNNING'))
+        self.assertFalse(order.refund_records.exists())
+        self.assertEqual(list(PointLedger.objects.filter(order=order).values_list('amount', flat=True)), [-10000])
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        confirmed = self.ok(boss.post(f'/api/orders/orders/{order.pk}/room/completion-requests/{wait.request_id}/confirm/',
+            {'client_request_id': 'room-confirm-after-addon-refund'}, format='json'))
+        self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} order={order.pk} room={self.room_id} addon={payment.pk} refund={refund.pk} '
+              f'buyer_refund_transaction={refund.buyer_transaction_id}', flush=True)
+        settled = self.settle_consultation_addon_refund(staff, transfer, refund)
+        print(f'{self.store.slug} order={order.pk} addon_net_income_transaction={settled.income_transaction_id}:'
+              f'{settled.amount} refund_replay={refund.pk}', flush=True)
+
     def assert_room_addon_unavailable_before_entry(self):
         buyer = self.api(self.buyer)
         path = f'/api/orders/orders/{self.order_id}/'
