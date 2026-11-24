@@ -27,6 +27,35 @@ def has_paid_addon_before(order, boundary):
     return payments.filter(buyer_transaction__created_at__lt=boundary).exists()
 
 
+def room_direct_addon_refund(order):
+    """Identify the posted refund for an add-on bought on the room's incoming seat."""
+    from .models import OrderOriginalShareTransfer
+
+    if (order.room_required_snapshot is not True or order.status != order.Status.COMPLETED
+            or order.required_provider_count != 1 or order.prestart_handoffs.exists()
+            or order.addon_intents.filter(payment__isnull=False).count() != 1):
+        return None
+    refunds = list(order.addon_refunds.select_related(
+        'payment__intent', 'payment__buyer_transaction', 'funding_release_run', 'proposal')[:2])
+    if len(refunds) != 1:
+        return None
+    refund = refunds[0]
+    payment = refund.payment
+    if (refund.proposal.status != 'ACCEPTED' or not 0 < refund.amount < payment.intent.amount
+            or refund.addon_pending_deduction != refund.amount
+            or refund.main_pending_deduction or refund.wallet_deduction or refund.deposit_deduction
+            or payment.handovers.exists()):
+        return None
+    run = getattr(refund, 'funding_release_run', None)
+    transfers = list(OrderOriginalShareTransfer.objects.filter(
+        previous_segment__attribution__order=order)[:2])
+    if (run and run.points_addon_snapshot and len(transfers) == 1
+            and transfers[0].next_segment_id == payment.intent.segment_id
+            and transfers[0].created_at < payment.buyer_transaction.created_at < refund.created_at):
+        return refund
+    return None
+
+
 def _pending_allowed(payment_id, allowed):
     return payment_id in allowed if isinstance(allowed, (set, frozenset, tuple, list)) else payment_id == allowed
 
