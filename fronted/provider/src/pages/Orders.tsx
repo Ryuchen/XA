@@ -34,6 +34,7 @@ import { useSession } from "@xa/shared"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { VoicePicker } from "@/components/VoicePicker"
+import { RoomCompletionPanel } from "@/components/RoomCompletionPanel"
 import { SearchField } from "@/components/SearchField"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -194,6 +195,7 @@ type Order = {
   grabbed_at?: string | null
   in_service_at?: string | null
   completed_at?: string | null
+  room_required_snapshot?: boolean | null
   cancelled_at?: string | null
   refunded_at?: string | null
   report_ready_at?: string | null
@@ -670,6 +672,7 @@ function ProviderOrderDetail({
                   : order.report_entry.reason || "当前不可创建报单"}
               </p>
             )}
+            {order.room_required_snapshot === true && <RoomCompletionPanel orderId={order.id} status={order.status} onSaved={detail.reload} />}
             {!!order.my_participation_segments?.length && (
               <section className="space-y-3">
                 <h3 className="text-sm font-semibold">我的履约记录</h3>
