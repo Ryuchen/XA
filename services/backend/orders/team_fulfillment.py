@@ -41,7 +41,7 @@ def team_report_evidence_error(report, kind):
 
 def team_evidence_submitted(order, account, field):
     from .team_progress import team_progress
-    progress = team_progress(order)
+    progress = team_progress(order, for_display=True)
     stage = 'ENTRY' if field == 'entry_image' else 'COMPLETION'
     if progress and progress['stage'] == stage:
         # 兼容此前从报单草稿上传导致两人截图齐全但状态未流转的订单；

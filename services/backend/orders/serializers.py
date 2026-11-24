@@ -247,7 +247,7 @@ class OrderListSerializer(EntityNumberListSerializer):
                 prefetch_related_objects(cancellable, 'used_coupons')
         prepare_order_settlement_display(rows, points_prepared=points_prepared, order_list_only=True)
         from .team_progress import prepare_team_progress
-        prepare_team_progress(rows)
+        prepare_team_progress(rows, for_display=True)
         # Load public provider avatars once for the whole list, including the
         # current primary provider and active team members.
         from .models import OrderProvider
@@ -690,7 +690,7 @@ class OrderSerializer(EntityNumberModelSerializer):
     def get_team_progress(self, obj):
         from .team_progress import team_progress
         from stores.display import provider_display_name
-        progress = team_progress(obj)
+        progress = team_progress(obj, for_display=True)
         if progress is None:
             return None
         avatars = self._provider_avatars(member['id'] for member in progress['members'])
@@ -863,6 +863,15 @@ class OrderSerializer(EntityNumberModelSerializer):
     def _points_fulfillment_available(self, obj, request):
         if not self._has_points_evidence(obj):
             return True
+        if obj.status == Order.Status.IN_SERVICE and obj.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED:
+            from .team_progress import team_progress
+            progress = team_progress(obj, for_display=True)
+            if hasattr(obj, '_formal_transfer_progress'):
+                # A released seat cannot use the retained seat's order action.
+                return bool(request.legacy_user and progress and any(
+                    member['id'] == request.account.pk for member in progress['members']) and any(
+                    segment.started_at and not segment.released_at and segment.attribution.status == 'ACTIVE'
+                    for segment in self._my_participation(obj)))
         from .points_funding_plan import PointsFundingPlanError
         from .points_report_test import verified_report_snapshot
         try:

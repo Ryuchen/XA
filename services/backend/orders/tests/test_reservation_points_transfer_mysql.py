@@ -1405,6 +1405,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.ok(teammate.post(path + 'participation-evidence/', {'segment_id': teammate_segment.pk,
             'completion_image': release_fixture.screenshot(), 'client_request_id': 'main-refund-released-segment'},
             format='multipart'))
+        self.assert_main_refund_completion_actions(path, original, teammate)
         self.ok(original.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'main-refund-unaffected-seat-complete'}, format='multipart'))
         with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
@@ -1459,6 +1460,25 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} order={order.pk} addon_refund={addon_refund.pk} main_posting={posting.pk} '
               f'main_refund={main.refund_id} main_credit={main.coin_transaction_id} points={main.points_ledger_id} '
               f'funding=780 release={events[-1][0]} unchanged_payment={other_payment.pk}', flush=True)
+
+    def assert_main_refund_completion_actions(self, detail_path, continuing, terminated):
+        listing = '/api/orders/orders/?status=in_progress&role=provider&page=1&page_size=20'
+        alias = self.store.database_alias
+        with connections[alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(continuing.get(detail_path))
+            rows = self.ok(continuing.get(listing))['list']
+            listed = next(row for row in rows if row['id'] == self.order_id)
+            for row in (detail, listed):
+                self.assertIn('COMPLETE', row['allowed_actions'])
+                self.assertFalse(row['my_assignment_released'])
+                progress = row['team_progress']
+                self.assertEqual((progress['stage'], progress['submitted_count'], progress['total_count']),
+                                 ('COMPLETION', 0, 1))
+                self.assertEqual([member['id'] for member in progress['members']], [self.original.pk])
+            for client in (terminated, self.api(self.replacement)):
+                other = self.ok(client.get(detail_path))
+                self.assertNotIn('COMPLETE', other['allowed_actions'])
+                self.assertTrue(other['my_assignment_released'])
 
     def fund_gift_addon_gap(self, funding_url, required):
         funding = self.ok(self.finance_client.get(funding_url))
