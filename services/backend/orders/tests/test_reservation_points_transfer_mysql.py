@@ -317,6 +317,11 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
         self.run_in_stores(self.exercise_paid_addon_consultation)
 
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
+                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)
+    def test_consultation_addon_refund_waits_for_payroll_and_adjusts_next_period(self):
+        self.run_in_stores(self.exercise_addon_refund_after_payroll)
+
     def test_returned_addon_consultation_refunds_only_the_returned_segment(self):
         self.run_in_stores(self.exercise_returned_addon_consultation)
 
@@ -2209,6 +2214,69 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         preview = payroll.preview(payroll.original_text)
         self.assertTrue(preview['can_confirm'], preview['warnings'])
         return payroll, preview
+
+    def exercise_addon_refund_after_payroll(self):
+        from console.payroll_models import PayrollRefundPerformanceAdjustment
+
+        PayrollEventBarrier.objects.get_or_create(pk=1)
+        self.transfer_and_join()
+        payment = self.pay_consultation_addon(self.replacement)
+        replacement = self.api(self.replacement)
+        path = f'/orders/{self.order_id}/'
+        self.ok(replacement.post('/api/orders' + path + 'complete/', {
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'payroll-addon-complete'},
+            format='multipart'))
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'addon_payment_id': payment.pk,
+            'affected_segment_ids': [payment.intent.segment_id]}, format='json'))
+        refund_path = path + f'addons/payments/{payment.pk}/refund-proposals/'
+        proposal = self.ok(staff.post('/api/admin' + refund_path, {
+            'request_id': 'payroll-addon-refund', 'amount_raw': 500, 'case_id': case['id'],
+            'explanation': '退回未履约的加购部分'}, format='json'))
+        for actor in (self.api(self.buyer), replacement):
+            self.ok(actor.post(f'/api/orders{refund_path}{proposal["id"]}/', {'accepted': True}, format='json'))
+        execute_url = f'/api/admin{refund_path}{proposal["id"]}/execute/'
+
+        salary = payroll_fixture.LateActivityPayrollTest()
+        salary.setUp()
+        salary.plan.base_fen, salary.plan.performance_fen, salary.plan.target_fen = 1000, 1000, 10000
+        salary.plan.target_scope = 'STORE'
+        salary.plan.save(update_fields=['base_fen', 'performance_fen', 'target_fen', 'target_scope'])
+        salary.assign(salary.current_text)
+        preview = salary.preview(salary.current_text)
+        self.assertTrue(preview['can_confirm'], preview['warnings'])
+        self.assertEqual((preview['lines'][0]['performance_basis_fen'], preview['totals']['performance_fen']),
+                         (self.receipt.paid_units + payment.intent.amount, 700))
+
+        def assert_payment_unlocked():
+            with transaction.atomic(using=self.store.database_alias):
+                OrderAddonPayment.objects.select_for_update(nowait=True).get(pk=payment.pk)
+                AfterSale.objects.select_for_update(nowait=True).get(pk=case['id'])
+                self.assertFalse(payment.refund_records.exists())
+
+        result, waited = self.consultation_during_payroll((salary, preview), staff, execute_url, {}, message,
+                                                         while_waiting=assert_payment_unlocked)
+        posted = self.ok(result)
+        self.assertEqual(self.ok(staff.post(execute_url, {}, format='json')), posted)
+        refund = payment.refund_records.get(proposal_id=proposal['id'])
+        self.assertEqual((refund.amount, refund.buyer_transaction.amount), (500, 500))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 500)
+        closed = salary.preview(salary.current_text)
+        self.assertEqual(closed['totals'], preview['totals'])
+        next_month = (salary.current.replace(day=28) + timedelta(days=4)).replace(day=1).strftime('%Y-%m')
+        salary.assign(next_month)
+        following = salary.confirm(next_month)
+        deduction = following['lines'][0]['refund_deduction_plan']
+        self.assertEqual((deduction['deducted_fen'], following['totals']['total_fen']), (50, 950))
+        adjustment = PayrollRefundPerformanceAdjustment.objects.get(addon_refund=refund, account=salary.worker)
+        self.assertEqual((adjustment.before_fen, adjustment.after_fen, adjustment.amount_fen), (700, 650, 50))
+        self.assertEqual(list(adjustment.applications.values_list('run_id', 'amount_fen')), [(following['run_id'], 50)])
+        self.assertEqual(payment.refund_records.count(), 1)
+        print(f'{self.store.slug} order={self.order_id} addon={payment.pk} refund={refund.pk} '
+              f'payroll_run={adjustment.original_run_id} waiting_session={waited} '
+              f'following_run={following["run_id"]} deduction={adjustment.amount_fen}', flush=True)
 
     def consultation_during_payroll(self, payroll_preview, staff, path, payload, message, *, while_waiting=None):
         payroll, preview = payroll_preview
