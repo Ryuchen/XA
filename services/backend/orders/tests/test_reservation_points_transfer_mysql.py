@@ -863,8 +863,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         _, second_order_id = self.book_points_reservation([self.original], self.start + timedelta(hours=3),
             'shared-receipt-other-reservation', service=second_service)
         allocation = self.ok(self.finance_client.post(self.funding_url, {
-            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 400}, format='json'))
-        self.assertEqual(allocation['order_id'], second_order_id)
+            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 900}, format='json'))
+        self.assertEqual((allocation['order_id'], allocation['amount']), (second_order_id, 900))
         staff, _, message = self.order_consultation()
         self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
         payload = {**self.consultation_payload(message), 'addon_payment_id': payment.pk,
@@ -872,7 +872,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         path = '/api/admin/aftersales/open-negotiation/'
         finance_url = f'/api/admin/platform/points-funding/{self.store.slug}/orders/{second_order_id}'
         events = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
-        before = [('ORDER', 2000), ('RELEASE', 600), ('RELEASE', 300), ('ORDER', 400)]
+        before = [('ORDER', 2000), ('RELEASE', 600), ('RELEASE', 300), ('ORDER', 900)]
         self.assertEqual(list(events.values_list('kind', 'amount')), before)
         buyer_balance = Wallet.objects.get(account=self.buyer).balance
 
@@ -914,13 +914,16 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 funding = self.ok(finance.result(timeout=15))
                 opened = self.ok(opening.result(timeout=15))
             self.assertEqual((funding['order_id'], funding['required_units'], funding['allocated_units'],
-                              funding['remaining_units']), (second_order_id, 2000, 400, 1600))
+                              funding['remaining_units']), (second_order_id, 2000, 900, 1100))
             if attempt == 0:
                 case_id = opened['id']
             self.assertEqual((opened['id'], opened['addon_payment']), (case_id, payment.pk))
         case = AfterSale.objects.get(order_id=self.order_id)
         self.assertEqual((len(case.history), case.history[0]['consultation_message_id']), (1, message.pk))
         self.assertFalse(AfterSale.objects.filter(order_id=second_order_id).exists())
+        rejected = self.finance_client.post(self.funding_url, {
+            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 1}, format='json')
+        self.assertEqual((rejected.status_code, rejected.data['msg']), (409, '分配金额超过到账未分配余额'))
         self.assertEqual(list(events.values_list('kind', 'amount')), before)
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, buyer_balance)
         self.assertFalse(payment.refund_records.exists())
