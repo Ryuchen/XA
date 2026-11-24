@@ -101,7 +101,7 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
     def test_transfer_addon_refund_readback_uses_the_income_from_its_verified_snapshot(self):
         from orders.addon_refund_execution import _replay_transfer_addon_refund
 
-        order = SimpleNamespace(pk=12, refund_records=Mock())
+        order = SimpleNamespace(pk=12, refund_records=Mock(), room_required_snapshot=False)
         order.refund_records.exists.return_value = False
         original = {'order_id': order.pk, 'payment_id': 7, 'proposal_id': 8, 'amount': 100}
         run = SimpleNamespace(points_addon_hash='digest')
