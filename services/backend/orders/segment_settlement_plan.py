@@ -374,11 +374,16 @@ class SegmentSettlementPlanView(APIView):
                     from .addon_settlement import has_paid_addons
                     from .points_transfer_funding import plan_points_transfer
                     from .points_transfer_refund_access import after_transfer
-                    if (order.payment_status != Order.PaymentStatus.PAID or order.refund_records.exists()
-                            or has_paid_addons(order)):
+                    refunds = order.refund_records.count()
+                    if (refunds > 1 or has_paid_addons(order)
+                            or (not refunds and order.payment_status != Order.PaymentStatus.PAID)):
                         raise SettlementError('积分转单的付款、退款或加购须先核对，不能生成逐段收益')
-                    with after_transfer(order.pk, phase='report', read_only=True):
-                        plan = plan_points_transfer(order.pk, read_only=True).segments
+                    with after_transfer(order.pk, phase='report', read_only=True) as locked:
+                        if refunds:
+                            from .points_transfer_refunded_plan import preview_first_main_refund
+                            plan = preview_first_main_refund(locked)
+                        else:
+                            plan = plan_points_transfer(order.pk, read_only=True).segments
                 elif not supports(order):
                     return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
                 elif _ordinary_transfer_refund(order):

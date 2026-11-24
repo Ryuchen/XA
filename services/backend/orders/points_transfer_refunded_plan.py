@@ -1,5 +1,6 @@
 """Rebuild per-person service readiness after a transferred points refund."""
 from collections import defaultdict
+from dataclasses import replace
 from datetime import timedelta
 
 from django.conf import settings
@@ -12,6 +13,32 @@ from .points_checkout_test import require_isolated_checkout
 from .points_funding_plan import PointsFundingPlanError
 from .segment_settlement_plan import PersonAmount, SegmentAmount, SegmentSettlementPlan
 from .settlement import SettlementError
+
+
+def preview_first_main_refund(order):
+    """Present the verified main-service net amount for each accountable segment."""
+    from .models import OrderSegmentSettlementManifest, PointsNegotiationPosting, PointsPostRefundTransferRevision
+
+    if order.settled_at or OrderSegmentSettlementManifest.objects.filter(order=order).exists():
+        raise SettlementError('订单已有收益结算记录，请核对原资金流水')
+    if PointsPostRefundTransferRevision.objects.filter(order=order).exists():
+        raise SettlementError('主单退款后再次转单，请按原协商及履约记录核对')
+    plan, _ = build_refunded_plan(order)
+    posting = PointsNegotiationPosting.objects.select_related('proposal').get(points_refund__redemption__order=order)
+    selected = set(posting.proposal.affected_segment_ids or [])
+    started = {segment['id'] for segment in posting.participants['facts']['segments'] if segment['started_at']}
+    eligible = started & selected if selected else started
+    lines = {line.segment_id: line for line in plan.segments}
+    for account_id, amount in posting.shares.filter(pending_deduction__gt=0).values_list('account_id', 'pending_deduction'):
+        affected = [line for line in plan.segments if line.account_id == account_id and line.segment_id in eligible]
+        if len(affected) != 1 or affected[0].income < amount:
+            raise SettlementError('主单退款扣减须明确唯一履约段')
+        line = affected[0]
+        lines[line.segment_id] = replace(line, income=line.income - amount)
+    for person in plan.persons:
+        if sum(lines[pk].income for pk in person.segment_ids) != person.income:
+            raise SettlementError('逐段预计收益与退款后本人净收益不一致')
+    return replace(plan, segments=tuple(lines.values()))
 
 
 def build_refunded_plan(order, *, now=None, allow_in_service=False):
@@ -59,7 +86,6 @@ def _build_refunded_plan(order, *, now=None, allow_in_service=False):
         if not isinstance(addon_history, list):
             raise SettlementError('退款后的加购资金版本缺少加购明细')
     if addon_history:
-        from dataclasses import replace
         addon_income = sum(item['provider_units'] for item in addon_history)
         if addon_income > funding.provider_income_units:
             raise SettlementError('加购收益超过整单收益')
