@@ -1,7 +1,8 @@
 """Store-local consent for refunds of an individual add-on payment."""
 from collections.abc import Mapping
+from django.db.models import Q
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -13,6 +14,10 @@ from .points_business_access import scoped_addon_refund_action
 from .addon_refund_lifecycle import protect_addon_refund
 from .models import (AfterSale, Order, OrderAddonPayment, OrderAddonRefundDecision, OrderAddonRefundParticipant,
                      OrderAddonRefundProposal, OrderParticipationSegment)
+
+
+class AddonRefundProposalConflict(APIException):
+    status_code = 409
 
 
 def _responsibilities_locked(order, payment):
@@ -46,7 +51,7 @@ def resolve_case_segments_locked(order, payment, accounts, requested):
     return segments
 
 
-def _locked(order_id, payment_id, *, case_id=None):
+def _locked(order_id, payment_id, *, case_id=None, expected_case_request_id=None):
     order = Order.objects.select_for_update().filter(pk=order_id).first()
     if not order:
         raise ValidationError('订单不存在')
@@ -63,6 +68,9 @@ def _locked(order_id, payment_id, *, case_id=None):
         if len(matches) > 1:
             raise ValidationError('该加购有多条适用售后，请明确选择售后记录')
         case = matches[0] if matches else None
+    if expected_case_request_id is not None and (
+            not case or case.client_request_id != expected_case_request_id or case.addon_payment_id != payment_id):
+        raise AddonRefundProposalConflict('原售后轮次或指定加购付款已变化，请刷新核对')
     payment = (OrderAddonPayment.objects.select_for_update().select_related('intent')
                .filter(pk=payment_id, intent__order=order).first())
     if not payment or not case:
@@ -280,7 +288,7 @@ def _data(proposal, *, account=None, execution_income=None):
     cross_items = cross_plan.get('items', []) if cross_plan else []
     if is_provider:
         cross_items = [item for item in cross_items if item.get('account_id') == account.pk]
-    return {'id': proposal.pk, 'payment_id': payment.pk, 'case_id': proposal.case_id,
+    data = {'id': proposal.pk, 'payment_id': payment.pk, 'case_id': proposal.case_id,
             'addon_name': payment.intent.addon_name, 'amount_raw': proposal.amount,
             'provider_burden_raw': burden,
             'rounding_surplus_raw': None if is_provider else burden - proposal.amount,
@@ -308,6 +316,11 @@ def _data(proposal, *, account=None, execution_income=None):
                           if not is_provider or row.account_id == account.pk or row.role == 'BOSS'],
             'created_at': proposal.created_at, 'accepted_at': proposal.accepted_at,
             'refund_executed': executed, 'execution_available': (enabled() or production) and proposal.status == 'ACCEPTED' and not executed}
+    if account is not None and account.account_type == 'STAFF':
+        data['case_request_id'] = proposal.case_request_id
+        if proposal.created_by_id == account.pk:
+            data['request_id'] = proposal.request_id
+    return data
 
 
 class StaffAddonRefundProposalView(APIView):
@@ -331,7 +344,8 @@ class StaffAddonRefundProposalView(APIView):
             raise ValidationError('请填写退款方案')
         request_id, amount, explanation = body.get('request_id'), body.get('amount_raw'), body.get('explanation')
         if (not {'request_id', 'amount_raw', 'explanation'} <= set(body)
-                or set(body) - {'request_id', 'amount_raw', 'explanation', 'affected_provider_account_ids', 'case_id'}
+                or set(body) - {'request_id', 'amount_raw', 'explanation', 'affected_provider_account_ids', 'case_id',
+                                'create_only', 'case_request_id'}
                 or not isinstance(request_id, str) or not 1 <= len(request_id.strip()) <= 64
                 or type(amount) is not int or amount <= 0 or amount % 10
                 or not isinstance(explanation, str) or not 2 <= len(explanation.strip()) <= 1000):
@@ -342,19 +356,41 @@ class StaffAddonRefundProposalView(APIView):
         case_id = body.get('case_id')
         if case_id is not None and (type(case_id) is not int or case_id <= 0):
             raise ValidationError('请选择有效的售后记录')
+        create_only, case_request_id = body.get('create_only', False), body.get('case_request_id')
+        if type(create_only) is not bool or (not create_only and 'case_request_id' in body):
+            raise ValidationError('售后轮次只用于首次登记退款方案')
+        if create_only:
+            if (case_id is None or not isinstance(case_request_id, str) or not 1 <= len(case_request_id) <= 64
+                    or case_request_id != case_request_id.strip()):
+                raise ValidationError('请指定原工单及其售后请求编号')
+            if selected is not None and (not selected or len(set(selected)) != len(selected)
+                                         or any(item <= 0 for item in selected)):
+                raise ValidationError('请选择有效的退款责任人')
         request_id, explanation = request_id.strip(), explanation.strip()
-        order, case, payment = _locked(order_id, payment_id, case_id=case_id)
-        previous = OrderAddonRefundProposal.objects.filter(payment=payment, request_id=request_id).first()
+        order, case, payment = _locked(order_id, payment_id, case_id=case_id,
+                                       expected_case_request_id=case_request_id)
+        proposals = payment.refund_proposals.all()
+        previous = proposals.filter(request_id=request_id).first()
         if previous:
-            if (previous.case_id != case.pk or previous.created_by_id != request.account.pk
-                    or previous.amount != amount or previous.explanation != explanation
-                    or (body.get('affected_provider_account_ids') is not None and
-                        set(body['affected_provider_account_ids']) != set(previous.participants.values_list('account_id', flat=True)))):
+            conflict = (previous.case_id != case.pk or previous.created_by_id != request.account.pk
+                        or previous.amount != amount or previous.explanation != explanation
+                        or (selected is not None
+                            and set(selected) != set(previous.participants.values_list('account_id', flat=True))))
+            if create_only and (conflict or previous.case_request_id != case.client_request_id
+                                or previous.case_opened_at != case.created_at
+                                or (selected is None and previous.participants.count() != 1)):
+                raise AddonRefundProposalConflict('请求编号已用于其他退款方案或售后轮次')
+            if conflict:
                 raise ValidationError('请求编号已用于其他退款方案')
             return Response({'code': 0, 'data': _data(previous, account=request.account)})
+        active = Q(status__in=['PENDING', 'ACCEPTED'], refund__isnull=True)
+        # An aftersale keeps its ID when reopened. Compare the opening snapshot under the order lock.
+        if create_only and proposals.filter(active | Q(
+                case=case, case_request_id=case.client_request_id, case_opened_at=case.created_at)).exists():
+            raise AddonRefundProposalConflict('该加购已有退款方案，请刷新核对原方案')
         if amount > _remaining(payment):
             raise ValidationError('退款金额超过加购未退款金额')
-        people = _participants(payment, case, amount, body.get('affected_provider_account_ids'))
+        people = _participants(payment, case, amount, selected)
         from .points_service_payment import needs_integrated_processing
         from .ordinary_addon_production import eligible as ordinary_addon_eligible
         if (not needs_integrated_processing(order) and not order.refund_records.exists()
@@ -431,15 +467,15 @@ class StaffAddonRefundProposalView(APIView):
                         raise ValidationError('退款时零余额押金承担凭证尚未接通')
         from .points_transfer_zero_addon_settlement import guard_unpaid_participants_locked
         guard_unpaid_participants_locked(payment, people)
-        current = payment.refund_proposals.filter(status__in=['PENDING', 'ACCEPTED'],
-                                                   refund__isnull=True).order_by('-pk').first()
-        if current and current.status == 'ACCEPTED':
-            raise ValidationError('已有双方确认的加购退款方案等待处理')
-        if current:
-            current.status = 'SUPERSEDED'
-            current.save(update_fields=['status'])
-            from site_messages.addon_refund_proposal_notice import refresh_delivered
-            refresh_delivered(current)
+        if not create_only:
+            current = proposals.filter(active).order_by('-pk').first()
+            if current and current.status == 'ACCEPTED':
+                raise ValidationError('已有双方确认的加购退款方案等待处理')
+            if current:
+                current.status = 'SUPERSEDED'
+                current.save(update_fields=['status'])
+                from site_messages.addon_refund_proposal_notice import refresh_delivered
+                refresh_delivered(current)
         from .addon_refund_cross_plan import capture as capture_cross_plan
         cross_plan = capture_cross_plan(order, payment, people)
         proposal = OrderAddonRefundProposal.objects.create(payment=payment, case=case,

@@ -5,6 +5,7 @@ from unittest import skipUnless
 
 from console.models import AdminAuditLog
 from orders import addon_payment
+from orders.aftersale import append_history
 from orders.models import AfterSale, OrderOriginalShareTransfer, OrderParticipationSegment
 from orders.tests import test_addon_intents
 from orders.tests.factories import make_provider
@@ -13,7 +14,8 @@ from orders.tests.test_addon_offers import authenticated
 from orders.tests.test_addon_payment import prepare
 from stores.context import resolve_store, store_context
 from stores.tests_hosts import xinan_store
-from wallet.models import Transaction
+from site_messages.models import AddonRefundProposalNotice
+from wallet.models import Transaction, Wallet
 
 
 @override_settings(ADDON_PAYMENT_INTERNAL_TESTING=True, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
@@ -29,6 +31,95 @@ class AddonRefundFlowTests(TestCase):
         self.user_url = f'/api/orders/orders/{self.fixture.order.pk}/addons/payments/{self.payment.pk}/refund-proposals/'
         self.discovery_url = f'/api/orders/orders/{self.fixture.order.pk}/addons/refund-proposals/'
         self.body = {'request_id': 'addon-refund-1', 'amount_raw': 500, 'explanation': '加购部分服务未履行'}
+
+    def first_proposal_body(self):
+        self.case.addon_payment_id = self.payment.pk
+        self.case.client_request_id = 'case-opening'
+        self.case.affected_segment_ids = [self.fixture.segment.pk]
+        append_history(self.case)
+        self.case.save(update_fields=['addon_payment', 'client_request_id', 'affected_segment_ids', 'history'])
+        return {**self.body, 'case_id': self.case.pk, 'case_request_id': self.case.client_request_id,
+                'create_only': True, 'affected_provider_account_ids': [self.fixture.provider.pk]}
+
+    def test_first_proposal_preserves_other_staff_attempt_and_original_receipt(self):
+        body = self.first_proposal_body()
+        second_staff = staff_client(['order:refund'])
+        balances = list(Wallet.objects.order_by('pk').values_list('pk', 'balance'))
+        transaction_count = Transaction.objects.count()
+        for staff in (self.staff, second_staff):
+            self.assertEqual(staff.get(self.staff_url).data, {'code': 0, 'data': []})
+
+        opened = self.staff.post(self.staff_url, body, format='json')
+        self.assertEqual(opened.status_code, 200, opened.data)
+        proposal = opened.data['data']
+        self.assertEqual((proposal['case_id'], proposal['payment_id'], proposal['case_request_id'],
+                          proposal['request_id'], proposal['status'], proposal['refund_executed']),
+                         (self.case.pk, self.payment.pk, self.case.client_request_id, body['request_id'], 'PENDING', False))
+        self.assertCountEqual([(row['role'], row['account_id'], row['accepted']) for row in proposal['decisions']],
+                              [('BOSS', self.fixture.boss.pk, None), ('PROVIDER', self.fixture.provider.pk, None)])
+        self.assertEqual([row['segment_id'] for row in proposal['participants'][0]['share_plan']],
+                         self.case.affected_segment_ids)
+        for staff, changes in ((second_staff, {'request_id': 'other-staff'}), (second_staff, {}),
+                               (self.staff, {'amount_raw': 400}),
+                               (self.staff, {'affected_provider_account_ids': [self.fixture.other.pk]})):
+            denied = staff.post(self.staff_url, {**body, **changes}, format='json')
+            self.assertEqual((denied.status_code, denied.data['code']), (409, 409), denied.data)
+        retry = self.staff.post(self.staff_url, body, format='json')
+        self.assertEqual(retry.status_code, 200, retry.data)
+        self.assertEqual(retry.data['data'], proposal)
+        self.assertEqual(self.staff.get(self.staff_url).data['data'], [proposal])
+        self.assertEqual(second_staff.get(self.staff_url).data['data'],
+                         [{key: value for key, value in proposal.items() if key != 'request_id'}])
+        for party in (self.fixture.client, self.fixture.provider_client):
+            detail = party.get(self.user_url + f"{proposal['id']}/").data['data']
+            self.assertNotIn('request_id', detail)
+            self.assertNotIn('case_request_id', detail)
+        self.assertEqual(self.payment.refund_proposals.count(), 1)
+        self.assertEqual(AdminAuditLog.objects.filter(resource='addon-refund-proposal').count(), 1)
+        self.assertEqual(AddonRefundProposalNotice.objects.filter(proposal_id=proposal['id']).count(), 2)
+        self.assertFalse(self.payment.refund_records.exists())
+        self.assertEqual(list(Wallet.objects.order_by('pk').values_list('pk', 'balance')), balances)
+        self.assertEqual(Transaction.objects.count(), transaction_count)
+
+    def test_first_proposal_requires_matching_payment_and_opening_round(self):
+        body = self.first_proposal_body()
+        for field in ('case_id', 'case_request_id'):
+            incomplete = {key: value for key, value in body.items() if key != field}
+            response = self.staff.post(self.staff_url, incomplete, format='json')
+            self.assertEqual(response.status_code, 400, response.data)
+        wrong_payment = self.staff_url.replace(f'/payments/{self.payment.pk}/', f'/payments/{self.payment.pk + 1}/')
+        for url, payload in ((wrong_payment, body), (self.staff_url, {**body, 'case_request_id': 'outdated'})):
+            response = self.staff.post(url, payload, format='json')
+            self.assertEqual(response.status_code, 409, response.data)
+        self.assertFalse(self.payment.refund_proposals.exists())
+
+        opened = self.staff.post(self.staff_url, body, format='json')
+        self.assertEqual(opened.status_code, 200, opened.data)
+        self.case.client_request_id = 'reopened-case'
+        self.case.created_at = timezone.now()
+        append_history(self.case)
+        self.case.save(update_fields=['client_request_id', 'created_at', 'history'])
+        for changes in ({}, {'case_request_id': self.case.client_request_id},
+                        {'case_request_id': self.case.client_request_id, 'request_id': 'new-round-attempt'}):
+            response = self.staff.post(self.staff_url, {**body, **changes}, format='json')
+            self.assertEqual(response.status_code, 409, response.data)
+        self.assertEqual(self.payment.refund_proposals.get().status, 'PENDING')
+
+    def test_first_proposal_never_replaces_while_legacy_creation_can_replace(self):
+        body = self.first_proposal_body()
+        first = self.staff.post(self.staff_url, body, format='json')
+        self.assertEqual(first.status_code, 200, first.data)
+        proposal_id = first.data['data']['id']
+        rejected = self.fixture.provider_client.post(self.user_url + f'{proposal_id}/', {'accepted': False}, format='json')
+        self.assertEqual(rejected.data['data']['status'], 'REJECTED')
+        denied = self.staff.post(self.staff_url, {**body, 'request_id': 'create-only-again'}, format='json')
+        self.assertEqual(denied.status_code, 409, denied.data)
+
+        for key in ('legacy-next', 'legacy-replacement'):
+            response = self.staff.post(self.staff_url, {**self.body, 'request_id': key}, format='json')
+            self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(list(self.payment.refund_proposals.order_by('pk').values_list('status', flat=True)),
+                         ['REJECTED', 'SUPERSEDED', 'PENDING'])
 
     def test_only_decision_accounts_can_find_and_read_back_their_proposals_from_the_order(self):
         buyer = self.fixture.client
