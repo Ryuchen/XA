@@ -2476,9 +2476,20 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.room_service = self.room_addon_purchase = self.team_returned_addon = True
         self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
 
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def test_team_room_main_and_addon_refunds_keep_the_second_addon(self):
+        self.room_service = self.room_addon_purchase = self.team_returned_addon = self.teammate_paid_addon = True
+        self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
+
     def exercise_room_addon_refund_before_confirmation(self, *, refund_main=False):
         former, replacement, transfer = self.transfer_and_enter_room()
         payment = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
+        other_payment = None
+        if self.teammate_paid_addon:
+            other_payment = self.pay_consultation_addon(self.teammate, addon=self.room_addon,
+                                                       request_id='room-other-seat-addon')
         wait = None
         if not self.teammate:
             wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
@@ -2503,7 +2514,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          [(payment.pk, transfer.next_segment_id, 500)])
         self.assertEqual(list(payment.allocations.values_list('kind', 'amount', 'refunded_amount')),
                          [('PREPAID', 1000, 500)])
-        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 500)
+        other_paid = other_payment.intent.amount if other_payment else 0
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - other_paid - 500)
         self.ok(self.api(self.staff).post(f'/api/admin/aftersales/{case["id"]}/resolve/',
             {'resolution': '已退指定加购，本次主单继续'}, format='json'))
         order = Order.objects.get(pk=self.order_id)
@@ -2522,13 +2534,15 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} order={order.pk} room={self.room_id} addon={payment.pk} refund={refund.pk} '
               f'buyer_refund_transaction={refund.buyer_transaction_id}', flush=True)
         if refund_main:
-            self.exercise_room_main_refund_after_addon(staff, message, transfer, refund, execute, posted)
+            self.exercise_room_main_refund_after_addon(staff, message, transfer, refund, execute, posted,
+                                                      other_payment=other_payment)
             return
         settled = self.settle_consultation_addon_refund(staff, transfer, refund)
         print(f'{self.store.slug} order={order.pk} addon_net_income_transaction={settled.income_transaction_id}:'
               f'{settled.amount} refund_replay={refund.pk}', flush=True)
 
-    def exercise_room_main_refund_after_addon(self, staff, message, transfer, addon_refund, addon_url, addon_receipt):
+    def exercise_room_main_refund_after_addon(self, staff, message, transfer, addon_refund, addon_url, addon_receipt,
+                                            *, other_payment=None):
         order = Order.objects.get(pk=self.order_id)
         affected = self.teammate or self.replacement
         segment = (OrderParticipationSegment.objects.get(attribution__order=order, provider_account=affected)
@@ -2565,9 +2579,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((main.equivalent_units, main.coin_transaction.amount, main.points_ledger.amount),
                          (1000, 600, 1000))
         self.assertEqual(posting.funding_release_evidence.expected_release, 400)
+        other_paid = other_payment.intent.amount if other_payment else 0
         self.assertEqual((Wallet.objects.get(account=self.buyer).balance,
                           MemberProfile.objects.get(account=self.buyer).points_balance),
-                         (self.balance_before + 100, points_before + 1000))
+                         (self.balance_before - other_paid + 100, points_before + 1000))
         self.assertEqual(order.room.pk, self.room_id)
         self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
         payment = addon_refund.payment
@@ -2582,15 +2597,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 {'segment_id': segment.pk, 'completion_image': release_fixture.screenshot(),
                  'client_request_id': 'refunded-room-ending-evidence'}, format='multipart'))
             reporting.append((self.teammate, segment.pk))
-        else:
-            completion_path = f'/orders/{order.pk}/addons/payments/{payment.pk}/completion/'
-            completion = self.ok(self.api(self.staff).post('/api/admin' + completion_path,
-                {'request_id': 'room-addon-work-after-main-refund', 'completed_work': '已核实剩余加购服务履行完毕'},
-                format='json'))
-            for actor in (self.buyer, self.replacement):
-                accepted = self.ok(self.api(actor).post(f'/api/orders{completion_path}{completion["id"]}/decision/',
-                    {'accepted': True}, format='json'))
-            self.assertEqual(accepted['status'], 'ACCEPTED')
+        affected_payment = other_payment if self.teammate else payment
+        if affected_payment:
+            self.confirm_completed_room_addon(affected_payment, affected)
         reports = [self.approve_report(account, segment_id) for account, segment_id in reporting]
         due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
         with patch('django.utils.timezone.now', return_value=due):
@@ -2600,14 +2609,26 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         provider_income = ([(self.original.pk, 1600), (self.replacement.pk, 2100), (self.teammate.pk, 3000)]
                            if self.teammate else [(self.original.pk, 3200), (self.replacement.pk, 3200)])
         funding = 1000 if self.teammate else 700
+        addon_income = [(self.replacement.pk, 200)]
+        if other_payment:
+            funding -= 200
+            addon_income.append((self.teammate.pk, 800))
+            other_settlement = other_payment.segment_settlements.select_related('income_transaction__wallet').get()
+            self.assertEqual((other_settlement.segment_id, other_settlement.amount,
+                              other_settlement.income_transaction.wallet.account_id), (segment.pk, 800, self.teammate.pk))
+            self.assertEqual((other_payment.consumption.paid_units, other_payment.consumption.refunded_units), (1000, 0))
+            self.assertEqual(list(other_payment.allocations.values_list('kind', 'amount', 'refunded_amount')),
+                             [('PREPAID', 1000, 0)])
+            self.assertFalse(other_payment.refund_records.exists())
         self.assertEqual((order.provider_income, order.settlement_store_funding),
                          (sum(amount for _, amount in provider_income), funding))
         settled_addon = payment.segment_settlements.select_related('income_transaction__wallet').get()
         self.assertEqual((settled_addon.segment_id, settled_addon.amount,
                           settled_addon.income_transaction.wallet.account_id), (transfer.next_segment_id, 200, self.replacement.pk))
+        self.assertEqual((payment.consumption.paid_units, payment.consumption.refunded_units), (1000, 500))
         self.assertCountEqual(order.transactions.filter(tx_type=Transaction.TxType.INCOME)
                               .values_list('wallet__account_id', 'amount'),
-                              [*provider_income, (self.replacement.pk, 200)])
+                              [*provider_income, *addon_income])
         self.assertEqual(self.ok(staff.post(execute, payload, format='json'))['execution_id'], posting.pk)
         self.assertEqual(self.ok(staff.post(addon_url, {}, format='json')), addon_receipt)
         self.assertEqual((order.refund_records.count(), payment.refund_records.count()), (1, 1))
@@ -2615,7 +2636,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          original_run.points_addon_hash)
         print(f'{self.store.slug} room={self.room_id} order={order.pk} addon_refund={addon_refund.pk} '
               f'main_refund={main.refund_id} main_wallet_tx={main.coin_transaction_id} points_tx={main.points_ledger_id} '
-              f'settled={[amount for _, amount in provider_income] + [200]} funding={funding}', flush=True)
+              f'settled={[amount for _, amount in provider_income + addon_income]} funding={funding}', flush=True)
+
+    def confirm_completed_room_addon(self, payment, provider):
+        path = f'/orders/{self.order_id}/addons/payments/{payment.pk}/completion/'
+        completion = self.ok(self.api(self.staff).post('/api/admin' + path,
+            {'request_id': 'room-addon-work-after-main-refund', 'completed_work': '已核实剩余加购服务履行完毕'},
+            format='json'))
+        for actor in (self.buyer, provider):
+            accepted = self.ok(self.api(actor).post(f'/api/orders{path}{completion["id"]}/decision/',
+                {'accepted': True}, format='json'))
+        self.assertEqual(accepted['status'], 'ACCEPTED')
 
     def confirm_room_after_other_seat_refund(self, order, reviewer):
         path = f'/api/orders/orders/{order.pk}/'
