@@ -2476,6 +2476,14 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.run_in_stores(self.exercise_refunded_points_room_preview)
 
     @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True,
+        REFUND_DEPOSIT_DEFICIT_ENABLED=True, REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=True)
+    def test_refunded_points_preview_never_creates_platform_wallet(self):
+        self.room_service = True
+        self.run_in_stores(lambda: self.exercise_refunded_points_room_preview(deposit_recovery=True))
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
         ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
     def test_room_addon_refund_before_confirmation_can_be_read_back_after_settlement(self):
         self.room_service = self.room_addon_purchase = True
@@ -2667,18 +2675,30 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 {'accepted': True}, format='json'))
         self.assertEqual(accepted['status'], 'ACCEPTED')
 
-    def exercise_refunded_points_room_preview(self):
+    def exercise_refunded_points_room_preview(self, *, deposit_recovery=False):
         former, replacement, transfer = self.transfer_and_enter_room()
         self.exercise_paid_points_room_confirmation(self.replacement, former=former)
-        staff, _, message = self.order_consultation(extra_permissions=['order:refund', 'report:view'])
+        permissions = ['order:refund', 'report:view']
+        if deposit_recovery:
+            permissions += ['escort:view', 'escort:deposit_topup']
+        staff, _, message = self.order_consultation(extra_permissions=permissions)
+        refund_units = 4500 if deposit_recovery else 1000
+        retained = 0 if deposit_recovery else 3200
+        if deposit_recovery:
+            profile = EscortProfile.objects.get(account=self.replacement)
+            profile.deposit_mode, profile.deposit_paid, profile.deposit_required = 'CASH', 0, 1000
+            profile.save(update_fields=['deposit_mode', 'deposit_paid', 'deposit_required'])
+            self.ok(staff.post(f'/api/admin/escorts/{profile.pk}/deposit-topups/', {
+                'amount': 1000, 'reference': 'ROOM-NET-PREVIEW-CASH', 'reason': '登记隔离测试押金',
+                'client_request_id': 'room-net-preview-deposit'}, format='multipart'))
         self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
         case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
             **self.consultation_payload(message), 'reason': '主服务部分退款',
             'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
         admin = f'/api/admin/aftersales/{case["id"]}/'
         proposed = self.ok(staff.post(admin + 'negotiation-proposal/', {
-            'request_id': 'room-net-preview-proposal', 'expected_version': 0, 'refund_units': 1000,
-            'provider_terms': [{'account_id': self.replacement.pk, 'retained_units': 3200}],
+            'request_id': 'room-net-preview-proposal', 'expected_version': 0, 'refund_units': refund_units,
+            'provider_terms': [{'account_id': self.replacement.pk, 'retained_units': retained}],
             'explanation': '由接替人承担本段主服务的部分退款'}, format='json'))
         path = f'/api/orders/orders/{self.order_id}/'
         for actor in (self.api(self.buyer), replacement):
@@ -2688,7 +2708,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             {'proposal_id': proposed['id'], 'client_request_id': 'room-net-preview-refund'}, format='json'))
         posting = PointsNegotiationPosting.objects.get(pk=receipt['execution_id'])
         self.assertEqual((posting.points_refund.coin_transaction.amount, posting.points_refund.points_ledger.amount),
-                         (600, 1000))
+                         (refund_units * 6 // 10, refund_units))
+        deposit_share = posting.shares.get(account=self.replacement)
+        self.assertEqual(deposit_share.deposit_deduction, 300 if deposit_recovery else 0)
         original_report = self.approve_report(self.original, transfer.previous_segment_id)
         replacement_report = self.approve_report(self.replacement, transfer.next_segment_id)
 
@@ -2701,12 +2723,24 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual({part['segment_id']: (part['account_id'], part['basis'], part['fee'], part['income'])
                           for part in plan['segments']}, {
             transfer.previous_segment_id: (self.original.pk, 4000, 800, 3200),
-            transfer.next_segment_id: (self.replacement.pk, 6000, 1800, 3200),
+            transfer.next_segment_id: (self.replacement.pk, 6000, 1800, retained),
         })
         self.assertEqual({row['account_id']: row['income'] for row in plan['persons']},
-                         {self.original.pk: 3200, self.replacement.pk: 3200})
+                         {self.original.pk: 3200, self.replacement.pk: retained})
         self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
         self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
+        if deposit_recovery:
+            from django.contrib.auth import get_user_model
+            username = f'isolated-missing-platform-{uuid4().hex}'
+            with override_settings(PLATFORM_SYSTEM_USERNAME=username):
+                denied = self.api(self.staff).get(preview_url)
+            self.assertEqual(denied.status_code, 409, denied.data)
+            self.assertFalse(get_user_model().objects.filter(username=username).exists())
+            self.assertEqual(deposit_share.deposit_deficit.source_store_transaction.wallet.user.username,
+                             settings.PLATFORM_SYSTEM_USERNAME)
+            print(f'{self.store.slug} order={order.pk} refund={posting.points_refund.refund_id} '
+                  f'deposit={deposit_share.deposit_deduction} missing_platform_status={denied.status_code}', flush=True)
+            return
         due = max(original_report.submitted_at, replacement_report.submitted_at) + timedelta(hours=order.service_freeze_hours)
         with patch('django.utils.timezone.now', return_value=due):
             self.assertEqual(confirm_due_consumption.run(), 1)
