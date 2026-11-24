@@ -2446,10 +2446,14 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         room = self.ok(buyer.get(path + 'room/'))
         self.assertEqual(room['order_status'], Order.Status.GRABBED)
         self.room_id = room['id']
-        quote = buyer.post(path + 'addons/quote/', {'addon_id': self.room_addon.pk, 'unit': 'HOUR',
-            'quantity': 1, 'configuration_version': 1, 'provider_account_id': self.original.pk}, format='json')
+        selection = {'addon_id': self.room_addon.pk, 'unit': 'HOUR', 'quantity': 1,
+                     'configuration_version': 1, 'provider_account_id': self.original.pk}
+        quote = buyer.post(path + 'addons/quote/', selection, format='json')
         self.assertEqual(quote.status_code, 409, quote.data)
-        self.assertFalse(OrderAddonPayment.objects.filter(intent__order_id=self.order_id).exists())
+        intent = buyer.post(path + 'addons/intents/', {**selection, 'expected_amount': 1000,
+            'request_id': 'room-before-entry', 'gift_balance_amount': 0, 'compensation_balance_amount': 0}, format='json')
+        self.assertEqual(intent.status_code, 409, intent.data)
+        self.assertFalse(Order.objects.get(pk=self.order_id).addon_intents.exists())
 
     def exercise_paid_transfer_room_addon(self):
         original, replacement, change = self.transfer_and_enter_room()
