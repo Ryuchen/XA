@@ -2549,6 +2549,15 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          (self.balance_before + 100, points_before + 1000))
         self.assertEqual(order.room.pk, self.room_id)
         self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        payment = addon_refund.payment
+        completion_path = f'/orders/{order.pk}/addons/payments/{payment.pk}/completion/'
+        completion = self.ok(self.api(self.staff).post('/api/admin' + completion_path,
+            {'request_id': 'room-addon-work-after-main-refund', 'completed_work': '已核实剩余加购服务履行完毕'},
+            format='json'))
+        for actor in (self.buyer, self.replacement):
+            accepted = self.ok(self.api(actor).post(f'/api/orders{completion_path}{completion["id"]}/decision/',
+                {'accepted': True}, format='json'))
+        self.assertEqual(accepted['status'], 'ACCEPTED')
         reports = [self.approve_report(account, segment_id) for account, segment_id in
                    ((self.original, transfer.previous_segment_id), (self.replacement, transfer.next_segment_id))]
         due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
@@ -2557,7 +2566,6 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.assertEqual(confirm_due_consumption.run(), 0)
         order.refresh_from_db()
         self.assertEqual((order.provider_income, order.settlement_store_funding), (6400, 700))
-        payment = addon_refund.payment
         settled_addon = payment.segment_settlements.select_related('income_transaction__wallet').get()
         self.assertEqual((settled_addon.segment_id, settled_addon.amount,
                           settled_addon.income_transaction.wallet.account_id), (transfer.next_segment_id, 200, self.replacement.pk))
