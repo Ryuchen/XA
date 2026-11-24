@@ -122,6 +122,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.room_addon = self.make_consultation_addon()
             profile.service_items.add(self.service)
             replacement.escort_profile.service_items.add(self.service)
+            if self.teammate:
+                self.teammate.escort_profile.service_items.add(self.service)
         self.ok(self.recharge())
         self.points, _ = MemberProfile.objects.update_or_create(
             account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon else 15000})
@@ -2467,10 +2469,19 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.room_service = self.room_addon_purchase = True
         self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
 
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def test_team_room_other_seat_finishes_after_separate_addon_and_main_refunds(self):
+        self.room_service = self.room_addon_purchase = self.team_returned_addon = True
+        self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
+
     def exercise_room_addon_refund_before_confirmation(self, *, refund_main=False):
         former, replacement, transfer = self.transfer_and_enter_room()
         payment = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
-        wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
+        wait = None
+        if not self.teammate:
+            wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
         staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
         self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
         case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
@@ -2496,15 +2507,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.ok(self.api(self.staff).post(f'/api/admin/aftersales/{case["id"]}/resolve/',
             {'resolution': '已退指定加购，本次主单继续'}, format='json'))
         order = Order.objects.get(pk=self.order_id)
-        wait.refresh_from_db()
-        self.assertEqual((order.status, order.payment_status, order.room.pk, wait.status),
-                         (Order.Status.IN_SERVICE, Order.PaymentStatus.PAID, self.room_id, 'RUNNING'))
+        self.assertEqual((order.status, order.payment_status, order.room.pk),
+                         (Order.Status.IN_SERVICE, Order.PaymentStatus.PAID, self.room_id))
         self.assertFalse(order.refund_records.exists())
         self.assertEqual(list(PointLedger.objects.filter(order=order).values_list('amount', flat=True)), [-10000])
         self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
-        confirmed = self.ok(boss.post(f'/api/orders/orders/{order.pk}/room/completion-requests/{wait.request_id}/confirm/',
-            {'client_request_id': 'room-confirm-after-addon-refund'}, format='json'))
-        self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
+        if wait:
+            wait.refresh_from_db()
+            self.assertEqual(wait.status, 'RUNNING')
+            confirmed = self.ok(boss.post(f'/api/orders/orders/{order.pk}/room/completion-requests/{wait.request_id}/confirm/',
+                {'client_request_id': 'room-confirm-after-addon-refund'}, format='json'))
+            self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
         self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
         print(f'{self.store.slug} order={order.pk} room={self.room_id} addon={payment.pk} refund={refund.pk} '
               f'buyer_refund_transaction={refund.buyer_transaction_id}', flush=True)
@@ -2517,22 +2530,27 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     def exercise_room_main_refund_after_addon(self, staff, message, transfer, addon_refund, addon_url, addon_receipt):
         order = Order.objects.get(pk=self.order_id)
+        affected = self.teammate or self.replacement
+        segment = (OrderParticipationSegment.objects.get(attribution__order=order, provider_account=affected)
+                   if self.teammate else transfer.next_segment)
+        retained = 3000 if self.teammate else 3200
         case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
             **self.consultation_payload(message), 'client_request_id': 'room-main-case-after-addon',
-            'reason': '另行处理主单的部分退款', 'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
+            'reason': '另行处理主单的部分退款', 'affected_provider_account_ids': [affected.pk],
+            'affected_segment_ids': [segment.pk]}, format='json'))
         self.assertIsNone(AfterSale.objects.get(pk=case['id']).addon_payment_id)
         admin = f'/api/admin/aftersales/{case["id"]}/'
         preview = self.ok(staff.get(admin + 'negotiation-preview/', {'refund_units': 1000}))
         self.assertTrue(preview['agreement_available'], preview)
         self.assertTrue(preview['execution_available'], preview)
         self.assertEqual([(term['account_id'], term['retained_units']) for term in preview['provider_terms']],
-                         [(self.replacement.pk, 3200)])
+                         [(affected.pk, retained)])
         proposed = self.ok(staff.post(admin + 'negotiation-proposal/', {
             'request_id': 'room-main-proposal-after-addon', 'expected_version': 0, 'refund_units': 1000,
-            'provider_terms': [{'account_id': self.replacement.pk, 'retained_units': 3200}],
+            'provider_terms': [{'account_id': affected.pk, 'retained_units': retained}],
             'explanation': '退部分主服务及关联积分'}, format='json'))
         decision = f'/api/orders/orders/{order.pk}/negotiation-proposal/'
-        for actor in (self.buyer, self.replacement):
+        for actor in (self.buyer, affected):
             self.ok(self.api(actor).post(decision, {'proposal_id': proposed['id'], 'accepted': True}, format='json'))
         execute = admin + 'negotiation-execution/'
         payload = {'proposal_id': proposed['id'], 'client_request_id': 'room-main-refund-after-addon'}
@@ -2550,28 +2568,43 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(order.room.pk, self.room_id)
         self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
         payment = addon_refund.payment
-        completion_path = f'/orders/{order.pk}/addons/payments/{payment.pk}/completion/'
-        completion = self.ok(self.api(self.staff).post('/api/admin' + completion_path,
-            {'request_id': 'room-addon-work-after-main-refund', 'completed_work': '已核实剩余加购服务履行完毕'},
-            format='json'))
-        for actor in (self.buyer, self.replacement):
-            accepted = self.ok(self.api(actor).post(f'/api/orders{completion_path}{completion["id"]}/decision/',
-                {'accepted': True}, format='json'))
-        self.assertEqual(accepted['status'], 'ACCEPTED')
-        reports = [self.approve_report(account, segment_id) for account, segment_id in
-                   ((self.original, transfer.previous_segment_id), (self.replacement, transfer.next_segment_id))]
+        reporting = [(self.original, transfer.previous_segment_id), (self.replacement, transfer.next_segment_id)]
+        if self.teammate:
+            order.refresh_from_db()
+            self.assertEqual((order.status, order.payment_status),
+                             (Order.Status.IN_SERVICE, Order.PaymentStatus.PARTIALLY_REFUNDED))
+            self.confirm_room_after_other_seat_refund(order, posting.operator)
+            ended = self.api(self.teammate)
+            self.ok(ended.post(f'/api/orders/orders/{order.pk}/participation-evidence/',
+                {'segment_id': segment.pk, 'completion_image': release_fixture.screenshot(),
+                 'client_request_id': 'refunded-room-ending-evidence'}, format='multipart'))
+            reporting.append((self.teammate, segment.pk))
+        else:
+            completion_path = f'/orders/{order.pk}/addons/payments/{payment.pk}/completion/'
+            completion = self.ok(self.api(self.staff).post('/api/admin' + completion_path,
+                {'request_id': 'room-addon-work-after-main-refund', 'completed_work': '已核实剩余加购服务履行完毕'},
+                format='json'))
+            for actor in (self.buyer, self.replacement):
+                accepted = self.ok(self.api(actor).post(f'/api/orders{completion_path}{completion["id"]}/decision/',
+                    {'accepted': True}, format='json'))
+            self.assertEqual(accepted['status'], 'ACCEPTED')
+        reports = [self.approve_report(account, segment_id) for account, segment_id in reporting]
         due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
         with patch('django.utils.timezone.now', return_value=due):
             self.assertEqual(confirm_due_consumption.run(), 1)
             self.assertEqual(confirm_due_consumption.run(), 0)
         order.refresh_from_db()
-        self.assertEqual((order.provider_income, order.settlement_store_funding), (6400, 700))
+        provider_income = ([(self.original.pk, 1600), (self.replacement.pk, 2100), (self.teammate.pk, 3000)]
+                           if self.teammate else [(self.original.pk, 3200), (self.replacement.pk, 3200)])
+        funding = 1000 if self.teammate else 700
+        self.assertEqual((order.provider_income, order.settlement_store_funding),
+                         (sum(amount for _, amount in provider_income), funding))
         settled_addon = payment.segment_settlements.select_related('income_transaction__wallet').get()
         self.assertEqual((settled_addon.segment_id, settled_addon.amount,
                           settled_addon.income_transaction.wallet.account_id), (transfer.next_segment_id, 200, self.replacement.pk))
         self.assertCountEqual(order.transactions.filter(tx_type=Transaction.TxType.INCOME)
                               .values_list('wallet__account_id', 'amount'),
-                              [(self.original.pk, 3200), (self.replacement.pk, 3200), (self.replacement.pk, 200)])
+                              [*provider_income, (self.replacement.pk, 200)])
         self.assertEqual(self.ok(staff.post(execute, payload, format='json'))['execution_id'], posting.pk)
         self.assertEqual(self.ok(staff.post(addon_url, {}, format='json')), addon_receipt)
         self.assertEqual((order.refund_records.count(), payment.refund_records.count()), (1, 1))
@@ -2579,7 +2612,27 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          original_run.points_addon_hash)
         print(f'{self.store.slug} room={self.room_id} order={order.pk} addon_refund={addon_refund.pk} '
               f'main_refund={main.refund_id} main_wallet_tx={main.coin_transaction_id} points_tx={main.points_ledger_id} '
-              'settled=3200+3200+200 funding=700', flush=True)
+              f'settled={[amount for _, amount in provider_income] + [200]} funding={funding}', flush=True)
+
+    def confirm_room_after_other_seat_refund(self, order, reviewer):
+        path = f'/api/orders/orders/{order.pk}/'
+        current, ended = self.api(self.replacement), self.api(self.teammate)
+        submission = path + 'room/completion-requests/'
+        payload = {'description': '本人剩余履约已完成', 'client_request_id': 'room-confirm-after-other-seat-refund'}
+        self.assertEqual(ended.post(submission, payload, format='json').status_code, 404)
+        self.assertEqual(current.post(submission, payload, format='json').status_code, 409)
+        self.assert_room_provider_actions(current, 'in_progress', ['COMPLETE'])
+        self.ok(current.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'continuing-room-evidence'}, format='multipart'))
+        self.assert_room_provider_actions(current, 'in_progress', [])
+        application = self.ok(current.post(submission, payload, format='json'))
+        self.assertEqual(application['participants'], [self.replacement.pk])
+        wait = self.review_paid_room_request(reviewer, application['id'])
+        confirmed = self.ok(self.api(self.buyer).post(f'{submission}{wait.request_id}/confirm/',
+            {'client_request_id': 'room-boss-confirms-continuing-seat'}, format='json'))
+        self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.settled_at), (Order.Status.COMPLETED, None))
 
     def assert_room_addon_unavailable_before_entry(self):
         buyer = self.api(self.buyer)
