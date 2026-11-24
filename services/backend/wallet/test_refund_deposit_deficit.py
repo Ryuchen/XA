@@ -35,22 +35,30 @@ class RefundDepositDeficitTest(APITransactionTestCase):
             profile = type(self.profile).objects.select_for_update().get(pk=self.profile.pk)
             wallet = type(self.wallet).objects.select_for_update().get(pk=self.wallet.pk)
             platform = get_platform_wallet(for_update=True)
+            cycle = profile.account.business_cycle
             refund = OrderRefund.objects.create(order=self.order, amount=amount, reason='隔离测试退款')
             original_provider = Transaction.objects.create(wallet=wallet, order=self.order, tx_type='DEPOSIT',
-                amount=-amount, balance_before=amount, balance_after=0)
+                amount=-amount, balance_before=amount, balance_after=0,
+                deposit_owner=profile.account, deposit_business_cycle=cycle)
             original_store = Transaction.objects.create(wallet=platform, order=self.order, tx_type='DEPOSIT_INCOME',
-                amount=amount, balance_before=platform.balance-amount, balance_after=platform.balance)
+                amount=amount, balance_before=platform.balance-amount, balance_after=platform.balance,
+                deposit_owner=profile.account, deposit_business_cycle=cycle, deposit_pair=original_provider)
             before = wallet.balance; wallet.balance += amount; wallet.save(update_fields=['balance'])
             provider = Transaction.objects.create(wallet=wallet, order=self.order, tx_type='DEPOSIT', amount=amount,
-                balance_before=before, balance_after=wallet.balance, reversal_of=original_provider)
+                balance_before=before, balance_after=wallet.balance, reversal_of=original_provider,
+                deposit_owner=profile.account, deposit_business_cycle=cycle)
             before = platform.balance; platform.balance -= amount; platform.save(update_fields=['balance'])
             store = Transaction.objects.create(wallet=platform, order=self.order, tx_type='DEPOSIT_INCOME', amount=-amount,
-                balance_before=before, balance_after=platform.balance, reversal_of=original_store)
+                balance_before=before, balance_after=platform.balance, reversal_of=original_store,
+                deposit_owner=profile.account, deposit_business_cycle=cycle, deposit_pair=provider)
             RefundRecoveryLine.objects.create(refund=refund, original_transaction=original_provider,
                 reversal_transaction=provider, wallet=wallet, source='DEPOSIT', amount=amount)
             RefundRecoveryLine.objects.create(refund=refund, original_transaction=original_store,
                 reversal_transaction=store, wallet=platform, source='DEPOSIT', amount=-amount)
-            profile.deposit_paid -= amount; profile.save(update_fields=['deposit_paid'])
+            profile.deposit_paid -= amount
+            if not profile.deposit_business_cycle:
+                profile.deposit_business_cycle = cycle
+            profile.save(update_fields=['deposit_paid', 'deposit_business_cycle'])
             deficit = register_refund_deficit(refund=refund, profile=profile,
                                               provider_transaction=provider, store_transaction=store)
             self.assertEqual(register_refund_deficit(refund=refund, profile=profile,
@@ -125,7 +133,7 @@ class RefundDepositDeficitTest(APITransactionTestCase):
             amount=100, balance_before=0, balance_after=100)
         store = Transaction.objects.create(wallet=self.platform, order=self.order, tx_type='DEPOSIT_INCOME',
             amount=-100, balance_before=100, balance_after=0)
-        with transaction.atomic(), self.assertRaisesMessage(ValueError, '退款缺少可核验的押金追回记录'):
+        with transaction.atomic(), self.assertRaisesMessage(ValueError, '退款押金两侧流水不匹配'):
             register_refund_deficit(refund=refund, profile=self.profile,
                                     provider_transaction=provider, store_transaction=store)
         self.assertFalse(RefundDepositDeficit.objects.exists())

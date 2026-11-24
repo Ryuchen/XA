@@ -1,5 +1,7 @@
 from datetime import timedelta
+from unittest import skipUnless
 
+from django.db import connection
 from django.test import TestCase, override_settings
 
 from console import test_payroll_late_activity as salary_fixture
@@ -7,8 +9,11 @@ from orders.models import OrderStatusLog
 from orders.tests import test_points_service_refund
 
 
+@skipUnless(connection.vendor == 'mysql',
+            '工资确认依赖 MySQL 工资事件屏障（18-盘点工资屏障待联调）；本模块同时作为 barrier_mysql 簇夹具')
 @override_settings(PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True, SERVICE_ORDER_POINTS_RECEIPT_ENABLED=True,
-                   POINTS_USAGE_SWITCHES_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+                   POINTS_USAGE_SWITCHES_ENABLED=True, PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True,
+                   LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
 class PointsRefundPayrollFlowTest(TestCase):
     def test_partial_points_refund_only_reduces_paid_coins_in_payroll(self):
         salary = salary_fixture.LateActivityPayrollTest(

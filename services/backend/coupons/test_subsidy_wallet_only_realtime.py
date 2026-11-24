@@ -1,22 +1,21 @@
 """A wallet-only operator sees subsidy totals change without order access."""
-import base64
-import json
 import os
-import subprocess
-from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import skipUnless
-from django.conf import settings
+
+from asgiref.sync import async_to_sync
+from channels.db import database_sync_to_async
+from channels.testing import WebsocketCommunicator
 from django.test import LiveServerTestCase, override_settings
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
+from config.asgi import application
 from coupons.benefits import grant_periodic
 from coupons.models import UserCoupon
 from coupons.test_coupon_availability_workflow import CouponAvailabilityWorkflowTest
 from engagement.models import VipTier
 from orders.tests.factories import make_boss_type, make_console_user, make_provider, make_service
 from orders.tests.test_release_flow import screenshot
-from users.test_native_checkin_order_realtime import isolated_redis_asgi
 from wallet.models import get_platform_wallet
 
 
@@ -58,24 +57,48 @@ class WalletOnlySubsidyRealtimeTest(LiveServerTestCase):
         platform = get_platform_wallet()
         platform.balance = 0
         platform.save(update_fields=['balance'])
-        evidence = base64.b64encode(screenshot().read()).decode()
-        repo = Path(settings.BASE_DIR).parent.parent
-        old_flag = os.environ.get('VIP_SAFE_BOX_SUBSIDY_ENABLED')
-        os.environ['VIP_SAFE_BOX_SUBSIDY_ENABLED'] = 'true'
-        try:
-            with isolated_redis_asgi() as (base, ws_base):
-                result = subprocess.run(['node', str(repo / 'scripts/admin-wallet-only-subsidy-realtime.cjs')], cwd=repo,
-                    input=json.dumps({'base': base, 'wsBase': ws_base, 'root': os.environ['XA_ADMIN_VUE_ROOT'],
-                        'financeToken': issue_account_tokens(finance_account)[0], 'dashboardToken': issue_account_tokens(dashboard_account)[0],
-                        'playerToken': issue_account_tokens(player_account)[0],
-                        'orderId': data['id'], 'orderNo': data['order_no'], 'evidence': evidence}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=60)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        finally:
-            if old_flag is None:
-                os.environ.pop('VIP_SAFE_BOX_SUBSIDY_ENABLED', None)
-            else:
-                os.environ['VIP_SAFE_BOX_SUBSIDY_ENABLED'] = old_flag
+        evidence = screenshot()
+        finance_client, dashboard_client = self.client_for(finance_account), self.client_for(dashboard_account)
+        player_client = self.client_for(player_account)
+        finance_token = issue_account_tokens(finance_account)[0]
+        dashboard_token = issue_account_tokens(dashboard_account)[0]
+
+        async def verify():
+            finance_socket = WebsocketCommunicator(application, f'/ws/orders/?token={finance_token}')
+            dashboard_socket = WebsocketCommunicator(application, f'/ws/orders/?token={dashboard_token}')
+            self.assertTrue((await finance_socket.connect())[0])
+            self.assertTrue((await dashboard_socket.connect())[0])
+
+            async def refresh_event(socket, kind):
+                for _ in range(10):
+                    event = await socket.receive_json_from(timeout=5)
+                    self.assertNotEqual(event['type'], 'order_status_update')
+                    if event['type'] == kind:
+                        self.assertEqual(event['data'], {})
+                        return
+                self.fail(f'no {kind} received')
+
+            try:
+                funds = await database_sync_to_async(lambda: self.ok(finance_client.get('/api/admin/wallets/platform-funds/')))()
+                self.assertEqual((funds['pending']['order_count'], funds['pending']['amount']), (0, 0))
+                stats = await database_sync_to_async(lambda: self.ok(dashboard_client.get('/api/admin/dashboard/stats')))()
+                self.assertEqual((stats['pending_subsidy_total'], stats['pending_subsidy_amount']), (0, 0))
+                await database_sync_to_async(lambda: self.ok(player_client.post(
+                    f"/api/orders/orders/{data['id']}/complete/", {'completion_image': evidence}, format='multipart')))()
+                await refresh_event(finance_socket, 'platform_funds_update')
+                await refresh_event(dashboard_socket, 'dashboard_order_update')
+                self.assertTrue(await finance_socket.receive_nothing(timeout=0.2))
+                self.assertTrue(await dashboard_socket.receive_nothing(timeout=0.2))
+                funds = await database_sync_to_async(lambda: self.ok(finance_client.get('/api/admin/wallets/platform-funds/')))()
+                self.assertEqual((funds['pending']['order_count'], funds['pending']['amount'], funds['pending']['orders']),
+                                 (1, 8000, []))
+                stats = await database_sync_to_async(lambda: self.ok(dashboard_client.get('/api/admin/dashboard/stats')))()
+                self.assertEqual((stats['pending_subsidy_total'], stats['pending_subsidy_amount']), (1, 8000))
+            finally:
+                await finance_socket.disconnect()
+                await dashboard_socket.disconnect()
+
+        async_to_sync(verify)()
 
 
 del CouponAvailabilityWorkflowTest

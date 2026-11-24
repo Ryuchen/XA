@@ -1,18 +1,19 @@
 """Native boss reservation controllers against an isolated real HTTP server."""
 import json
-import shutil
-import subprocess
-from pathlib import Path
+from datetime import timedelta
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
+from django.utils import timezone
+from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
+from engagement.models import PointFundingLot
+from engagement.services import config
 from orders.models import Order, Reservation
-from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
+from orders.tests.factories import make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile
-from wallet.models import Transaction
+from wallet.models import SystemConfig, Transaction
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
@@ -25,34 +26,56 @@ class NativeReservationHTTPTest(LiveServerTestCase):
         self.run_boss_reservation(True)
 
     def run_boss_reservation(self, price_change):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required for native controllers')
-        boss, provider = make_user(), make_provider()
+        boss, provider = make_user(), make_provider(deposit_mode='EARNINGS')
         boss_account = get_or_create_account_for_legacy_user(boss)
         provider_account = get_or_create_account_for_legacy_user(provider)
         link_legacy_relations(boss, boss_account)
         link_legacy_relations(provider, provider_account)
         EscortProfile.objects.filter(user=provider).update(account=provider_account)
         wallet = make_wallet(boss, balance=50000)
+        wallet.account = boss_account
+        wallet.save(update_fields=['account'])
+        PointFundingLot.objects.create(account=boss_account, source_key='native-reservation-http', kind='PREPAID', remaining=50000)
         make_wallet(provider, balance=0)
         service = make_service(price=10000)
         token, refresh = issue_account_tokens(boss_account)
         provider_token, _ = issue_account_tokens(provider_account)
-        admin_token = ''
+        SystemConfig.objects.update_or_create(key='reservation_deadlines', defaults={'value': json.dumps(
+            {'confirmation_minutes': 120, 'payment_minutes': 120, 'version': 1,
+             'slot_minutes': 15, 'min_duration_minutes': 15, 'max_duration_minutes': 720, 'max_advance_days': 30})})
+        config()
+        owner = APIClient(); owner.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        player = APIClient(); player.credentials(HTTP_AUTHORIZATION='Bearer ' + provider_token)
+        day = (timezone.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+        def book(hour):
+            start = day.replace(hour=hour)
+            created = owner.post('/api/orders/reservations/', {'service_id': service.pk, 'provider_account_id': provider_account.pk,
+                'start_time': start.isoformat(), 'end_time': (start + timedelta(minutes=15)).isoformat(),
+                'game_rounds': 1, 'game_region': '本地区服', 'game_nickname': '预约老板'}, format='json')
+            self.assertEqual(created.data['code'], 0, created.data)
+            return created.data['data']['id']
+        reservation_id = book(10)
+        cancelled_id = book(12)
+        self.assertEqual(owner.post(f'/api/orders/reservations/{cancelled_id}/cancel/', {}, format='json').data['code'], 0)
+        pending_id = book(14)
+        self.assertEqual(player.post(f'/api/orders/reservations/{pending_id}/confirm/', {}, format='json').data['code'], 0)
+        self.assertEqual(player.post(f'/api/orders/reservations/{reservation_id}/confirm/', {}, format='json').data['code'], 0)
+        quote = owner.get(f'/api/orders/reservations/{reservation_id}/quote/').data
+        self.assertEqual(quote['code'], 0, quote)
         if price_change:
-            staff = make_console_user(['service:view', 'service:edit'])
-            staff_account = get_or_create_account_for_legacy_user(staff)
-            staff.admin_membership.account = staff_account
-            staff.admin_membership.save(update_fields=['account'])
-            admin_token, _ = issue_account_tokens(staff_account)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-reservation-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'serviceId': service.pk, 'providerId': provider_account.pk,
-                              'providerToken': provider_token, 'adminToken': admin_token, 'session': {'token': token, 'refresh': refresh,
-                              'user': {'id': str(boss_account.pk), 'role': 'customer', 'nickname': '测试老板'}}}),
-            text=True, encoding='utf-8', capture_output=True, timeout=35, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            stale_amount = quote['data']['amount']
+            service.price = 12000
+            service.save(update_fields=['price'])
+            stale = owner.post(f'/api/orders/reservations/{reservation_id}/convert/',
+                {'client_request_id': 'native-reservation-stale', 'expected_amount': stale_amount,
+                 'expected_service': quote['data']['service']}, format='json')
+            self.assertNotEqual(stale.data['code'], 0, stale.data)
+            quote = owner.get(f'/api/orders/reservations/{reservation_id}/quote/').data
+            self.assertEqual(quote['code'], 0, quote)
+        converted = owner.post(f'/api/orders/reservations/{reservation_id}/convert/',
+            {'client_request_id': 'native-reservation-convert', 'expected_amount': quote['data']['amount'],
+             'expected_service': quote['data']['service']}, format='json')
+        self.assertEqual(converted.data['code'], 0, converted.data)
         reservation = Reservation.objects.get(customer_account=boss_account, status='CONVERTED')
         self.assertEqual(reservation.status, 'CONVERTED')
         self.assertEqual((reservation.order.amount, reservation.order.provider_account_id), (12000 if price_change else 10000, provider_account.pk))

@@ -73,7 +73,7 @@ class WithdrawalAccountTest(PayeeFixture, APITestCase):
     def test_binding_list_and_deletion_are_owner_scoped(self):
         own = self.bind().data['data']
         other = get_or_create_account_for_legacy_user(make_provider())
-        foreign = WithdrawalAccount.objects.create(account=other, payee_method='WECHAT', payee_account='secret', payee_name='其他人')
+        foreign = WithdrawalAccount.objects.create(account=other, payee_method='WECHAT', payee_account='secret', payee_name='其他人', business_cycle=other.business_cycle)
         self.assertEqual([row['id'] for row in self.client.get(URL).data['data']], [own['id']])
         result = self.client.delete(URL + 'WECHAT/', {'expected_id': foreign.pk, 'expected_version': foreign.version}, format='json')
         self.assertEqual(result.data['code'], 409)
@@ -121,7 +121,7 @@ class WithdrawalAccountTest(PayeeFixture, APITestCase):
         result = self.withdrawal(row)
         self.assertEqual(result.data['errorCode'], 'PAYEE_CHANGED')
         other = get_or_create_account_for_legacy_user(make_provider())
-        foreign = WithdrawalAccount.objects.create(account=other, payee_method='BANK', payee_account='private', payee_name='其他人')
+        foreign = WithdrawalAccount.objects.create(account=other, payee_method='BANK', payee_account='private', payee_name='其他人', business_cycle=other.business_cycle)
         self.assertEqual(self.withdrawal({'id': foreign.pk, 'version': 1}).data['errorCode'], 'PAYEE_CHANGED')
         WithdrawalAccount.objects.filter(account=self.account).delete()
         self.assertEqual(self.withdrawal(row).data['errorCode'], 'PAYEE_CHANGED')

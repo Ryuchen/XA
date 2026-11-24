@@ -420,20 +420,6 @@ def notify_unselected_applicants(order, applications, selected_accounts):
                 related_order_id=order.pk, action_url=f'/pages/orders/index?application_id={application_id}'))
 
 
-def close_applications_for_staff_assignment(order, selected_accounts):
-    """Close the current public application round while the order is locked."""
-    selected_accounts = set(selected_accounts)
-    applications = list(order.applications.filter(status='PENDING').values_list('pk', 'applicant_id', 'partner_id'))
-    if not applications:
-        return
-    matched = [pk for pk, applicant_id, partner_id in applications
-               if {account_id for account_id in (applicant_id, partner_id) if account_id} == selected_accounts]
-    pending = order.applications.filter(status='PENDING')
-    pending.exclude(pk__in=matched).update(status='NOT_SELECTED', updated_at=timezone.now())
-    pending.filter(pk__in=matched).update(status='SELECTED', updated_at=timezone.now())
-    notify_unselected_applicants(order, applications, selected_accounts)
-
-
 class MyApplicationDetailView(APIView):
     """Let a member revisit an existing invitation even while absent from the pool."""
     permission_classes = [IsClubAccountAuthenticated]

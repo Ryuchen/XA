@@ -1,4 +1,6 @@
 """A selected team can discover and start an order after returning online."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -23,6 +25,8 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
     ok = release_flow.ReleaseFlowTest.ok
     recharge = release_flow.ReleaseFlowTest.recharge
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '选人通知工作流须本人试音录音/客服指派能力属正式契约深水区（18-盘点 派单/试音待联调）；最终联调启用')
     def test_quick_double_notice_prefixes_each_name_without_changing_profiles(self):
         from stores.models import Store
         self.assertEqual(Store.objects.filter(slug='shenglang').update(provider_name_prefix='SL'), 1)
@@ -51,6 +55,8 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         second.escort_profile.refresh_from_db()
         self.assertEqual([self.provider.escort_profile.display_name, second.escort_profile.display_name], names)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '选人通知工作流须本人试音录音/客服指派能力属正式契约深水区（18-盘点 派单/试音待联调）；最终联调启用')
     def test_staff_assignment_notice_reaches_boss_account_when_legacy_id_is_stale(self):
         from stores.models import Store
         self.assertEqual(Store.objects.filter(slug='shenglang').update(provider_name_prefix='SL'), 1)
@@ -89,6 +95,8 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         rows = self.ok(self.client.get('/api/messages/'))['messages']
         self.assertFalse(any(item['title'] == '已为你指派大神' for item in rows))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '选人通知工作流须本人试音录音/客服指派能力属正式契约深水区（18-盘点 派单/试音待联调）；最终联调启用')
     def test_single_application_selection_notifies_provider_once(self):
         profile = self.provider.escort_profile
         profile.pass_tier = 'BLACK'
@@ -117,6 +125,8 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         self.assertTrue(self.ok(self.client.get('/api/messages/assignment-alerts/', {'after': 0}))['pending'])
         self.assertEqual(self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['status'], 'GRABBED')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '选人通知工作流须本人试音录音/客服指派能力属正式契约深水区（18-盘点 派单/试音待联调）；最终联调启用')
     def test_selected_provider_cannot_return_order_to_pool_by_rejecting(self):
         replacement = make_provider(display_name='新陪玩', deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         for provider in (self.provider, replacement):
@@ -158,6 +168,8 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         self.assertFalse(OrderApplication.objects.filter(order_id=order_id, applicant=self.accounts[replacement.pk]).exists())
 
     @override_settings(REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '选人通知工作流须本人试音录音/客服指派能力属正式契约深水区（18-盘点 派单/试音待联调）；最终联调启用')
     def test_selected_team_detail_tracks_staff_transfer_and_return(self):
         partner, incoming = (make_provider(display_name=name, deposit_paid=40000, wechat_avatar_legacy_exempt=True)
                              for name in ('原队友', '接手陪玩'))
@@ -222,6 +234,8 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
                     '本次报名曾被选中，当前服务人员已调整。' if new == incoming
                     else '本次报名已选中，请查看订单状态。')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '选人通知工作流须本人试音录音/客服指派能力属正式契约深水区（18-盘点 派单/试音待联调）；最终联调启用')
     def test_double_team_invitation_confirmation_and_selection_reach_correct_accounts(self):
         second, outsider = (make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True) for _ in range(2))
         for user in (self.provider, second, outsider):

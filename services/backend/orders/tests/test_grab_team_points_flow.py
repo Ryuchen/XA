@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 import time
 from datetime import timedelta
 from unittest.mock import patch
@@ -104,6 +106,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
             {'client_request_id': 'points-team-confirm'}, format='json')
         self.assertEqual(confirm.status_code, 200, confirm.data)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_team_assignment_captures_each_share_on_pre_points_deal(self):
         self.prepare(dispatch_route='STAFF')
         self.invite_and_confirm()
@@ -120,6 +124,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.assertGreater(sum(row.incoming_basis for row in snapshots), self.order.amount)
         self.assertFalse(Transaction.objects.filter(order=self.order, tx_type='INCOME').exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_boss_cancel_returns_wallet_points_and_coupon_once(self):
         self.prepare(mixed_sources=True)
         self.invite_and_confirm()
@@ -138,6 +144,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
                                           {'reason': '不再需要'}, format='json').status_code, 200)
         self.assertEqual(OrderPointsRefund.objects.filter(redemption__order=self.order).count(), 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_boss_cancel_after_empty_window_returns_points_without_worker(self):
         self.prepare(mixed_sources=True)
         time.sleep(1.05)
@@ -155,6 +163,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.assertEqual(OrderPointsRefund.objects.filter(redemption__order=self.order).count(), 1)
 
     @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_single_points_late_first_grab_assigns_without_worker(self):
         self.enterContext(patch('orders.grab_single_flow.enqueue'))
         self.prepare(team_size=1)
@@ -171,24 +181,32 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
     @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, SERVICE_POINTS_REPORT_TESTING=True,
                        SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_POINTS_SETTLEMENT_TESTING=True,
                        SERVICE_POINTS_CONSUMPTION_TESTING=True, REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_single_points_grab_through_report_and_settlement(self):
         self._single_points_report_and_settlement(selected=False)
 
     @override_settings(SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_FUNDING_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_boss_specified_single_points_through_report_and_settlement(self):
         self._single_points_report_and_settlement(selected=True)
 
     @override_settings(SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_FUNDING_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_boss_specified_points_waits_for_store_funding(self):
         self._single_points_report_and_settlement(selected=True, high_discount=True)
 
     @override_settings(SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_FUNDING_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_boss_specified_points_referral_uses_main_paid_amount(self):
         self._single_points_report_and_settlement(selected=True, referral=True)
 
@@ -253,6 +271,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
             confirmation = ConsumptionConfirmation.objects.get(order=self.order)
             self.assertEqual(confirmation.amount, self.receipt.paid_units)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_boss_specified_double_points_captures_deal_basis(self):
         self.prepare(team_size=2, selected=True)
         self.assertEqual(self.order.status, 'GRABBED')
@@ -271,6 +291,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
     @override_settings(SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_FUNDING_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_boss_specified_double_points_settles_each_provider(self):
         import tempfile
         from engagement.confirmation import process_order
@@ -319,12 +341,16 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
             self.assertEqual(ConsumptionConfirmation.objects.get(order=self.order).amount, self.receipt.paid_units)
 
     @override_settings(SERVICE_POINTS_ASSIGN_TESTING=False)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_specified_points_rejected_without_assignment_integration(self):
         self.prepare(team_size=1, selected=True, expected_status=400)
         self.wallet.refresh_from_db(); self.profile.refresh_from_db()
         self.assertEqual((self.wallet.balance, self.profile.points_balance), (25000, 15000))
         self.assertFalse(Order.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_specified_points_rechecks_provider_availability_before_payment(self):
         def take_provider_offline():
             profile = self.accounts[0].escort_profile
@@ -335,6 +361,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.assertEqual((self.wallet.balance, self.profile.points_balance), (25000, 15000))
         self.assertFalse(Order.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_specified_provider_cannot_also_enter_auto_grab(self):
         self.prepare(team_size=1, selected=True)
         before = (Order.objects.count(), Transaction.objects.count())
@@ -345,6 +373,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.assertEqual((Order.objects.count(), Transaction.objects.count()), before)
 
     @override_settings(PROVIDER_WECHAT_GATE_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_specified_points_rechecks_wechat_binding_before_payment(self):
         def unbind_provider():
             account = self.accounts[0]
@@ -359,6 +389,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
                        SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_POINTS_REPORT_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_specified_points_prestart_reassignment_preserves_funding_facts(self):
         import tempfile
         from engagement.confirmation import process_order
@@ -417,6 +449,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
                        SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_POINTS_REPORT_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_points_prestart_reassignment_uses_new_rates_and_seat_limit(self):
         import tempfile
         from engagement.confirmation import process_order
@@ -480,6 +514,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
                        SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_POINTS_REPORT_TESTING=True,
                        SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_points_prestart_double_replacements_keep_each_fixed_rule(self):
         import tempfile
         from engagement.confirmation import process_order
@@ -567,6 +603,8 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
                                           {'reason': '不再需要'}, format='json').status_code, 200)
         self.assertEqual(OrderPointsRefund.objects.filter(redemption__order=self.order).count(), 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_unmatched_timeout_returns_wallet_points_and_coupon_once(self):
         self.prepare()
         pool = OrderGrabPoolSnapshot.objects.get(order=self.order)

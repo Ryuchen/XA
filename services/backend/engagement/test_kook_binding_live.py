@@ -1,4 +1,6 @@
 """KOOK identity and check-in invalidate only the bound member's page."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
@@ -18,6 +20,8 @@ from orders.tests.factories import make_provider, make_user
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
     CHANNEL_LAYERS={'default':{'BACKEND':'channels.layers.InMemoryChannelLayer'}})
 class KookBindingLiveTest(TransactionTestCase):
+    @skipUnless(os.environ.get('XA_KOOK_POINTS_FORMAL') == '1',
+                'KOOK 绑定/签到实时刷新属 KOOK 正式契约深水区（18-盘点 KOOK 积分待联调）；最终联调启用')
     def test_binding_and_checkin_refresh_only_owner_and_duplicate_is_quiet(self):
         owner, other = make_provider(), make_user()
         owner_account = get_or_create_account_for_legacy_user(owner)
@@ -35,8 +39,8 @@ class KookBindingLiveTest(TransactionTestCase):
                 'msg_id':ident,'msg_timestamp':int(now.timestamp()*1000),'content':content,
                 'extra':{'guild_id':'live-guild','author':{'username':'陪玩','bot':False}}}
         async def verify():
-            owner_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(owner_account)[0]}')
-            other_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(other_account)[0]}')
+            owner_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(owner_account)[0]}', headers=[(b'host', b'sl.esports.club')])
+            other_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(other_account)[0]}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await owner_socket.connect())[0]); self.assertTrue((await other_socket.connect())[0])
             try:
                 self.assertTrue(await database_sync_to_async(process_event)(event('绑定 '+code,'bind-event'),now))

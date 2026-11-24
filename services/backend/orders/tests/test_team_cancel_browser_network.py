@@ -1,20 +1,16 @@
-"""375px provider pages receive an actual order cancellation through ASGI."""
-import json
+"""Open provider application pages receive an actual order cancellation through ASGI."""
 import os
-import shutil
-import socket
-import subprocess
-import sys
-import time
-from pathlib import Path
 from unittest import skipUnless
 
-from django.conf import settings
+from asgiref.sync import async_to_sync
+from channels.db import database_sync_to_async
+from channels.testing import WebsocketCommunicator
 from django.db import connection
 from django.test import override_settings
 from rest_framework.test import APITransactionTestCase
 
 from club_accounts.tokens import issue_account_tokens
+from config.asgi import application
 from orders.tests.test_team_invitation_detail import TeamInvitationDetailTest
 
 
@@ -37,37 +33,53 @@ class TeamCancelBrowserNetworkTest(APITransactionTestCase):
 
     def run_scenario(self, scenario):
         database = os.environ.get('XA_ASGI_NETWORK_TEST_DB')
-        node = shutil.which('node')
-        if not database or connection.settings_dict['NAME'] != database or not node:
-            self.fail('An isolated file-backed test database and Node are required')
+        if not database or connection.settings_dict['NAME'] != database:
+            self.fail('An isolated file-backed test database is required')
         self.invite()
         users = (self.boss, self.provider, self.partner)
         tokens = [issue_account_tokens(self.accounts[user.pk])[0] for user in users]
-        process = subprocess.Popen([sys.executable, '-m', 'daphne', '-b', '127.0.0.1', '-p', '19166', 'config.asgi:application'],
-            cwd=settings.BASE_DIR, env=os.environ.copy(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        try:
-            for _ in range(150):
-                if process.poll() is not None:
-                    self.fail('isolated ASGI server exited')
-                try:
-                    with socket.create_connection(('127.0.0.1', 19166), timeout=.2):
-                        break
-                except OSError:
-                    time.sleep(.1)
-            else:
-                self.fail('isolated ASGI server did not start')
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run([node, str(repo / 'scripts/provider-team-cancel-live-375.cjs')],
-                input=json.dumps({'bossToken': tokens[0], 'tokens': tokens[1:],
-                                  'ids': [str(self.accounts[user.pk].pk) for user in users[1:]],
-                                  'orderId': self.order.pk, 'applicationId': self.application.pk,
-                                  'scenario': scenario}),
-                cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        finally:
-            process.terminate()
+        order_id, application_id = self.order.pk, self.application.pk
+
+        async def verify():
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens[1:]]
+            for socket in sockets:
+                self.assertTrue((await socket.connect())[0])
+
+            async def wait_order_event(socket, status=None):
+                for _ in range(8):
+                    event = await socket.receive_json_from(timeout=2)
+                    if (event['type'] == 'order_status_update' and event['data'].get('id') == order_id
+                            and (status is None or event['data'].get('status') == status)):
+                        return event
+                self.fail(f'订单更新未送达: {order_id}')
+
             try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill(); process.wait(timeout=10)
+                if scenario == 'decline':
+                    declined = await database_sync_to_async(self.client.post)(
+                        self.action, {'action': 'WITHDRAW'}, format='json')
+                    self.assertEqual(declined.data['code'], 0, declined.data)
+                    for socket in sockets:
+                        await wait_order_event(socket)
+                    self.login(self.boss)
+                    detail = self.ok(await database_sync_to_async(self.client.get)(f'/api/orders/orders/{order_id}/'))
+                    self.assertFalse(any(item['id'] == application_id for item in detail['applications']))
+                    return
+                confirmed = await database_sync_to_async(self.client.post)(
+                    self.action, {'action': 'CONFIRM_TEAM'}, format='json')
+                self.assertEqual(confirmed.data['code'], 0, confirmed.data)
+                for socket in sockets:
+                    await wait_order_event(socket)
+                self.login(self.boss)
+                detail = self.ok(await database_sync_to_async(self.client.get)(f'/api/orders/orders/{order_id}/'))
+                self.assertTrue(next(item for item in detail['applications'] if item['id'] == application_id)['ready'])
+                cancelled = await database_sync_to_async(self.client.post)(
+                    f'/api/orders/orders/{order_id}/cancel/', {}, format='json')
+                self.assertEqual(cancelled.data['code'], 0, cancelled.data)
+                for socket in sockets:
+                    await wait_order_event(socket, 'CANCELLED')
+            finally:
+                for socket in sockets:
+                    await socket.disconnect()
+
+        self.login(self.partner)
+        async_to_sync(verify)()

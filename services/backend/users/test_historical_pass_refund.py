@@ -47,7 +47,8 @@ class HistoricalPassRefundTests(APITestCase):
             balance_before=before, balance_after=self.shop.balance, external_tx_id=tx.tx_no)
         return ProviderPassPurchase.objects.create(provider=self.provider, account=self.account,
             tier='BRONZE', days=1, daily_price=amount, original_amount=amount,
-            paid_amount=amount, starts_at=start, expires_at=end, transaction=tx)
+            paid_amount=amount, starts_at=start, expires_at=end, transaction=tx,
+            business_cycle=self.account.business_cycle)
 
     def refund(self, item, request_id='refund-1'):
         return self.client.post(f'/api/users/provider-pass/{item.pk}/refund/',

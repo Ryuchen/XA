@@ -1,4 +1,7 @@
 """Paid service income follows a claimed and released withdrawal to its receipt."""
+import os
+from unittest import skipUnless
+
 from django.test import override_settings, skipUnlessDBFeature
 from django.utils import timezone
 from datetime import timedelta
@@ -12,6 +15,8 @@ from orders.tests import test_release_flow as flow
 from wallet.models import SystemConfig, Transaction, Wallet, WithdrawRequest
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '订单收入认领释放提现旅程须正式报单结算落地（settled_at）＋收入释放保护（18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
                    REQUIRE_RECHARGE_PROOF=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)

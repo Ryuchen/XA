@@ -1,15 +1,13 @@
-"""Provider H5 refreshes an open invitation after a separate worker cancels it."""
-import json
+"""Open invitation, boss detail and admin dashboard refresh after a separate worker cancels."""
 import os
-import socket
 import subprocess
 import sys
-import tempfile
-import time
 from datetime import timedelta
-from pathlib import Path
 from unittest import skipUnless
 
+from asgiref.sync import async_to_sync
+from channels.db import database_sync_to_async
+from channels.testing import WebsocketCommunicator
 from django.conf import settings
 from django.db import connection
 from django.test import TransactionTestCase
@@ -18,13 +16,14 @@ from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
+from config.asgi import application
 from orders.models import Order, OrderApplication
 from orders.tasks import auto_cancel_pending_order
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
-from wallet.models import Wallet
+from wallet.models import Transaction, Wallet
 
 
-@skipUnless(os.environ.get('XA_PROVIDER_TIMEOUT_REALTIME_H5_DIR'), 'Requires isolated H5, ASGI, Redis and Celery')
+@skipUnless(os.environ.get('XA_PROVIDER_TIMEOUT_REALTIME_H5_DIR'), 'Requires isolated ASGI, Redis and Celery')
 class ProviderTimeoutLivePageTest(TransactionTestCase):
     def test_open_team_invitation_updates_when_worker_expires_order(self):
         self.assertEqual(connection.settings_dict['NAME'], os.environ.get('XA_ASGI_NETWORK_TEST_DB'))
@@ -55,78 +54,67 @@ class ProviderTimeoutLivePageTest(TransactionTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[1])
         invited = client.post(f'/api/orders/orders/{order_id}/grab/', {'team_size': 2, 'partner_id': accounts[2].pk}, format='json')
         self.assertEqual(invited.data['code'], 0, invited.data)
-        application_id = OrderApplication.objects.get(order_id=order_id, applicant=accounts[1]).pk
-        with socket.socket() as listener:
-            listener.bind(('127.0.0.1', 0)); port = listener.getsockname()[1]
+        OrderApplication.objects.get(order_id=order_id, applicant=accounts[1])
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
+        detail = client.get(f'/api/orders/orders/{order_id}/').data['data']
+        self.assertEqual(detail['status'], 'PENDING')
+        self.assertIn('CANCEL', detail['allowed_actions'])
+        staff_token = issue_account_tokens(staff_account)[0]
+        staff_client = APIClient(); staff_client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+        stats = staff_client.get('/api/admin/dashboard/stats').data['data']
+        self.assertEqual((stats['pending_paid_total'], stats['pending_paid_routes']['public'], stats['paid_amount_total']),
+                         (1, 1, 20000))
+        Order.objects.filter(pk=order_id).update(auto_cancel_at=timezone.now() - timedelta(seconds=1))
         env = {**os.environ, 'KOOK_ENABLED': 'false', 'WECOM_DISPATCH_ENABLED': 'false'}
-        server = subprocess.Popen([sys.executable, '-m', 'daphne', '-b', '127.0.0.1', '-p', str(port), 'config.asgi:application'],
-            cwd=settings.BASE_DIR, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        browser = native = admin = worker = None
+        worker = None
+
+        def start_worker():
+            nonlocal worker
+            worker = subprocess.Popen([sys.executable, '-m', 'celery', '-A', 'config', 'worker', '-P', 'solo', '-l', 'WARNING'],
+                cwd=settings.BASE_DIR, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+            auto_cancel_pending_order.delay(order_id)
+
+        async def verify():
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+                       for token in (tokens[0], tokens[2], staff_token)]
+            for socket in sockets:
+                self.assertTrue((await socket.connect())[0])
+
+            async def wait_cancelled(socket):
+                for _ in range(10):
+                    event = await socket.receive_json_from(timeout=60)
+                    if (event['type'] == 'order_status_update' and event['data'].get('id') == order_id
+                            and event['data'].get('status') == 'CANCELLED'):
+                        return event
+                self.fail(f'取消更新未送达: {order_id}')
+
+            try:
+                await database_sync_to_async(start_worker)()
+                boss_event = await wait_cancelled(sockets[0])
+                self.assertEqual(boss_event['data']['payment_status'], 'REFUNDED')
+                await wait_cancelled(sockets[1])
+                await wait_cancelled(sockets[2])
+            finally:
+                for socket in sockets:
+                    await socket.disconnect()
+
         try:
-            for _ in range(150):
-                if server.poll() is not None:
-                    self.fail('isolated ASGI server exited')
-                try:
-                    with socket.create_connection(('127.0.0.1', port), timeout=.2):
-                        break
-                except OSError:
-                    time.sleep(.1)
-            else:
-                self.fail('isolated ASGI server did not start')
-            with tempfile.TemporaryDirectory(prefix='xa-timeout-live-page-') as temp:
-                ready = str(Path(temp) / 'ready')
-                native_ready = str(Path(temp) / 'native-ready')
-                admin_ready = str(Path(temp) / 'admin-ready')
-                repo = Path(__file__).resolve().parents[4]
-                browser = subprocess.Popen(['node', str(repo / 'scripts/provider-timeout-open-375-live.cjs')],
-                    cwd=repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    text=True, encoding='utf-8', creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-                browser.stdin.write(json.dumps({'base': f'http://127.0.0.1:{port}', 'ready': ready,
-                    'root': os.environ['XA_PROVIDER_TIMEOUT_REALTIME_H5_DIR'], 'token': tokens[2],
-                    'providerId': str(accounts[2].pk), 'orderId': order_id, 'applicationId': application_id}))
-                browser.stdin.close(); browser.stdin = None
-                native = subprocess.Popen(['node', str(repo / 'scripts/native-timeout-open-live.cjs')],
-                    cwd=repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    text=True, encoding='utf-8', creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-                native.stdin.write(json.dumps({'base': f'http://127.0.0.1:{port}', 'ready': native_ready,
-                    'token': tokens[0], 'bossId': accounts[0].pk, 'orderId': order_id}))
-                native.stdin.close(); native.stdin = None
-                admin = subprocess.Popen(['node', str(repo / 'scripts/admin-timeout-dashboard-live.cjs')],
-                    cwd=repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    text=True, encoding='utf-8', creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-                admin.stdin.write(json.dumps({'base': f'http://127.0.0.1:{port}', 'ready': admin_ready,
-                    'token': issue_account_tokens(staff_account)[0]}))
-                admin.stdin.close(); admin.stdin = None
-                ready_paths = [Path(ready), Path(native_ready), Path(admin_ready)]
-                deadline = time.monotonic() + 50
-                while not all(path.exists() for path in ready_paths) and time.monotonic() < deadline and all(process.poll() is None for process in (browser, native, admin)):
-                    time.sleep(.1)
-                if not all(path.exists() for path in ready_paths):
-                    outputs = []
-                    for process in (browser, native, admin):
-                        if process.poll() is None:
-                            process.terminate()
-                        stdout, stderr = process.communicate(timeout=5)
-                        outputs.append(stdout + stderr)
-                    self.fail('Clients did not reach their open pages: ' + '\n'.join(outputs))
-                Order.objects.filter(pk=order_id).update(auto_cancel_at=timezone.now() - timedelta(seconds=1))
-                worker = subprocess.Popen([sys.executable, '-m', 'celery', '-A', 'config', 'worker', '-P', 'solo', '-l', 'WARNING'],
-                    cwd=settings.BASE_DIR, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-                auto_cancel_pending_order.delay(order_id)
-                stdout, stderr = browser.communicate(timeout=35)
-                self.assertEqual(browser.returncode, 0, stdout + stderr)
-                stdout, stderr = native.communicate(timeout=35)
-                self.assertEqual(native.returncode, 0, stdout + stderr)
-                stdout, stderr = admin.communicate(timeout=35)
-                self.assertEqual(admin.returncode, 0, stdout + stderr)
-                self.assertEqual(Wallet.objects.get(user=users[0]).balance, 50000)
+            async_to_sync(verify)()
+            self.assertEqual(Wallet.objects.get(user=users[0]).balance, 50000)
+            self.assertEqual(Transaction.objects.filter(order_id=order_id, tx_type='REFUND', status='SUCCESS').count(), 1)
+            detail = client.get(f'/api/orders/orders/{order_id}/').data['data']
+            self.assertEqual((detail['status'], detail['payment_status']), ('CANCELLED', 'REFUNDED'))
+            self.assertNotIn('CANCEL', detail['allowed_actions'])
+            inbox = client.get('/api/messages/', {'type': 'ORDER'}).data['data']['messages']
+            self.assertTrue(any(row['related_order_id'] == order_id and row['title'] == '订单超时已取消' for row in inbox))
+            stats = staff_client.get('/api/admin/dashboard/stats').data['data']
+            self.assertEqual((stats['pending_paid_total'], stats['pending_paid_routes']['public'], stats['paid_amount_total']),
+                             (0, 0, 0))
         finally:
-            for process in (browser, native, admin, worker, server):
-                if process and process.poll() is None:
-                    process.terminate()
-                    try:
-                        process.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        process.kill(); process.wait(timeout=10)
+            if worker and worker.poll() is None:
+                worker.terminate()
+                try:
+                    worker.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    worker.kill(); worker.wait(timeout=10)

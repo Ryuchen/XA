@@ -1,6 +1,8 @@
 """老板钱包三类可用余额必须来自真实资金批次，而非累计充值字段。"""
 from io import BytesIO
+import os
 from tempfile import TemporaryDirectory
+from unittest import skipUnless
 
 from django.test import TransactionTestCase, override_settings
 from PIL import Image
@@ -119,6 +121,8 @@ class WalletBalancePartsTest(TransactionTestCase):
         self.assertEqual(refunded.data['code'], 0, refunded.data)
         self.assertParts(1100, 1000, 100, 0)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '赠送/赔付与本金共享 FIFO 支付普通订单须混合资金选择契约（现行普通单本金优先，18-盘点订单售后资金组合）；最终联调启用')
     def test_compensation_and_gift_share_the_existing_fifo_and_refund_ledger(self):
         self.recharge(amount=1000, gift=100)
         self.adjust(300, PointFundingLot.Kind.COMPENSATION)

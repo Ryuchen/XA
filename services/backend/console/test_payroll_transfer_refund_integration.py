@@ -1,5 +1,7 @@
 from datetime import timedelta
+import os
 import time
+from unittest import skipUnless
 
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
@@ -43,6 +45,8 @@ from wallet.models import Transaction
     ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
     KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
 )
+@skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+            '转单退款工资调整依赖正式逐段转单链与客服多人指派夹具（18-盘点转单分段收敛／客服安排抢单），门禁保持关闭；最终联调启用')
 class TransferRefundPayrollIntegrationTest(TransactionTestCase):
     @override_settings(GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True,
         GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True,

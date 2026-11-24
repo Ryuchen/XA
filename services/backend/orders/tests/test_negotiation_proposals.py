@@ -29,9 +29,13 @@ class NegotiationProposalTests(APITestCase):
         Transaction.objects.create(wallet=wallet, order=self.order, tx_type='PAY', amount=-10000,
                                    balance_before=19000, balance_after=9000)
         attribution = OrderOriginalAttribution.objects.create(order=self.order, original_amount=10000, status='ACTIVE')
+        from orders.models import OrderWorkStint
+        started = timezone.now()
         for index, account in enumerate((self.a_account, self.b_account), 1):
             OrderParticipationSegment.objects.create(attribution=attribution, provider_account=account, slot=index,
-                original_share=5000, accepted_at=timezone.now(), started_at=timezone.now())
+                original_share=5000, accepted_at=started, started_at=started,
+                provider_business_cycle=account.business_cycle)
+            OrderWorkStint.objects.create(order=self.order, account=account, started_at=started)
 
     def case(self, scope=None):
         payload = {**self.payload, 'affected_provider_account_ids':scope or [self.a_account.pk]}
@@ -165,8 +169,12 @@ class NegotiationProposalTests(APITestCase):
         decide(case.pk, actor=self.a_account, proposal_id=second.pk, accepted=False)
         result = self.client_for(resolver).post(f'/api/admin/aftersales/{case.pk}/resolve/',
             {'resolution':'完成售后'}, format='json')
-        self.assertNotEqual(result.data.get('code', 400), 0, result.data)
-        case.refresh_from_db(); self.assertEqual(case.status, 'OPEN')
+        # 现行批复规则：旧方案已同意未执行、新方案被拒绝时允许客服结案，
+        # 但原确认记录保留不被抹除（18-盘点协商售后结案补充）。
+        self.assertEqual(result.data['code'], 0, result.data)
+        case.refresh_from_db(); self.assertEqual(case.status, 'RESOLVED')
+        first.refresh_from_db(); second.refresh_from_db()
+        self.assertEqual((first.status, second.status), ('ACCEPTED', 'REJECTED'))
 
     def test_legacy_store_without_proposal_tables_can_resolve_when_feature_disabled(self):
         from unittest.mock import patch

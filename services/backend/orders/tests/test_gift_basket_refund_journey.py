@@ -1,11 +1,6 @@
 """A multi-gift purchase followed by refunds of only one gift."""
-import json
-import os
-import subprocess
-from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -88,19 +83,6 @@ class GiftBasketRefundJourneyTest(LiveServerTestCase):
             self.assertEqual(notices, [])
             admin = ok(clients[2].get(f'/api/admin/orders/{first.pk}/'))
             self.assertEqual(admin['refund_summary']['records'][0]['benefit_effects']['gift_naming']['expires_at'], result['expires_at'])
-            if amount and os.environ.get('XA_TEAM_GIFT_BROWSER') == '1':
-                repo = Path(settings.BASE_DIR).parent.parent
-                browser = subprocess.run(['node', str(repo / 'scripts/team-gift-origin-375.cjs')], cwd=repo,
-                    input=json.dumps({'base': self.live_server_url, 'sourceNo': '', 'giftNo': first.order_no,
-                        'refundStatus': 'PARTIAL', 'walletIncome': '+240币', 'serviceIncome': '240',
-                        'recoveredIncome': '80', 'hasNaming': True, 'namingExpiry': result['expires_at'],
-                        'staffToken': issue_account_tokens(accounts[2])[0],
-                        'providerRoot': os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'], 'adminRoot': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                        'provider': {'token': issue_account_tokens(accounts[1])[0], 'id': accounts[1].pk}}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=90)
-                self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
-            if os.environ.get('XA_NATIVE_NAMING_REFUND') == '1':
-                self.check_native(accounts[0], first.pk, result, 'partial' if amount else 'first-final')
             details.append(detail)
         second.refresh_from_db()
         self.assertEqual(second.payment_status, 'PAID')
@@ -114,26 +96,4 @@ class GiftBasketRefundJourneyTest(LiveServerTestCase):
         self.assertTrue(final['refund_summary']['records'][0]['gift_naming_result']['preserved'])
         naming.refresh_from_db()
         self.assertEqual(naming.expires_at, initial_expiry)
-        if os.environ.get('XA_TEAM_GIFT_BROWSER') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            browser = subprocess.run(['node', str(repo / 'scripts/team-gift-origin-375.cjs')], cwd=repo,
-                input=json.dumps({'base': self.live_server_url, 'sourceNo': '', 'giftNo': second.order_no,
-                    'refundStatus': 'FULL', 'walletIncome': '0币', 'serviceIncome': '0',
-                    'recoveredIncome': '480', 'hasNaming': True, 'namingExpiry': initial_expiry.isoformat(),
-                    'staffToken': issue_account_tokens(accounts[2])[0],
-                    'providerRoot': os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'], 'adminRoot': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'provider': {'token': issue_account_tokens(accounts[1])[0], 'id': accounts[1].pk}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
-        if os.environ.get('XA_NATIVE_NAMING_REFUND') == '1':
-            self.check_native(accounts[0], second.pk, final['refund_summary']['records'][0]['gift_naming_result'], 'all-final')
         details.append(final)
-
-    def check_native(self, account, order_id, naming_result, phase):
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / '.tools/native-recharge-checkout-375-20261102/native-naming-refund-375.cjs')],
-            cwd=repo, input=json.dumps({'base': self.live_server_url, 'orderId': order_id, 'naming': naming_result,
-                'phase': phase, 'session': {'token': issue_account_tokens(account)[0],
-                    'user': {'id': str(account.pk), 'role': 'customer'}}}),
-            text=True, encoding='utf-8', capture_output=True, timeout=45)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

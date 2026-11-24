@@ -1,6 +1,6 @@
 """One store-local transaction boundary for catalogue configuration."""
 from stores.db import transaction
-from django.db import DatabaseError
+from django.db import DatabaseError, IntegrityError
 from rest_framework.exceptions import APIException
 
 from .models import CatalogWriteLock
@@ -15,6 +15,21 @@ class CatalogUnavailable(APIException):
 def lock_catalog():
     if not transaction.get_connection().in_atomic_block:
         raise RuntimeError('商品目录修改必须在门店事务内进行')
+    try:
+        CatalogWriteLock.objects.select_for_update().get(pk=1)
+        return
+    except CatalogWriteLock.DoesNotExist:
+        pass
+    except DatabaseError as exc:
+        raise CatalogUnavailable() from exc
+    # 未跑数据迁移的库（如快速单测同步建表）缺少播种行；并发创建由单例主键兜底。
+    try:
+        with transaction.atomic():
+            CatalogWriteLock.objects.create(pk=1)
+    except IntegrityError:
+        pass
+    except DatabaseError as exc:
+        raise CatalogUnavailable() from exc
     try:
         CatalogWriteLock.objects.select_for_update().get(pk=1)
     except (DatabaseError, CatalogWriteLock.DoesNotExist) as exc:

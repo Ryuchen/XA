@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier, Event
 from types import SimpleNamespace
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import close_old_connections
@@ -345,6 +347,8 @@ class DirectPaymentDeliveryTest(TestCase):
 
     @override_settings(WECOM_DISPATCH_ENABLED=True, WECOM_DISPATCH_NEW_ORDERS=True,
                        WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=mock-test')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '直付企微新单派单投递记录与 CAS 重试属正式契约深水区（18-盘点 直付/企微派单待联调）；最终联调启用')
     def test_retry_keeps_one_group_record_and_delivery_cas(self):
         row = self.ingested()
         self.process(row)

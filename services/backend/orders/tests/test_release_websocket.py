@@ -12,6 +12,9 @@ from orders.tests.factories import make_provider, make_console_user
 from orders.tests.factories import make_order, make_user
 
 
+STORE_HEADERS = [(b'host', b'sl.esports.club')]
+
+
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ReleaseWebSocketTest(TransactionTestCase):
     def test_real_completed_order_notification_renders_deadline_before_delivery(self):
@@ -22,11 +25,14 @@ class ReleaseWebSocketTest(TransactionTestCase):
         order = make_order(boss, provider=user, customer_account=boss_account,
                            provider_account=account, status='COMPLETED',
                            completed_at=timezone.now())
+        from orders.models import OrderProvider
+        OrderProvider.objects.create(order=order, provider=user, provider_account=account,
+            provider_business_cycle=account.business_cycle)
         token, _ = issue_account_tokens(account)
 
         async def verify():
             from orders.notifier import _notify_order_update
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
             self.assertTrue((await socket.connect())[0])
             try:
                 await database_sync_to_async(_notify_order_update)(order)
@@ -47,8 +53,8 @@ class ReleaseWebSocketTest(TransactionTestCase):
         token, _ = issue_account_tokens(account)
 
         async def verify():
-            for path in ('/ws/orders/', '/api/ws/orders/'):
-                socket = WebsocketCommunicator(application, f'{path}?token={token}')
+            for path in ('/ws/orders/',):
+                socket = WebsocketCommunicator(application, f'{path}?token={token}', headers=STORE_HEADERS)
                 connected, _ = await socket.connect()
                 self.assertTrue(connected)
                 try:
@@ -56,6 +62,7 @@ class ReleaseWebSocketTest(TransactionTestCase):
                     self.assertEqual(await socket.receive_json_from(), {'type': 'pong'})
                     await get_channel_layer().group_send(f'account_{account.pk}', {
                         'type': 'order_status_update', 'data': {'order_id': 123, 'status': 'COMPLETED'},
+                        'recipient_account_id': account.pk, 'recipient_business_cycle': account.business_cycle,
                     })
                     self.assertEqual(await socket.receive_json_from(), {
                         'type': 'order_status_update', 'data': {'order_id': 123, 'status': 'COMPLETED'},
@@ -67,7 +74,7 @@ class ReleaseWebSocketTest(TransactionTestCase):
 
     def test_anonymous_socket_is_rejected(self):
         async def verify():
-            socket = WebsocketCommunicator(application, '/ws/orders/')
+            socket = WebsocketCommunicator(application, '/ws/orders/', headers=STORE_HEADERS)
             connected, _ = await socket.connect()
             self.assertFalse(connected)
             await socket.disconnect()
@@ -84,7 +91,7 @@ class ReleaseWebSocketTest(TransactionTestCase):
             token, _ = issue_account_tokens(account)
 
             async def verify():
-                socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+                socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
                 connected, _ = await socket.connect()
                 self.assertTrue(connected)
                 try:
@@ -110,11 +117,13 @@ class ReleaseWebSocketTest(TransactionTestCase):
             membership.save(update_fields=['account'])
             owner = make_provider()
             session = ChatSession.objects.create(user=owner, account=get_or_create_account_for_legacy_user(owner))
+            session.claimed_by_id = account.pk
+            session.save(update_fields=['claimed_by_id'])
             message = ChatMessage.objects.create(session=session, content='仅会话读者可见')
             token, _ = issue_account_tokens(account)
 
             async def verify():
-                socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+                socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
                 self.assertTrue((await socket.connect())[0])
                 try:
                     for event_type in ('chat_message', 'chat_session_update'):
@@ -152,13 +161,14 @@ class ReleaseWebSocketTest(TransactionTestCase):
         tokens = [issue_account_tokens(item)[0] for item in (account, other)]
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS) for token in tokens]
             try:
                 for socket in sockets:
                     self.assertTrue((await socket.connect())[0])
                 for item in (account, other):
                     await get_channel_layer().group_send(f'account_{item.pk}', {
-                        'type': 'chat_message', 'data': {'session_id': session.pk, 'message': {'id': message.pk}},
+                        'type': 'chat_message', 'data': {'session_id': session.pk, 'message': {'id': message.pk},
+                            'recipient_business_cycle': item.business_cycle},
                     })
                 payload = (await sockets[0].receive_json_from())['data']['message']
                 self.assertEqual(payload['id'], message.pk)
@@ -197,8 +207,8 @@ class OtpReleaseWebSocketTest(TransactionTestCase):
             account, _, token = self.enrolled_account(staff=staff)
 
             async def verify():
-                for path in ('/ws/orders/', '/api/ws/orders/'):
-                    socket = WebsocketCommunicator(application, f'{path}?token={token}')
+                for path in ('/ws/orders/',):
+                    socket = WebsocketCommunicator(application, f'{path}?token={token}', headers=STORE_HEADERS)
                     connected, _ = await socket.connect()
                     self.assertTrue(connected)
                     try:
@@ -206,6 +216,7 @@ class OtpReleaseWebSocketTest(TransactionTestCase):
                         self.assertEqual(await socket.receive_json_from(), {'type': 'pong'})
                         await get_channel_layer().group_send(f'account_{account.pk}', {
                             'type': 'order_status_update', 'data': {'id': 123},
+                            'recipient_account_id': account.pk, 'recipient_business_cycle': account.business_cycle,
                         })
                         self.assertEqual((await socket.receive_json_from())['data'], {'id': 123})
                     finally:
@@ -219,7 +230,7 @@ class OtpReleaseWebSocketTest(TransactionTestCase):
         _, credential, token = self.enrolled_account()
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
             self.assertTrue((await socket.connect())[0])
             try:
                 await database_sync_to_async(
@@ -229,7 +240,7 @@ class OtpReleaseWebSocketTest(TransactionTestCase):
                 self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 4401})
             finally:
                 await socket.disconnect()
-            stale = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            stale = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
             self.assertFalse((await stale.connect())[0])
             await stale.disconnect()
 
@@ -241,7 +252,7 @@ class OtpReleaseWebSocketTest(TransactionTestCase):
             token, _ = issue_account_tokens(account)
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
             self.assertFalse((await socket.connect())[0])
             await socket.disconnect()
 
@@ -253,7 +264,7 @@ class OtpReleaseWebSocketTest(TransactionTestCase):
         token, _ = issue_account_tokens(account)
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=STORE_HEADERS)
             self.assertTrue((await socket.connect())[0])
             try:
                 await socket.send_json_to({'type': 'ping'})

@@ -17,7 +17,8 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
                    WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
 class AfterSaleQueueRealTest(APITestCase):
     def setUp(self):
-        self.boss, self.provider = make_user(), make_provider()
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        self.boss, self.provider = make_user(), make_provider(deposit_mode='EARNINGS')
         self.staff = make_console_user(['dashboard:view', 'order:view', 'order:settle', 'order:refund'])
         self.accounts = {u.pk: get_or_create_account_for_legacy_user(u) for u in (self.boss, self.provider, self.staff)}
         self.staff.admin_membership.account = self.accounts[self.staff.pk]
@@ -26,6 +27,9 @@ class AfterSaleQueueRealTest(APITestCase):
         self.provider.escort_profile.save(update_fields=['account'])
         self.service = make_service(price=10000, commission_rate=20)
         make_wallet(self.boss, balance=100000)
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        PointFundingLot.objects.create(account=self.accounts[self.boss.pk], source_key='aftersale-queue-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=100000)
 
     def login(self, user):
         token, _ = issue_account_tokens(self.accounts[user.pk])

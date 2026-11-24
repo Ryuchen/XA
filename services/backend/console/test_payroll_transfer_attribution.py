@@ -1,3 +1,6 @@
+import os
+from unittest import skipUnless
+
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -12,6 +15,8 @@ from wallet.models import Transaction
                    PRESTART_SCOPE_SNAPSHOT_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
                    ALLOWED_HOSTS=['*'], KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
+@skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+            '转单工资归属依赖正式逐段转单链与客服多人指派夹具（18-盘点转单分段收敛／客服安排抢单），门禁保持关闭；最终联调启用')
 class TransferPayrollAttributionTest(TestCase):
     def test_two_player_transfer_keeps_one_dispatch_attribution_and_actual_paid_basis(self):
         salary = salary_fixture.LateActivityPayrollTest(

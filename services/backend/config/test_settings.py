@@ -8,9 +8,19 @@ ISOLATED_CONTROL_PLANE = False
 SECRET_KEY = 'xa-test-only-secret-key-not-for-production-use'
 ALLOWED_HOSTS = ['*']
 
+# 官方套件由 StoreContextRunner 建立声浪目录行与夹具侧门店上下文；
+# DRF 默认测试 Host 与本机回环地址绑定到同一部署固定入口。
+TEST_RUNNER = 'config.test_runner.StoreContextRunner'
+STORE_HOST_BINDINGS = {'sl.esports.club': 'shenglang', 'xa.esports.club': 'xinan',
+                       'testserver': 'shenglang', 'localhost': 'shenglang',
+                       '127.0.0.1': 'shenglang'}
+
 # Unit tests and the default CI job run without a database or Redis service.
 # Migration/MySQL settings override DATABASES for their separate checks.
-DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}
+DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_a': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_b': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_new': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}
+# 宿主机可能导出 XA_STORE_DATABASES，使基础 settings 注入门店别名；
+# 单测无门店库服务，必须随 DATABASES 一并重置，否则系统检查找不到连接。
+STORE_DATABASE_ALIASES = ()
 CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
 CELERY_BROKER_URL = 'memory://'
 CELERY_RESULT_BACKEND = 'cache+memory://'

@@ -7,8 +7,6 @@ from .pass_refund import ProviderPassRefundView
 from .pass_points import ProviderPassPointsQuoteView
 from .voice_views import VoiceRecordingDeleteView, VoiceRecordingListView, VoiceRecordingResolveView
 from .h5_login import H5LoginStartView, H5LoginCallbackView, H5LoginStatusView
-from .web_login import (WebLoginStartView, WebLoginStatusView, WebLoginAuthorizeView,
-    WebLoginSmsView, WebLoginConfirmView)
 from .views import (
     AccountLoginView,
     AccountRefreshView,
@@ -25,8 +23,6 @@ from .views import (
     MeAvatarView,
     ProviderStatsView,
     UpdateEscortStatusView,
-    WechatLoginView,
-    WechatBindView,
 )
 
 urlpatterns = [
@@ -41,13 +37,6 @@ urlpatterns = [
     path('h5-login/start/', H5LoginStartView.as_view()),
     path('h5-login/callback/', H5LoginCallbackView.as_view()),
     path('h5-login/status/', H5LoginStatusView.as_view()),
-    path('web-login/start/', WebLoginStartView.as_view()),
-    path('web-login/status/', WebLoginStatusView.as_view()),
-    path('web-login/authorize/', WebLoginAuthorizeView.as_view()),
-    path('web-login/sms/', WebLoginSmsView.as_view()),
-    path('web-login/confirm/', WebLoginConfirmView.as_view()),
-    path('wechat-login/', WechatLoginView.as_view()),
-    path('wechat-bind/', WechatBindView.as_view()),
     path('account-login/', AccountLoginView.as_view()),
     path('refresh/', AccountRefreshView.as_view()),
     path('me/', MeView.as_view()),

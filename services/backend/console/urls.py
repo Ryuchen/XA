@@ -73,8 +73,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .auth import ConsoleLoginView, ConsoleProfileView, ConsoleRefreshView
-from .dual_auth import (ConsolePasswordLoginView, ConsoleWechatStartView,
-    ConsoleWechatAuthorizeView, ConsoleWechatConfirmView, ConsoleWechatStatusView)
+from .dual_auth import ConsolePasswordLoginView
 from .options import FormOptionsView
 from .dictionaries import DictionaryCatalogView, DictionaryItemViewSet, DictionaryOptionsView
 from .config_readiness import SetupEvidenceConfirmationView
@@ -249,10 +248,6 @@ urlpatterns = [
     path('auth/h5-login/start', ConsoleH5StartView.as_view()),
     path('auth/h5-login/callback', ConsoleH5CallbackView.as_view()),
     path('auth/h5-login/status', ConsoleH5StatusView.as_view()),
-    path('auth/wechat/start', ConsoleWechatStartView.as_view()),
-    path('auth/wechat/authorize', ConsoleWechatAuthorizeView.as_view()),
-    path('auth/wechat/confirm', ConsoleWechatConfirmView.as_view()),
-    path('auth/wechat/status', ConsoleWechatStatusView.as_view()),
     path('auth/refresh', ConsoleRefreshView.as_view()),
     path('auth/profile', ConsoleProfileView.as_view()),
     path('platform/auth/login', PlatformPasswordLoginView.as_view()),

@@ -44,7 +44,7 @@ class CustomVipStoreIsolationTest(TestCase):
         payload = {'mapping': mapping, 'recalculation_token': preview.data['data']['token']}
         with store_context(stores[1]):
             denied = clients[1].post('/api/admin/vip-tiers/reorder/', payload, format='json')
-            self.assertEqual(denied.status_code, 400, denied.data)
+            self.assertEqual(denied.status_code, 400, denied.content)
         with store_context(stores[0]):
             applied = clients[0].post('/api/admin/vip-tiers/reorder/', payload, format='json')
             self.assertEqual(applied.status_code, 200, applied.data)
@@ -91,14 +91,18 @@ class CustomVipStoreIsolationTest(TestCase):
         SERVICE_POINTS_ASSIGN_TESTING=True, SERVICE_POINTS_REPORT_TESTING=True,
         SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_POINTS_SETTLEMENT_TESTING=True,
         SERVICE_ORDINARY_FUNDING_TESTING=True, ORIGINAL_ATTRIBUTION_ENABLED=True,
-        SEGMENT_ECONOMICS_CAPTURE_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False)
+        SEGMENT_ECONOMICS_CAPTURE_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False,
+        GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+        GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
     def test_real_settings_birthday_coupon_reward_and_payment_in_each_store(self):
         from wallet.services import get_wallet
         from orders.models import Order
         stores = (resolve_store(), xinan_store())
-        for store, multiplier in zip(stores, (2, 4)):
+        for store, host, multiplier in zip(stores, ('sl.esports.club', 'xa.esports.club'), (2, 4)):
             with store_context(store):
                 config()
+                from console.grab_config import save_grab_window
+                save_grab_window(30, 0, lambda *_: None)
                 VipMonthlyCutover.objects.create(activated_at=timezone.now()-timedelta(days=1),
                     platform_actor_id='test', operation_id='birthday-isolation')
                 user = make_user()
@@ -111,13 +115,13 @@ class CustomVipStoreIsolationTest(TestCase):
                 staff_user = make_console_user(['engagement:view', 'engagement:edit'])
                 staff = get_or_create_account_for_legacy_user(staff_user)
                 staff_user.admin_membership.account = staff; staff_user.admin_membership.save(update_fields=['account'])
-                admin = APIClient(HTTP_X_STORE_SLUG=store.slug, HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(staff)[0])
+                admin = APIClient(HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(staff)[0])
                 rule = {'birthday': True, 'birthday_discount': 80 + multiplier, 'birthday_valid_days': multiplier,
                         'birthday_multiplier': multiplier, 'birthday_reward_id': reward.pk,
                         'birthday_reward_quantity': multiplier}
                 response = admin.patch(f'/api/admin/vip-tiers/{tier.pk}/', {'benefits': {'issuance': rule}}, format='json')
-                self.assertEqual(response.status_code, 200, response.data)
-                boss = APIClient(HTTP_X_STORE_SLUG=store.slug, HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(account)[0])
+                self.assertEqual(response.status_code, 200, response.content)
+                boss = APIClient(HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(account)[0])
                 self.assertEqual(boss.get('/api/coupons/mine/').status_code, 200)
                 birthday = UserCoupon.objects.select_related('coupon').get(account=account,
                     coupon__grant_key__startswith='vip-birthday:')

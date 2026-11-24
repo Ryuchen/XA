@@ -68,13 +68,6 @@ class SelectedInvitationNavigationTest(LiveServerTestCase):
         result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-application-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        if os.environ.get('XA_CANCELLED_TEAM_BROWSER') == '1':
-            result = subprocess.run([node, str(repo / 'scripts/provider-cancelled-team-375.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'tokens': tokens[1:],
-                                  'ids': [str(account.pk) for account in accounts],
-                                  'orderId': order_id, 'applicationId': application.pk}),
-                cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_previous_selection_page_shows_rejected_order_back_in_pool(self):
         node = shutil.which('node')

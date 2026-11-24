@@ -44,7 +44,7 @@ def bind_account(user):
     """
     account = get_or_create_account_for_legacy_user(user)
     link_legacy_relations(user, account)
-    EscortProfile.objects.filter(user=user).update(account=account)
+    EscortProfile.objects.filter(user=user).update(account=account, deposit_business_cycle=account.business_cycle)
     Wallet.objects.filter(user=user).update(account=account)
     return account
 
@@ -99,7 +99,8 @@ class DepositRefundApiTest(APITestCase):
         return f'/api/admin/escorts/{self.provider.escort_profile.id}/deposit-refund/'
 
     def _post(self, **overrides):
-        payload = {'amount': 1000, 'reason': '离职结算'}
+        from uuid import uuid4
+        payload = {'amount': 1000, 'reason': '离职结算', 'client_request_id': uuid4().hex}
         payload.update(overrides)
         return self.client.post(self.url, payload)
 
@@ -218,11 +219,11 @@ class DepositRefundApiTest(APITestCase):
             ).count(), 1,
         )
 
-    # ---- ⑧ claim 命中（同参数连点，未带客户端键的降级窗口）----
+    # ---- ⑧ claim 命中（同键连点须幂等拒绝）----
     def test_derived_key_blocks_rapid_duplicate(self):
         fund_platform_deposit_pool(10000)
-        first = self._post(amount=500)
-        second = self._post(amount=500)
+        first = self._post(amount=500, client_request_id='cid-derived-dup')
+        second = self._post(amount=500, client_request_id='cid-derived-dup')
         self.assertEqual(first.data['code'], 0)
         self.assertEqual(second.data['code'], 409)
         self.assertEqual(
@@ -252,7 +253,7 @@ class DepositRefundApiTest(APITestCase):
     def test_granted_permission_passes(self):
         operator = make_console_user(perms=['escort:view', 'escort:deposit_refund'])
         self.client.force_authenticate(operator)
-        res = self.client.post(self.url, {'amount': 1000, 'reason': '离职结算'})
+        res = self.client.post(self.url, {'amount': 1000, 'reason': '离职结算', 'client_request_id': 'cid-granted'})
         self.assertEqual(res.data['code'], 0)
 
     # ---- ⑩ 未绑定业务账户 ----
@@ -347,7 +348,7 @@ class DepositPayRefundIdentityTest(APITestCase):
     def test_identity_holds_after_pay_then_refund(self):
         # 缴纳：陪玩自己走 C 端接口
         self.client.force_authenticate(self.provider)
-        pay = self.client.post('/api/wallet/deposit/', {'amount': 3000})
+        pay = self.client.post('/api/wallet/deposit/', {'amount': 3000, 'client_request_id': 'cid-pay-identity'})
         self.assertEqual(pay.data['code'], 0)
         self.assertEqual(self._sum(Transaction.TxType.DEPOSIT), -3000)
         self.assertEqual(self._sum(Transaction.TxType.DEPOSIT_INCOME), 3000)
@@ -359,7 +360,7 @@ class DepositPayRefundIdentityTest(APITestCase):
         with patch('django.utils.timezone.now', return_value=closed_at+timedelta(days=7)):
             refund = self.client.post(
                 f'/api/admin/escorts/{self.provider.escort_profile.id}/deposit-refund/',
-                {'amount': 1200, 'reason': '部分退还'},
+                {'amount': 1200, 'reason': '部分退还', 'client_request_id': 'cid-identity-refund'},
             )
         self.assertEqual(refund.data['code'], 0)
 
@@ -375,7 +376,7 @@ class DepositPayRefundIdentityTest(APITestCase):
 
     def test_full_refund_zeroes_out_both_sides(self):
         self.client.force_authenticate(self.provider)
-        self.client.post('/api/wallet/deposit/', {'amount': 3000})
+        self.client.post('/api/wallet/deposit/', {'amount': 3000, 'client_request_id': 'cid-pay-second'})
         closed_at = timezone.now()
         seed_closed_order(self.provider, self.account, closed_at=closed_at)
 
@@ -383,7 +384,7 @@ class DepositPayRefundIdentityTest(APITestCase):
         with patch('django.utils.timezone.now', return_value=closed_at+timedelta(days=7)):
             res = self.client.post(
                 f'/api/admin/escorts/{self.provider.escort_profile.id}/deposit-refund/',
-                {'amount': 3000, 'reason': '全额退还'},
+                {'amount': 3000, 'reason': '全额退还', 'client_request_id': 'cid-full-refund'},
             )
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(self._sum(Transaction.TxType.DEPOSIT), 0)

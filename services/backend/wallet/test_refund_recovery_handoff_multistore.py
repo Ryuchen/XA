@@ -50,6 +50,10 @@ class RefundRecoveryHandoffMultiStoreTest(TestCase):
                 service = make_service(price=10000, commission_rate=20)
                 wallet = get_wallet(user=self.boss, account=boss_account)
                 wallet.balance = 20000; wallet.save(update_fields=['balance'])
+                from engagement.models import ClubOperationConfig, PointFundingLot
+                ClubOperationConfig.objects.get_or_create(pk=1)
+                PointFundingLot.objects.create(account=boss_account, source_key='recovery-handoff-prepaid',
+                    kind=PointFundingLot.Kind.PREPAID, remaining=20000)
                 boss_token = issue_account_tokens(boss_account)[0]
                 staff_token = issue_account_tokens(staff_account)[0]
                 boss = APIClient(HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer ' + boss_token)
@@ -114,6 +118,10 @@ class RefundRecoveryHandoffMultiStoreTest(TestCase):
                     service = make_service(price=10000, commission_rate=20)
                     wallet = get_wallet(user=self.boss, account=boss_account)
                     wallet.balance = 20000; wallet.save(update_fields=['balance'])
+                    from engagement.models import ClubOperationConfig, PointFundingLot
+                    ClubOperationConfig.objects.get_or_create(pk=1)
+                    PointFundingLot.objects.create(account=boss_account, source_key='recovery-service-prepaid',
+                        kind=PointFundingLot.Kind.PREPAID, remaining=20000)
                     def client(account):
                         return APIClient(HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(account)[0])
                     result = client(boss_account).post('/api/orders/create/', {'service_id':service.pk,

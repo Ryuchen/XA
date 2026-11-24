@@ -31,12 +31,13 @@ class MessageRecipientWorkflowTest(APITestCase):
         self.assertTrue(options[self.account.pk]['recipient_mapped'])
         self.assertTrue(options[self.other.pk]['recipient_mapped'])
         self.assertFalse(options[self.unmapped.pk]['recipient_mapped'])
-        sent = self.client.post('/api/admin/messages/push/', {'audience': 'CUSTOM', 'recipient_account_ids': [self.account.pk],
+        sent = self.client.post('/api/admin/messages/push/', {'recipient_account_ids': [self.account.pk],
                                 'title': '隔离核对通知', 'preview': '摘要', 'detail': '完整内容'}, format='json')
         self.assertEqual(sent.data['data']['count'], 1)
         msg = Message.objects.get(title='隔离核对通知')
-        self.assertEqual((msg.recipient_id, msg.recipient_account_id), (self.first.pk, self.account.pk))
-        self.assertFalse(Message.objects.filter(recipient_id=self.second.pk, title='隔离核对通知').exists())
+        # 业务账号是收件身份权威；legacy recipient 可选，映射账号也不回填。
+        self.assertEqual((msg.recipient_id, msg.recipient_account_id), (None, self.account.pk))
+        self.assertFalse(Message.objects.filter(recipient_account=self.other, title='隔离核对通知').exists())
         listed = self.client.get('/api/admin/messages/')
         row = next(item for item in listed.data['data']['list'] if item['id'] == msg.pk)
         self.assertEqual((row['recipient_no'], row['recipient_username'], row['is_read']), (self.account.account_no, self.account.username, False))

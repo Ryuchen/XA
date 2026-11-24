@@ -13,9 +13,13 @@ from orders.models import Order
 from orders.tests.factories import make_console_user, make_service, make_user, make_wallet
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
 class PromotionWorkflowTest(APITestCase):
     def setUp(self):
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
         staff = make_console_user(['promotion:view', 'promotion:edit', 'promotion:delete'])
         admin = get_or_create_account_for_legacy_user(staff)
         AdminMembership.objects.filter(user=staff).update(account=admin)
@@ -25,6 +29,10 @@ class PromotionWorkflowTest(APITestCase):
         link_legacy_relations(boss, account)
         self.account = account
         make_wallet(boss, balance=100000)
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
+        PointFundingLot.objects.create(account=account, source_key='promotion-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=100000)
         self.buyer = APIClient()
         self.buyer.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
         self.service = make_service(price=10000)
@@ -52,12 +60,14 @@ class PromotionWorkflowTest(APITestCase):
         claimed = self.buyer.post(f'/api/coupons/{coupon.pk}/claim/')
         self.assertEqual(claimed.data['code'], 0, claimed.data)
         claim = UserCoupon.objects.get(account=self.account, coupon=coupon)
-        conflict = self.buyer.post('/api/orders/create/', {'service_id': self.service.pk, 'user_coupon_id': claim.pk,
+        # 现行 legacy 下单经 service_discount_options 自动组合活动＋券（不再互斥拒绝）。
+        combined = self.buyer.post('/api/orders/create/', {'service_id': self.service.pk, 'user_coupon_id': claim.pk,
                                     'client_request_id': str(uuid4())}, format='json')
-        self.assertEqual(conflict.data['code'], 400, conflict.data)
-        self.assertIn('活动', conflict.data['msg'])
+        self.assertEqual(combined.data['code'], 0, combined.data)
+        self.assertEqual((combined.data['data']['promo_discount'], combined.data['data']['coupon_discount'],
+                          combined.data['data']['amount']), (3000, 1000, 6000))
         claim.refresh_from_db()
-        self.assertEqual(claim.status, 'UNUSED')
+        self.assertEqual(claim.status, 'USED')
         result = self.buyer.post('/api/orders/create/', {'service_id': self.service.pk, 'dispatch_route': 'STAFF',
                                   'client_request_id': str(uuid4())}, format='json')
         self.assertEqual(result.data['code'], 0, result.data)

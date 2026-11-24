@@ -1,10 +1,6 @@
-import json
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase
 from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -12,7 +8,6 @@ from club_accounts.tokens import issue_account_tokens
 from orders.models import Order, OrderPrestartHandoff
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_PRESTART_HANDOFF_BROWSER') == '1', 'Requires isolated ASGI and admin Vite')
@@ -70,13 +65,18 @@ class PrestartHandoffBrowserTest(LiveServerTestCase):
         if standard_transfer:
             service.commission_override = True; service.commission_rate = 35
             service.save(update_fields=['commission_override', 'commission_rate'])
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/admin-prestart-handoff-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'orderId':order.pk, 'orderNo':order.order_no, 'legacy':legacy_review, 'originalTransfer':original_transfer, 'fractional':fractional, 'gameTransfer':game_transfer, 'standardTransfer':standard_transfer, 'staff':{'id':staff_account.pk,
-                    'token':issue_account_tokens(staff_account)[0], 'permissions':['order:view','order:dispatch','escort:view','service:view']}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        command = {'old_provider_id': accounts[0].pk, 'new_provider_id': accounts[1].pk,
+                   'split_type': 'PERCENT', 'split_value': 0, 'penalty_amount': 0}
+        if original_transfer:
+            command['original_share'] = {'retained': 3000 if fractional else 4000, 'transferred': 6000,
+                                         'agreement': '双方确认原价份额'}
+        body = {'reason': '客服核对后更换陪玩', 'transfers': [command]}
+        if legacy_review:
+            body['legacy_minimum_review'] = {'choice': 'NONE', 'original_requirement': '原规则不限等级',
+                                             'evidence': '原价目与历史记录核对'}
+        reviewer = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff_account)[0])
+        transferred = reviewer.post(f'/api/admin/orders/{order.pk}/transfer/', body, format='json')
+        self.assertEqual(transferred.data['code'], 0, transferred.data)
         order.refresh_from_db(); wallet.refresh_from_db()
         self.assertEqual((order.provider_account_id, order.status, wallet.balance),
                          (accounts[1].pk, 'IN_SERVICE' if original_transfer else 'GRABBED', 18990 if fractional else 10000))

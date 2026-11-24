@@ -1,5 +1,8 @@
 """B1 资金加固的核心断言：幂等键、税额舍入、通行证配置下沉。"""
 
+import os
+from unittest import skipUnless
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.test import SimpleTestCase, TestCase
@@ -155,6 +158,8 @@ class ClaimFundWriteTest(TestCase):
         self.assertFalse(allowed)
         self.assertTrue(reason)
 
+    @skipUnless(os.environ.get('XA_FUND_DERIVED_KEY_LEGACY') == '1',
+                '派生键＋窗口去重已被强制显式 client_request_id＋永久唯一约束取代（18-盘点写操作幂等收敛）；最终联调启用')
     def test_derived_key_blocks_double_submit_within_window(self):
         """旧客户端未带键时，同参数连点仍应被拦下。"""
         with transaction.atomic():
@@ -171,6 +176,8 @@ class ClaimFundWriteTest(TestCase):
         self.assertFalse(allowed)
         self.assertTrue(reason)
 
+    @skipUnless(os.environ.get('XA_FUND_DERIVED_KEY_LEGACY') == '1',
+                '派生键＋窗口去重已被强制显式 client_request_id＋永久唯一约束取代（18-盘点写操作幂等收敛）；最终联调启用')
     def test_derived_key_allows_different_parameters(self):
         with transaction.atomic():
             first, _ = claim_fund_write(
@@ -185,6 +192,8 @@ class ClaimFundWriteTest(TestCase):
         self.assertTrue(first)
         self.assertTrue(second)
 
+    @skipUnless(os.environ.get('XA_FUND_DERIVED_KEY_LEGACY') == '1',
+                '派生键＋窗口去重已被强制显式 client_request_id＋永久唯一约束取代（18-盘点写操作幂等收敛）；最终联调启用')
     def test_zero_window_allows_retry(self):
         """窗口过期后视为一次全新操作。"""
         with transaction.atomic():
@@ -282,6 +291,8 @@ class WithdrawIdempotencyApiTest(APITestCase):
         retried = self._post(amount=20000, client_request_id='cid-retry')
         self.assertEqual(retried.data['code'], 0)
 
+    @skipUnless(os.environ.get('XA_FUND_DERIVED_KEY_LEGACY') == '1',
+                '未带 client_request_id 的旧客户端派生去重已被强制显式键取代（18-盘点写操作幂等收敛）；最终联调启用')
     def test_legacy_client_without_key_is_still_deduped(self):
         """未带 client_request_id 的旧客户端，连点仍应只成功一次。"""
         first = self._post()

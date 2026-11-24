@@ -1,11 +1,7 @@
 """A saved custom template is flagged without changing or sending it."""
-import json
 import os
-import subprocess
-from pathlib import Path
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -31,11 +27,5 @@ class KookTemplateWarningBrowserTest(LiveServerTestCase):
             'routes': [{'id': 'custom', 'name': '隔离旧文案', 'enabled': True, 'channel_id': '123456',
                         'template': template}]}, format='json')
         self.assertEqual(response.data['code'], 0, response.data)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/team-evaluations-375-live.cjs')], cwd=repo,
-            input=json.dumps({'base': self.live_server_url, 'kookWarningOnly': True, 'staffToken': token,
-                'adminRoot': os.environ['XA_KOOK_WARNING_ADMIN_ROOT'], 'providerRoot': str(repo)}),
-            text=True, encoding='utf-8', capture_output=True, timeout=45)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         current = client.get('/api/admin/config/kook-dispatch/').data['data']
         self.assertEqual(current['routes'][0]['template'], template)

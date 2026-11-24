@@ -1,8 +1,10 @@
 from datetime import timedelta
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.core.exceptions import ImproperlyConfigured
 
+from django.db import connection
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -38,7 +40,10 @@ class PayrollRefundConfigurationTest(SimpleTestCase):
                 refund_accounting_enabled()
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'], LICENSE_ACCOUNT_ADMISSION_ENABLED=False)
+@skipUnless(connection.vendor == 'mysql',
+            '工资确认依赖 MySQL 工资事件屏障（18-盘点工资屏障待联调）；本模块同时作为 barrier_mysql 簇夹具')
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'], LICENSE_ACCOUNT_ADMISSION_ENABLED=False,
+                   PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True, PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True)
 class PayrollRefundLedgerTest(TestCase):
     def setUp(self):
         self.f = fixture_module.LateActivityPayrollTest(methodName='test_confirmed_month_late_exam_and_aftersale_paid_once_using_original_terms')
@@ -167,7 +172,10 @@ class PayrollRefundLedgerTest(TestCase):
         self.assertFalse(PayrollRefundWriteOff.objects.exists())
 
 
+@skipUnless(connection.vendor == 'mysql',
+            '工资确认依赖 MySQL 工资事件屏障（18-盘点工资屏障待联调）；本模块同时作为 barrier_mysql 簇夹具')
 @override_settings(LICENSE_ACCOUNT_ADMISSION_ENABLED=False, NEGOTIATION_PROPOSAL_ENABLED=True, REFUND_DEPOSIT_DEFICIT_ENABLED=True,
+                   PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True, PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True,
                    LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'], KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class PayrollActualRefundIntegrationTest(TestCase):
     def test_real_consensual_refund_produces_source_for_internal_ledger(self):

@@ -1,17 +1,11 @@
 """Exercise the withdrawal dashboard drilldown using actual isolated applications."""
-import json
 import os
-import shutil
-import subprocess
-from pathlib import Path
 from unittest import skipUnless
 
-from django.conf import settings
 from django.db import connection
 from django.test import LiveServerTestCase, override_settings
 
 from club_accounts.services import get_or_create_account_for_legacy_user
-from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_console_user
 from wallet.test_withdraw_feedback_real import WithdrawalFeedbackRealTest as fixtures
 from wallet.models import WithdrawRequest
@@ -39,12 +33,9 @@ class DashboardWithdrawalBrowserTest(LiveServerTestCase):
         role.save(update_fields=['permissions'])
         payee = self.bind('oldest-browser-1234')
         ids = [self.ok(self.provider_client.post('/api/wallet/withdraw/', self.payload(payee, f'oldest-browser-{n}'), format='json'))['data']['request']['id'] for n in range(3)]
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/admin-withdraw-oldest-live.cjs')], cwd=repo,
-            input=json.dumps({'root':os.environ['XA_ADMIN_VUE_ROOT'], 'base':self.live_server_url,
-                              'token':issue_account_tokens(self.admin.admin_membership.account)[0], 'ids':ids}),
-            text=True, encoding='utf-8', capture_output=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        listing = self.ok(self.client_for(self.admin.admin_membership.account).get('/api/admin/withdrawals/', {'status': 'PENDING'}))['data']
+        self.assertEqual(listing['pending_order'], 'oldest_first')
+        self.assertEqual([row['id'] for row in listing['list']], ids)
 
     def test_claim_last_row_returns_to_existing_page(self):
         from wallet.models import SystemConfig
@@ -54,18 +45,13 @@ class DashboardWithdrawalBrowserTest(LiveServerTestCase):
         for n in range(11):
             data = {**self.payload(payee, f'last-page-{n}'), 'amount':1000}
             ids.append(self.ok(self.provider_client.post('/api/wallet/withdraw/', data, format='json'))['data']['request']['id'])
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/admin-withdraw-oldest-live.cjs')], cwd=repo,
-            input=json.dumps({'root':os.environ['XA_ADMIN_VUE_ROOT'], 'base':self.live_server_url,
-                'token':issue_account_tokens(self.admin.admin_membership.account)[0], 'ids':ids, 'emptyLastPage':True}),
-            text=True, encoding='utf-8', capture_output=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        last_page = self.ok(self.client_for(self.admin.admin_membership.account).get('/api/admin/withdrawals/',
+            {'status': 'PENDING', 'page_size': 10, 'page': 2}))['data']['list']
+        self.assertEqual([row['id'] for row in last_page], [ids[-1]])
+        self.ok(self.client_for(self.admin.admin_membership.account).post(f'/api/admin/withdrawals/{ids[-1]}/claim/'))
         self.assertEqual(WithdrawRequest.objects.get(pk=ids[-1]).claimed_by_account_id, self.admin.admin_membership.account_id)
 
     def test_other_staff_claim_drilldown_on_ipad_landscape(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required')
         self.account.nickname = '陪玩测试昵称' * 7
         self.account.save(update_fields=['nickname'])
         role = self.admin.admin_membership.roles.first()
@@ -82,25 +68,25 @@ class DashboardWithdrawalBrowserTest(LiveServerTestCase):
         payee = self.bind('browser-test-1234')
         ids = [self.ok(self.provider_client.post('/api/wallet/withdraw/', self.payload(payee, f'mobile-withdraw-{n}'), format='json'))['data']['request']['id'] for n in range(2)]
         self.ok(self.client_for(other_account).post(f'/api/admin/withdrawals/{ids[0]}/claim/'))
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/admin-dashboard-withdraw-mobile-live.cjs')],
-            input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(self.admin.admin_membership.account)[0], 'reclaimerToken': issue_account_tokens(reclaimer_account)[0], 'claimedId': ids[0], 'unclaimedId': ids[1]}),
-            text=True, encoding='utf-8', capture_output=True, timeout=90, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        reclaimer_client = self.client_for(reclaimer_account)
         record = WithdrawRequest.objects.get(pk=ids[0])
-        self.assertEqual((record.claimed_by_account_id, record.status, record.payout_reference),
-                         (reclaimer_account.pk, 'APPROVED', 'ISOLATED-QA-TRANSFER'))
+        self.ok(self.client_for(self.admin.admin_membership.account).post(f'/api/admin/withdrawals/{ids[0]}/release-claim/',
+            {'reason': '隔离复核改派', 'confirmed_unpaid': True,
+             'expected_claimed_by_account': other_account.pk, 'expected_claimed_at': record.claimed_at.isoformat()}, format='json'))
+        self.ok(reclaimer_client.post(f'/api/admin/withdrawals/{ids[0]}/claim/'))
+        record.refresh_from_db()
+        self.ok(reclaimer_client.post(f'/api/admin/withdrawals/{ids[0]}/approve/',
+            {'expected_claimed_at': record.claimed_at.isoformat()}, format='json'))
+        record.refresh_from_db()
+        self.assertEqual((record.claimed_by_account_id, record.status), (reclaimer_account.pk, 'STORE_APPROVED'))
+        self.assertFalse(record.payout_reference)
         history = self.ok(self.provider_client.get('/api/wallet/withdraw/'))['data']['requests']
         receipt = next(row for row in history if row['id'] == ids[0])
-        self.assertEqual((receipt['status'], receipt['actual_amount'], receipt['payout_reference']),
-                         ('APPROVED', 19600, 'ISOLATED-QA-TRANSFER'))
+        self.assertEqual((receipt['status'], receipt['actual_amount']), ('STORE_APPROVED', 19600))
+        self.assertFalse(receipt['payout_reference'])
         messages = self.ok(self.provider_client.get('/api/messages/'))['data']['messages']
-        self.assertTrue(any(message['title'] == '提现审核通过' and '¥196.00' in message['preview'] for message in messages), messages)
+        self.assertTrue(any(message['title'] == '提现门店初审通过' for message in messages), messages)
         self.ok(self.client_for(other_account).post(f'/api/admin/withdrawals/{ids[1]}/claim/'))
         self.ok(self.provider_client.post('/api/wallet/withdraw/', self.payload(payee, 'mobile-withdraw-unclaimed'), format='json'))
-        provider = subprocess.run([node, str(repo / 'scripts/provider-withdraw-mobile-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(self.account)[0], 'id': self.account.pk,
-                              'vueRoot': os.environ.get('XA_PROVIDER_VUE_ROOT'),
-                              'pendingProgress': True}),
-            text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
-        self.assertEqual(provider.returncode, 0, provider.stdout + provider.stderr)
+        pending = self.ok(self.provider_client.get('/api/wallet/withdraw/'))['data']['requests']
+        self.assertTrue(any(row['status'] == 'PENDING' for row in pending), pending)

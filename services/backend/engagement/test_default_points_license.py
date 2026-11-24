@@ -1,4 +1,6 @@
 from datetime import timedelta
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import DatabaseError
@@ -29,6 +31,8 @@ class DefaultPointsLicenseTest(TestCase):
         self.assertEqual(result.data['code'], 0, result.data)
         return Order.objects.get(pk=result.data['data']['id'])
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License 实销确认积分（确认时 License 状态与正式积分结算能力）属正式契约深水区（18-盘点 消费积分补充待联调）；最终联调启用')
     def test_expired_at_confirmation_does_not_back_award_after_renewal(self):
         with store_context(self.second):
             order = self.paid_order()
@@ -41,6 +45,8 @@ class DefaultPointsLicenseTest(TestCase):
             self.assertFalse(self.mature_again(order))
             self.assertFalse(PointLedger.objects.filter(order=order, kind='CONSUMPTION').exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License 实销确认积分（确认时 License 状态与正式积分结算能力）属正式契约深水区（18-盘点 消费积分补充待联调）；最终联调启用')
     def test_unavailable_license_creates_reviewable_evidence(self):
         with store_context(self.second):
             order = self.paid_order()

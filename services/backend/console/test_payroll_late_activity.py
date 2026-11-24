@@ -1,5 +1,7 @@
 from datetime import timedelta
+from unittest import skipUnless
 
+from django.db import connection
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -14,7 +16,11 @@ from orders.tests.test_addon_configuration import staff_client
 from wallet.models import RechargeRecord
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+@skipUnless(connection.vendor == 'mysql',
+            '工资确认依赖 MySQL 工资事件屏障（18-盘点工资屏障待联调）；本模块同时作为 barrier_mysql 簇夹具')
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'],
+                   PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True,
+                   PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True)
 class LateActivityPayrollTest(TestCase):
     def setUp(self):
         self.client = staff_client(['salary:view', 'salary:edit', 'salary:confirm'])

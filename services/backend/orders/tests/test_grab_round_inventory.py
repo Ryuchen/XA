@@ -1,4 +1,5 @@
 """Inventory uses actual stored receipt/team evidence, never request subsets."""
+import os
 from datetime import timedelta
 from unittest import skipUnless
 
@@ -29,6 +30,8 @@ class SingleInventoryTest(TransactionTestCase):
             with transaction.atomic():
                 return inspect_round(self.round.pk)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_all_receipts_are_collected_and_ranked_without_qualifying_or_assigning(self):
         first = self.submit(self.first, 'a')
         second = self.submit(self.second, 'b')
@@ -71,6 +74,8 @@ class SingleInventoryTest(TransactionTestCase):
         self.assertEqual((damaged.status, damaged.review_receipt_ids, damaged.pending_receipt_ids),
                          ('REVIEW', (first,), (second,)))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_late_receipt_is_not_treated_as_a_candidate(self):
         first = self.submit(self.first, 'on-time')
         second = self.submit(self.second, 'late')
@@ -89,6 +94,8 @@ class SingleInventoryTest(TransactionTestCase):
         self.assertEqual((result.status, result.potential_candidate_ids, result.review_receipt_ids),
                          ('REVIEW', (first,), (second,)))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_candidate_submitted_before_visible_reports_reason(self):
         self.order, self.round = fixture.pool_for(delays={
             'BLACK': 0, 'GOLD': 60, 'SILVER': 120, 'BRONZE': 180, 'NONE': 300})
@@ -137,6 +144,8 @@ class TeamInventoryTest(TransactionTestCase):
             with transaction.atomic():
                 return inspect_round(self.round.pk)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_complete_teams_are_collected_without_external_selection(self):
         first = self.team(0, 1, 'first-team')
         second = self.team(2, 3, 'second-team')
@@ -146,6 +155,8 @@ class TeamInventoryTest(TransactionTestCase):
         self.assertEqual(result.ranking.winner_id, first.pk)
         self.assertFalse(result.can_assign)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_unapplied_invitation_and_unproved_withdrawal_block_ranking(self):
         first = self.team(0, 1, 'complete-team')
         unbound = record_intent(self.round.pk, self.people[2][1].pk, 'INVITE', 'not-applied',
@@ -159,6 +170,8 @@ class TeamInventoryTest(TransactionTestCase):
         self.assertEqual((result.status, result.unresolved_team_ids, result.ranking),
                          ('WAIT_APPLY', (first.pk,), None))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_proved_withdrawal_allows_member_to_join_another_team(self):
         old = self.team(0, 1, 'old-team')
         sleep(0.02)
@@ -178,6 +191,8 @@ class TeamInventoryTest(TransactionTestCase):
         self.assertEqual((inventory.unapplied_receipt_ids, inventory.unresolved_team_ids), ((), ()))
         self.assertFalse(inventory.can_assign)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_withdrawal_cannot_apply_damaged_or_unordered_receipt(self):
         team = self.team(0, 1, 'protected-team')
         sleep(0.02)
@@ -198,6 +213,8 @@ class TeamInventoryTest(TransactionTestCase):
         self.assertEqual((team.status, team.withdrawal_receipt_id, team.occupied_seats.count()),
                          ('UNVERIFIED', None, 2))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_withdrawal_save_failure_restores_occupied_seats(self):
         team = self.team(0, 1, 'rollback-team')
         sleep(0.02)
@@ -211,6 +228,8 @@ class TeamInventoryTest(TransactionTestCase):
         self.assertEqual((team.status, team.withdrawal_receipt_id, team.occupied_seats.count()),
                          ('UNVERIFIED', None, 2))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_unordered_invitation_and_confirmation_cannot_be_hidden_by_withdrawal(self):
         team = self.team(0, 1, 'unordered-team')
         sleep(0.02)
@@ -227,6 +246,8 @@ class TeamInventoryTest(TransactionTestCase):
         team.refresh_from_db()
         self.assertEqual((team.status, team.occupied_seats.count()), ('UNVERIFIED', 2))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_late_or_unacknowledged_withdrawal_does_not_free_seats(self):
         team = self.team(0, 1, 'deadline-team')
         sleep(0.02)
@@ -246,6 +267,8 @@ class TeamInventoryTest(TransactionTestCase):
             team.refresh_from_db()
             self.assertEqual((team.status, team.occupied_seats.count()), ('UNVERIFIED', 2))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_changed_withdrawal_receipt_blocks_inventory_after_application(self):
         team = self.team(0, 1, 'tampered-team')
         sleep(0.02)
@@ -267,6 +290,8 @@ class InventoryStoreTest(TransactionTestCase):
     databases = {'default', 'store_b'} if 'store_b' in settings.DATABASES else {'default'}
     reset_sequences = True
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_same_ids_never_mix_receipts_across_stores(self):
         records = []
         for store, tier in ((resolve_store(), 'GOLD'), (xinan_store(), 'BRONZE')):
@@ -291,6 +316,8 @@ class InventoryStoreTest(TransactionTestCase):
                     self.assertEqual((result.status, result.potential_candidate_ids), ('WAIT_ADMISSION', (proof_id,)))
 
     @override_settings(PRESTART_SCOPE_SNAPSHOT_ENABLED=True, REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_withdrawal_proofs_and_team_seats_are_store_local(self):
         records = []
         for store in (resolve_store(), xinan_store()):

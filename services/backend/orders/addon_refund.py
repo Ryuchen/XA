@@ -306,7 +306,6 @@ class StaffAddonRefundProposalView(APIView):
         from .ordinary_addon_production import eligible as ordinary_addon_eligible
         if (not needs_integrated_processing(order) and not order.refund_records.exists()
                 and order.addon_intents.count() >= 1 and ordinary_addon_eligible(order, allow_open=True)):
-            from .models import OrderAddonRefundParticipant
             from .addon_handover import current_responsibilities
             from .addon_refund_execution import _main_pending_income
             from django.db.models import Sum
@@ -339,7 +338,7 @@ class StaffAddonRefundProposalView(APIView):
                         raise ValidationError('退款前须有可核验的本人有效钱包')
         if (not needs_integrated_processing(order) and order.refund_records.count() == 1
                 and order.addon_intents.count() >= 1 and ordinary_addon_eligible(order, allow_open=True)):
-            from .models import OrderAddonRefund, OrderAddonRefundParticipant, NegotiationExecution
+            from .models import OrderAddonRefund, NegotiationExecution
             from .addon_refund_execution import _main_pending_income
             from .addon_handover import current_responsibilities
             from django.db.models import Sum

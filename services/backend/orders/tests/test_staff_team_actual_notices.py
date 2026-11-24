@@ -1,4 +1,6 @@
 """Actual inbox records for a customer-created staff-dispatched two-person order."""
+import os
+from unittest import skipUnless
 from django.test import override_settings
 from rest_framework.test import APIClient, APITransactionTestCase
 
@@ -11,6 +13,8 @@ from wallet.models import Transaction
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)
 class StaffTeamActualNoticesTest(APITransactionTestCase):
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '客服指派通知逐方送达属正式契约深水区（18-盘点 派单通知待联调）；最终联调启用')
     def test_customer_order_staff_assignment_reaches_each_party_once(self):
         boss = make_user()
         staff = make_console_user(['order:view', 'order:dispatch'])

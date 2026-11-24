@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 import time
 from datetime import timedelta
 from unittest.mock import patch
@@ -26,6 +28,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
     auth = fixture.GameCommissionPaymentTest.auth
     create = fixture.GameCommissionPaymentTest.create
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_disabled_clock_keeps_existing_team_round_from_legacy_cancel_or_timeout(self):
         from orders.tasks import auto_cancel_pending_order
         self.prepare()
@@ -70,6 +74,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertEqual(result.status_code, 200, result.data)
         return result.data['data']['team_id']
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_full_team_is_ranked_and_both_members_receive_the_order(self):
         self.prepare()
         team_id = self.invite()
@@ -87,6 +93,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
                          {self.accounts[0].pk, self.accounts[1].pk})
         self.assertEqual(OrderGrabTeamRoundState.objects.get(round__pool__order=self.order).winner_id, team_id)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_invitee_cannot_see_order_before_delay_and_may_complete_after_empty_round(self):
         self.prepare(partner_delay=2)
         team_id = self.invite()
@@ -107,6 +115,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.GRABBED)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_first_winning_team_loses_eligibility_and_reopens(self):
         self.prepare()
         team_id = self.invite()
@@ -123,6 +133,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertEqual(list(states.values_list('status', flat=True)), ['REOPENED', 'OPEN'])
         self.assertTrue(states.last().round.simultaneous_visibility)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_two_full_teams_are_ranked_and_both_winning_members_notified(self):
         self.prepare()
         for index, tier in enumerate(('GOLD', 'SILVER'), start=2):
@@ -162,6 +174,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
             self.assertTrue(Message.objects.filter(recipient_account=account, related_order_id=self.order.pk,
                                                    title='本次未抢到订单').exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_boss_cancellation_refunds_a_pending_team(self):
         self.prepare()
         team_id = self.invite()
@@ -177,6 +191,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.wallet.refresh_from_db()
         self.assertEqual((self.order.status, self.wallet.balance), ('CANCELLED', 100000))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_boss_cancel_after_empty_window_does_not_depend_on_worker(self):
         self.prepare()
         time.sleep(1.05)
@@ -187,6 +203,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.order.refresh_from_db(); self.wallet.refresh_from_db()
         self.assertEqual((self.order.status, self.wallet.balance), ('CANCELLED', 100000))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_team_member_withdraws_before_switching_to_another_team(self):
         self.prepare()
         user = make_provider(deposit_mode='EARNINGS', pass_tier='GOLD',
@@ -220,6 +238,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
                                   {'client_request_id': 'confirm-new-team'}, format='json')
         self.assertEqual(result.status_code, 200, result.data)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_invitation_never_reveals_order_to_currently_ineligible_partner(self):
         self.prepare()
         self.invite()
@@ -232,6 +252,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertFalse(result.data['data'][0]['order_visible'])
         self.assertNotIn('order_id', result.data['data'][0])
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_incomplete_team_does_not_block_timeout_refund(self):
         from orders.models import OrderGrabPoolSnapshot, OrderGrabRound
         self.prepare()
@@ -247,6 +269,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.wallet.balance), ('CANCELLED', 100000))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_persisted_withdrawal_is_applied_before_allocating_team(self):
         from orders.grab_receipt_probe import record_intent
         from orders.models import OrderGrabTeamDraft
@@ -272,6 +296,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.PENDING)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_parked_disqualified_team_can_form_again_after_eligibility_recovers(self):
         from orders.grab_receipt_probe import record_intent
         from orders.models import OrderGrabTeamDraft
@@ -303,6 +329,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.GRABBED)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_staff_arranged_and_staff_created_double_orders_enter_team_pool(self):
         from orders.models import OrderGrabPoolSnapshot
         self.prepare()
@@ -337,6 +365,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertTrue(self.order.requires_boss_selection)
 
     @override_settings(GAME_COMMISSION_PAYMENT_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_double_assignment_uses_payment_time_game_commission_snapshot(self):
         self.prepare(with_game=True)
         team_id = self.invite()

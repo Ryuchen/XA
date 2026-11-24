@@ -33,13 +33,6 @@ def schedule_chat_message(session, message, *, owner_snapshot=None):
         logger.exception('Chat message outbox pending recovery for message %s', message.pk)
 
 
-def _legacy_message_safely(session, message, owner_snapshot):
-    try:
-        notify_chat_message(session, message, owner_snapshot=owner_snapshot)
-    except Exception:
-        logger.exception('Chat message notification failed for message %s', message.pk)
-
-
 def _deliver_safely(outbox_id):
     try:
         deliver_chat_notification(outbox_id)

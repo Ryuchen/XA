@@ -1,7 +1,6 @@
 from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """The real order's frozen gameplay is visible before and after acceptance."""
 import json
-import os
 import shutil
 import subprocess
 from datetime import timedelta
@@ -67,12 +66,6 @@ class ProviderVueGameplaySnapshotHTTPTest(LiveServerTestCase):
             self.assertEqual(detail['gameplay_snapshot']['rules'],rules)
             self.assertEqual(detail['roulette_result'],order['roulette_result'])
         browser(order,'assigned')
-        if os.environ.get('XA_GAMEPLAY_SNAPSHOT_NATIVE') == '1':
-            native=subprocess.run(['node',str(repo/'scripts/native-gameplay-snapshot-iphone12.cjs')],
-                input=json.dumps({'base':self.live_server_url,'orderId':order['id'],'bossId':accounts[0].pk,
-                    'token':issue_account_tokens(accounts[0])[0], 'fulfillment':fulfillment,
-                    'target':order['roulette_result']['name']}),text=True,encoding='utf-8',capture_output=True,timeout=40,cwd=repo)
-            self.assertEqual(native.returncode,0,native.stdout+native.stderr)
         plain=make_service(name='隔离普通服务',price=10000)
         fresh=make_provider()
         fresh_account=get_or_create_account_for_legacy_user(fresh)

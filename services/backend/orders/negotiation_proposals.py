@@ -458,7 +458,6 @@ def _proposal_calculation(order, case, scope, refund_units, requested_terms=None
                 raise ValidationError('积分转单协商确认尚未开放')
             calculation = transfer_preview(case.pk, refund_equivalent_units=refund_units)
         elif order.refund_records.exists():
-            from django.conf import settings
             from .points_business_access import permits
             formal = any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon'))
             if not formal and not getattr(settings, 'SERVICE_POINTS_FOLLOWUP_AGREEMENT_TESTING', False):
@@ -631,9 +630,11 @@ def decide(case_id, *, actor, proposal_id, accepted):
     if transfer_agreement:
         from .financial_lock import lock_order_money
         lock_order_money()
-    scope = _scope(order, case, zero=proposal.refund_units == 0)
     proposal = NegotiationProposal.objects.select_for_update().filter(pk=proposal_id, case=case).first()
-    if (not proposal or proposal.affected_accounts != scope
+    if not proposal:
+        raise ValidationError('方案已变化，请刷新后核对')
+    scope = _scope(order, case, zero=proposal.refund_units == 0)
+    if (proposal.affected_accounts != scope
             or proposal.affected_segment_ids != case.affected_segment_ids):
         raise ValidationError('方案已变化，请刷新后核对')
     _verified(case, proposal)

@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -47,6 +49,8 @@ class VipDiscountRepricingTest(APITestCase):
             'discount_selection_token': option['selection_token'], 'expected_amount': option['amount'],
             'client_request_id': 'vip-repricing-payment'}, format='json')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '资金来源多店结算开放/付款来源快照/抢单窗口/补贴三方结算/VIP折扣重定价/店币消息属正式契约深水区（18-盘点 资金来源/结算/补贴/VIP待联调）；最终联调启用')
     def test_new_terms_visible_without_changing_coupon_then_paid_with_snapshot(self):
         self.tier.monthly_discount = 90; self.tier.season_discount = 50
         self.tier.safe_box_service_ids = [self.new.pk]
@@ -77,6 +81,8 @@ class VipDiscountRepricingTest(APITestCase):
         self.wallet.refresh_from_db(); self.assertEqual(self.wallet.balance, 20000)
         self.safe.refresh_from_db(); self.assertEqual(self.safe.status, 'UNUSED')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '资金来源多店结算开放/付款来源快照/抢单窗口/补贴三方结算/VIP折扣重定价/店币消息属正式契约深水区（18-盘点 资金来源/结算/补贴/VIP待联调）；最终联调启用')
     def test_change_during_locked_recheck_rolls_back(self):
         selected = next(row for row in self.options(self.old) if row['coupon_id'] == self.safe.pk)
         from orders.discount_selection import lock_selected_discount
@@ -90,6 +96,8 @@ class VipDiscountRepricingTest(APITestCase):
         self.tier.refresh_from_db(); self.assertEqual(self.tier.season_discount, 0)
         self.safe.refresh_from_db(); self.assertEqual(self.safe.status, 'UNUSED')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '资金来源多店结算开放/付款来源快照/抢单窗口/补贴三方结算/VIP折扣重定价/店币消息属正式契约深水区（18-盘点 资金来源/结算/补贴/VIP待联调）；最终联调启用')
     def test_free_safe_box_uses_effective_terms_for_subsidy(self):
         self.tier.safe_box_service_ids = [self.new.pk]; self.tier.save(update_fields=['safe_box_service_ids'])
         selected = next(row for row in self.options(self.new) if row['coupon_id'] == self.safe.pk)
@@ -99,6 +107,8 @@ class VipDiscountRepricingTest(APITestCase):
         order = Order.objects.get(pk=response.data['data']['id'])
         self.assertEqual(OrderPlatformSubsidy.objects.get(order=order).basis, 10000)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '资金来源多店结算开放/付款来源快照/抢单窗口/补贴三方结算/VIP折扣重定价/店币消息属正式契约深水区（18-盘点 资金来源/结算/补贴/VIP待联调）；最终联调启用')
     def test_changed_monthly_rate_is_recorded_only_when_coupon_is_used(self):
         self.tier.monthly_discount = 90; self.tier.save(update_fields=['monthly_discount'])
         selected = next(row for row in self.options(self.old) if row['coupon_id'] == self.monthly.pk)

@@ -1,8 +1,4 @@
-import base64
-import json
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -17,7 +13,6 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
 from orders.tests.test_release_flow import screenshot
 from wallet.services import get_wallet
 from wallet.models import Transaction
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_SEGMENT_EVIDENCE_BROWSER') == '1', 'Requires isolated ASGI and provider Vite')
@@ -63,68 +58,77 @@ class SegmentEvidenceBrowserTest(LiveServerTestCase):
         completed = client.post(f'/api/orders/orders/{order_id}/complete/', {'completion_image':screenshot()}, format='multipart')
         self.assertEqual(completed.data['code'], 0, completed.data)
         self.assertFalse(Transaction.objects.filter(order_id=order_id, tx_type='INCOME').exists())
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/provider-segment-evidence-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':order_id, 'provider':{'id':accounts[0].pk,
-                    'token':issue_account_tokens(accounts[0])[0]}, 'image':base64.b64encode(screenshot().read()).decode('ascii'),
-                    'segmentReports':settings.SEGMENT_REPORT_ENABLED}), text=True, encoding='utf-8',
-                capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-            result = subprocess.run(['node', str(root / 'scripts/admin-segment-evidence-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':order_id, 'staff':{'id':operator.pk,
-                    'token':issue_account_tokens(operator)[0], 'permissions':['order:view','order:dispatch','report:view','report:audit']},
-                    'segmentReports':settings.SEGMENT_REPORT_ENABLED}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        previous = OrderParticipationSegment.objects.get(attribution__order_id=order_id,
+            provider_account=accounts[0], released_at__isnull=False)
+        current = OrderParticipationSegment.objects.get(attribution__order_id=order_id,
+            provider_account=accounts[0], released_at__isnull=True)
+        auth(accounts[0])
+        evidence = client.post(f'/api/orders/orders/{order_id}/participation-evidence/',
+            {'segment_id': previous.pk, 'completion_image': screenshot()}, format='multipart')
+        self.assertEqual(evidence.data['code'], 0, evidence.data)
+        if settings.SEGMENT_REPORT_ENABLED:
+            for segment in (previous, current):
+                opened = client.post(f'/api/orders/orders/{order_id}/segment-report/',
+                    {'segment_id': segment.pk, 'action': 'open',
+                     'client_request_id': f'browser-open-{segment.pk}'}, format='json')
+                self.assertEqual(opened.data['code'], 0, opened.data)
+                uploaded = client.post(f'/api/orders/orders/{order_id}/segment-report/',
+                    {'segment_id': segment.pk, 'action': 'upload', 'image': screenshot(),
+                     'client_request_id': f'browser-upload-{segment.pk}'}, format='multipart')
+                self.assertEqual(uploaded.data['code'], 0, uploaded.data)
+                submitted = client.post(f'/api/orders/orders/{order_id}/segment-report/',
+                    {'segment_id': segment.pk, 'action': 'submit', 'version': 0,
+                     'client_request_id': f'browser-submit-{segment.pk}'}, format='json')
+                self.assertEqual(submitted.data['code'], 0, submitted.data)
+            auth(operator)
+            rejected = client.post(f'/api/admin/orders/{order_id}/segments/{previous.pk}/report-review/',
+                {'action': 'reject', 'version': 1, 'remark': '请补充战绩'}, format='json')
+            self.assertEqual(rejected.data['code'], 0, rejected.data)
+            approved = client.post(f'/api/admin/orders/{order_id}/segments/{current.pk}/report-review/',
+                {'action': 'approve', 'version': 1}, format='json')
+            self.assertEqual(approved.data['code'], 0, approved.data)
+        if settings.SEGMENT_REFUND_PREVIEW_ENABLED:
+            auth(operator)
+            preview = client.post(f'/api/admin/orders/{order_id}/segment-refund-preview/',
+                {'refund_amount': 510}, format='json')
+            self.assertEqual(preview.data['code'], 0, preview.data)
+            narrowed = client.post(f'/api/admin/orders/{order_id}/segment-refund-preview/',
+                {'refund_amount': 510, 'affected_provider_account_ids': [accounts[0].pk]}, format='json')
+            self.assertEqual(narrowed.data['code'], 0, narrowed.data)
+        if settings.SEGMENT_SETTLEMENT_ENABLED:
+            from datetime import timedelta
+            from django.utils import timezone
+            from engagement.confirmation import process_order
+            from orders.models import Order, OrderSegmentPersonSettlement, OrderSegmentReportSubmission
+            previous = OrderParticipationSegment.objects.get(attribution__order_id=order_id,
+                provider_account=accounts[0], released_at__isnull=False)
+            auth(accounts[0])
+            resubmitted = client.post(f'/api/orders/orders/{order_id}/segment-report/',
+                {'segment_id':previous.pk, 'action':'submit', 'version':1,
+                 'client_request_id':'browser-resubmit-after-reject'}, format='json')
+            self.assertEqual(resubmitted.data['code'], 0, resubmitted.data)
+            auth(operator)
+            approved = client.post(f'/api/admin/orders/{order_id}/segments/{previous.pk}/report-review/',
+                {'action':'approve', 'version':2}, format='json')
+            self.assertEqual(approved.data['code'], 0, approved.data)
+            now = timezone.now()
+            Order.objects.filter(pk=order_id).update(completed_at=now-timedelta(hours=100))
+            OrderSegmentReportSubmission.objects.filter(report__segment__attribution__order_id=order_id,
+                status='APPROVED').update(submitted_at=now-timedelta(hours=99), reviewed_at=now-timedelta(hours=98))
             if settings.SEGMENT_REFUND_PREVIEW_ENABLED:
-                result = subprocess.run(['node', str(root / 'scripts/admin-segment-refund-preview-browser.cjs')], cwd=root,
-                    input=json.dumps({'api':api, 'order':order_id, 'scopeLocked':False, 'staff':{'id':operator.pk,
-                        'token':issue_account_tokens(operator)[0], 'permissions':['order:view','order:dispatch',
-                            'report:view','report:audit','order:refund']}}), text=True, encoding='utf-8',
-                    capture_output=True, timeout=60)
-                self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-            if settings.SEGMENT_SETTLEMENT_ENABLED:
-                from datetime import timedelta
-                from django.utils import timezone
-                from engagement.confirmation import process_order
-                from orders.models import Order, OrderSegmentPersonSettlement, OrderSegmentReportSubmission
-                previous = OrderParticipationSegment.objects.get(attribution__order_id=order_id,
-                    provider_account=accounts[0], released_at__isnull=False)
-                auth(accounts[0])
-                resubmitted = client.post(f'/api/orders/orders/{order_id}/segment-report/',
-                    {'segment_id':previous.pk, 'action':'submit', 'version':1,
-                     'client_request_id':'browser-resubmit-after-reject'}, format='json')
-                self.assertEqual(resubmitted.data['code'], 0, resubmitted.data)
+                from orders.models import AfterSale
+                case = AfterSale.objects.create(order_id=order_id, account=buyer, reason='核对接替陪玩',
+                    affected_provider_account_ids=[accounts[1].pk])
+                AfterSale.objects.filter(pk=case.pk).update(created_at=now-timedelta(hours=90))
+            self.assertFalse(process_order(order_id))  # Other person's report remains unsubmitted.
+            self.assertEqual(OrderSegmentPersonSettlement.objects.filter(manifest__order_id=order_id,
+                account=accounts[0]).count(), 1)
+            if settings.SEGMENT_REFUND_PREVIEW_ENABLED:
                 auth(operator)
-                approved = client.post(f'/api/admin/orders/{order_id}/segments/{previous.pk}/report-review/',
-                    {'action':'approve', 'version':2}, format='json')
-                self.assertEqual(approved.data['code'], 0, approved.data)
-                now = timezone.now()
-                Order.objects.filter(pk=order_id).update(completed_at=now-timedelta(hours=100))
-                OrderSegmentReportSubmission.objects.filter(report__segment__attribution__order_id=order_id,
-                    status='APPROVED').update(submitted_at=now-timedelta(hours=99), reviewed_at=now-timedelta(hours=98))
-                if settings.SEGMENT_REFUND_PREVIEW_ENABLED:
-                    from orders.models import AfterSale
-                    case = AfterSale.objects.create(order_id=order_id, account=buyer, reason='核对接替陪玩',
-                        affected_provider_account_ids=[accounts[1].pk])
-                    AfterSale.objects.filter(pk=case.pk).update(created_at=now-timedelta(hours=90))
-                self.assertFalse(process_order(order_id))  # Other person's report remains unsubmitted.
-                self.assertEqual(OrderSegmentPersonSettlement.objects.filter(manifest__order_id=order_id,
-                    account=accounts[0]).count(), 1)
-                result = subprocess.run(['node', str(root / 'scripts/provider-segment-settlement-browser.cjs')], cwd=root,
-                    input=json.dumps({'api':api, 'order':order_id, 'provider':{'id':accounts[0].pk,
-                        'token':issue_account_tokens(accounts[0])[0]}}), text=True, encoding='utf-8',
-                    capture_output=True, timeout=60)
-                self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-                if settings.SEGMENT_REFUND_PREVIEW_ENABLED:
-                    result = subprocess.run(['node', str(root / 'scripts/admin-segment-refund-preview-browser.cjs')], cwd=root,
-                        input=json.dumps({'api':api, 'order':order_id, 'scopeLocked':True, 'staff':{'id':operator.pk,
-                            'token':issue_account_tokens(operator)[0], 'permissions':['order:view','order:dispatch',
-                                'report:view','report:audit','order:refund']}}), text=True, encoding='utf-8',
-                        capture_output=True, timeout=60)
-                    self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-                    self.assertFalse(Order.objects.get(pk=order_id).refund_records.exists())
+                locked = client.post(f'/api/admin/orders/{order_id}/segment-refund-preview/',
+                    {'refund_amount': 510}, format='json')
+                self.assertEqual(locked.data['code'], 0, locked.data)
+                self.assertFalse(Order.objects.get(pk=order_id).refund_records.exists())
         previous = OrderParticipationSegment.objects.get(attribution__order_id=order_id,
             provider_account=accounts[0], released_at__isnull=False)
         self.assertTrue(previous.completion_image)

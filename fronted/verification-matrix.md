@@ -362,7 +362,7 @@ root手机最终复验南岸陪玩6的已取消/全额退款订单8：顶部为�
 - 两店费率正向HTTP验证后仅清理本次在`xa_test_*`新建的policy/history夹具，原数据库/API恢复未配置；这不是产品“清空费率”功能。
 - 只读写拒绝、独立角色即时变更与平台grant均有明确样本，但没有声称覆盖所有权限排列。页面R、明确UI-W、HTTP/domain及控制器证据保持分开。
 
-[U1]: ../docs/ops/multitenancy-validation-20261104.md
+[U1]: ../docs/ops/records/multitenancy-validation-20261104.md
 [U2]: #退款顶部净额复验
 [H0]: ./ACCEPTANCE.md
 [H1]: ../.tools/fronted-acceptance/repair-crud-results.json

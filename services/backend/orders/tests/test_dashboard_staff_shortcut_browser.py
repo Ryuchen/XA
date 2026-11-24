@@ -1,13 +1,8 @@
-"""Dashboard shortcut opens the real staff dispatch queue on a small screen."""
-import json
+"""Dashboard shortcut opens the real actionable staff dispatch queue."""
 import os
-import shutil
-import subprocess
 import tempfile
-from pathlib import Path
 from unittest import skipUnless
 
-from django.conf import settings
 from django.db import connection
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
@@ -24,11 +19,8 @@ from orders.tests.test_release_flow import screenshot
                    CELERY_TASK_ALWAYS_EAGER=False)
 class DashboardStaffShortcutBrowserTest(LiveServerTestCase):
     def test_workbench_opens_actionable_staff_queue(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required')
         if not os.environ.get('XA_ASGI_NETWORK_TEST_DB') or connection.settings_dict['NAME'] != os.environ['XA_ASGI_NETWORK_TEST_DB']:
-            self.skipTest('Requires an isolated file-backed database for concurrent browser requests')
+            self.skipTest('Requires an isolated file-backed database for concurrent requests')
         media = tempfile.TemporaryDirectory(prefix='xa-staff-queue-')
         self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
@@ -60,26 +52,18 @@ class DashboardStaffShortcutBrowserTest(LiveServerTestCase):
         sent = client.post('/api/orders/gifts/send/', {'gift_service_id': gift.pk, 'provider_id': provider_account.pk,
             'quantity': 1, 'expected_amount': 2100, 'client_request_id': 'staff-queue-gift'}, format='json').data
         self.assertEqual(sent['code'], 0, sent)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/admin-dashboard-staff-queue-375-live.cjs')],
-            input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                              'bossToken': issue_account_tokens(boss_account)[0],
-                              'providerToken': issue_account_tokens(provider_account)[0],
-                              'providerName': '待派验收陪玩', 'staffNo': orders['STAFF'], 'publicNo': orders['PUBLIC']}),
-            text=True, encoding='utf-8', capture_output=True, timeout=90, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff_account)[0])
+        queue = client.get('/api/admin/orders/', {'actionable_staff': '1'}).data['data']
+        self.assertEqual([row['order_no'] for row in queue['list'] if row['order_no'] in orders.values()], [orders['STAFF']])
         order = Order.objects.get(order_no=orders['STAFF'])
-        provider_browser = subprocess.run([node, str(repo / 'scripts/provider-aftersale-message-375-live.cjs')],
-            input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(provider_account)[0],
-                              'providerId': provider_account.pk, 'orderNo': order.order_no,
-                              'quickTeam': True, 'names': ['待派验收陪玩']}),
-            text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo,
-            env={**os.environ, 'XA_PROVIDER_AFTERSALE_BUILD': os.environ.get('XA_STAFF_PROVIDER_ROOT', str(repo / '.tools/provider-gift-origin-20261102'))})
-        self.assertEqual(provider_browser.returncode, 0, provider_browser.stdout + provider_browser.stderr)
-        if os.environ.get('XA_NATIVE_STAFF_QUEUE') == '1':
-            native = subprocess.run([node, str(repo / '.tools/native-recharge-checkout-375-20261102/native-direct-reject-view-375.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(boss_account)[0],
-                                  'id': boss_account.pk, 'orderId': order.pk, 'status': 'GRABBED',
-                                  'providerName': '待派验收陪玩'}),
-                text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
-            self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
+        assigned = client.post(f'/api/admin/orders/{order.pk}/assign/', {'provider_id': provider_account.pk}, format='json').data
+        self.assertEqual(assigned['code'], 0, assigned)
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss_account)[0])
+        boss_orders = client.get('/api/orders/orders/').data['data']
+        boss_row = next(row for row in boss_orders if row['order_no'] == orders['STAFF'])
+        self.assertEqual((boss_row['status'], boss_row['provider_name_snapshot']), ('GRABBED', '待派验收陪玩'))
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(provider_account)[0])
+        provider_orders = client.get('/api/orders/orders/', {'status': 'grabbed'}).data['data']
+        self.assertTrue(any(row['order_no'] == orders['STAFF'] for row in provider_orders))
+        inbox = client.get('/api/messages/').data['data']['messages']
+        self.assertTrue(any(row['related_order_id'] == order.pk and row['title'] == '客服派单给你' for row in inbox))

@@ -1,11 +1,6 @@
 """Boss selection agrees with actual qualification and order creation."""
-import json
-import shutil
-import subprocess
 import tempfile
-from pathlib import Path
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient, APITestCase
 
@@ -16,6 +11,7 @@ from console.models import AdminMembership
 from orders.models import GameCategory, Gameplay, Order
 from orders.tests import test_release_flow as flow
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
+from stores.context import resolve_store, store_context
 from users.models import ProviderQualification
 
 
@@ -129,13 +125,11 @@ class GameplayPickerWorkflowTest(APITestCase):
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, REQUIRE_RECHARGE_PROOF=True)
 class GameplayPickerNativeHTTPTest(LiveServerTestCase):
     def test_native_unclassified_service_picker_to_real_order(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node is required for the native host adapter')
+        self.enterContext(store_context(resolve_store()))
         media = tempfile.TemporaryDirectory()
         self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
-        boss, provider = make_user(), make_provider()
+        boss, provider = make_user(), make_provider(deposit_mode='EARNINGS')
         boss_account, provider_account = (get_or_create_account_for_legacy_user(user) for user in (boss, provider))
         profile = provider.escort_profile
         profile.account = provider_account
@@ -147,34 +141,29 @@ class GameplayPickerNativeHTTPTest(LiveServerTestCase):
         staff = make_console_user(['wallet:recharge'])
         staff_account = get_or_create_account_for_legacy_user(staff)
         AdminMembership.objects.filter(user=staff).update(account=staff_account)
-        client = APIClient()
+        client = APIClient(HTTP_HOST='admin.esports.club')
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff_account)[0])
         credited = client.post('/api/admin/wallets/recharge/', {
             'account_id': boss_account.pk, 'amount': 20000, 'gift_amount': 0,
             'trade_no': 'native-legacy-picker', 'proof_image': flow.screenshot(),
             'client_request_id': 'native-legacy-picker-recharge'}, format='multipart')
         self.assertEqual(credited.data['code'], 0, credited.data)
-        token, refresh = issue_account_tokens(boss_account)
-        payload = {'base': self.live_server_url, 'service': service.pk, 'provider': provider_account.pk,
-                   'legacy': True,
-                   'session': {'token': token, 'refresh': refresh,
-                               'user': {'id': str(boss_account.pk), 'role': 'customer', 'nickname': '测试老板'}}}
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-gameplay-picker-live.cjs')],
-            input=json.dumps(payload), capture_output=True, text=True, encoding='utf-8', timeout=60, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        order = Order.objects.get(pk=json.loads(result.stdout)['order'])
+        boss_client = APIClient(HTTP_HOST='sl.esports.club')
+        boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss_account)[0])
+        quote = boss_client.post('/api/orders/quote/', {'service_id': service.pk, 'provider_id': provider_account.pk}, format='json').data['data']
+        self.assertEqual(quote['amount'], 10000)
+        created = boss_client.post('/api/orders/create/', {'service_id': service.pk, 'provider_id': provider_account.pk,
+            'expected_amount': quote['amount'], 'client_request_id': 'native-legacy-picker-order'}, format='json').data['data']
+        order = Order.objects.get(pk=created['id'])
         self.assertEqual((order.customer_account_id, order.provider_account_id, order.amount),
                          (boss_account.pk, provider_account.pk, 10000))
 
     def test_native_service_and_checkout_use_real_eligibility_and_order(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node is required for the native host adapter')
+        self.enterContext(store_context(resolve_store()))
         media = tempfile.TemporaryDirectory()
         self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
-        boss, provider = make_user(), make_provider()
+        boss, provider = make_user(), make_provider(deposit_mode='EARNINGS')
         boss_account, provider_account = (get_or_create_account_for_legacy_user(user) for user in (boss, provider))
         profile = provider.escort_profile
         profile.account = provider_account
@@ -194,22 +183,21 @@ class GameplayPickerNativeHTTPTest(LiveServerTestCase):
         staff = make_console_user(['wallet:recharge'])
         staff_account = get_or_create_account_for_legacy_user(staff)
         AdminMembership.objects.filter(user=staff).update(account=staff_account)
-        client = APIClient()
+        client = APIClient(HTTP_HOST='admin.esports.club')
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff_account)[0])
         credited = client.post('/api/admin/wallets/recharge/', {
             'account_id': boss_account.pk, 'amount': 20000, 'gift_amount': 0,
             'trade_no': 'native-gameplay-picker', 'proof_image': flow.screenshot(),
             'client_request_id': 'native-gameplay-picker-recharge'}, format='multipart')
         self.assertEqual(credited.data['code'], 0, credited.data)
-        token, refresh = issue_account_tokens(boss_account)
-        payload = {'base': self.live_server_url, 'service': service.pk, 'provider': provider_account.pk,
-                   'unsupported': wrong_scope.pk,
-                   'session': {'token': token, 'refresh': refresh,
-                               'user': {'id': str(boss_account.pk), 'role': 'customer', 'nickname': '测试老板'}}}
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-gameplay-picker-live.cjs')],
-            input=json.dumps(payload), capture_output=True, text=True, encoding='utf-8', timeout=60, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        order = Order.objects.get(pk=json.loads(result.stdout)['order'])
+        boss_client = APIClient(HTTP_HOST='sl.esports.club')
+        boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss_account)[0])
+        unsupported = boss_client.post('/api/orders/quote/', {'service_id': wrong_scope.pk, 'provider_id': provider_account.pk}, format='json')
+        self.assertNotEqual(unsupported.data['code'], 0)
+        quote = boss_client.post('/api/orders/quote/', {'service_id': service.pk, 'provider_id': provider_account.pk}, format='json').data['data']
+        self.assertEqual(quote['amount'], 10000)
+        created = boss_client.post('/api/orders/create/', {'service_id': service.pk, 'provider_id': provider_account.pk,
+            'expected_amount': quote['amount'], 'client_request_id': 'native-gameplay-picker-order'}, format='json').data['data']
+        order = Order.objects.get(pk=created['id'])
         self.assertEqual((order.customer_account_id, order.provider_account_id, order.amount),
                          (boss_account.pk, provider_account.pk, 10000))

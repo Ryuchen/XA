@@ -1,6 +1,7 @@
 """Platform review and offline payout facts, committed within the store database."""
 import hashlib
 import json
+from django.conf import settings
 from django.db import DatabaseError, IntegrityError
 from django.db.models import Count
 from django.utils import timezone

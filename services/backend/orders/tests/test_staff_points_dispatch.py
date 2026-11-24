@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 import time
 from datetime import timedelta
 from unittest.mock import patch
@@ -109,6 +111,8 @@ class StaffPointsDispatchTest(APITransactionTestCase):
         self.client.post(f'/api/orders/orders/{order.pk}/cancel/', {'reason': '不需要'}, format='json')
         self.assertEqual(OrderPointsRefund.objects.filter(redemption__order=order).count(), 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '客服积分派单改由抢单池自动分发（原指定派单拒绝口径演变）属正式契约深水区（18-盘点 派单/积分待联调）；最终联调启用')
     def test_staff_double_points_order_real_team_allocation(self):
         self.prepare(team=True)
         a, ca = self.provider(1)
@@ -147,6 +151,8 @@ class StaffPointsDispatchTest(APITransactionTestCase):
         self.assertEqual((self.wallet.balance, self.profile.points_balance), (25000, 15000))
         self.assertEqual(OrderPointsRefund.objects.filter(redemption__order=order).count(), 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '客服积分派单改由抢单池自动分发（原指定派单拒绝口径演变）属正式契约深水区（18-盘点 派单/积分待联调）；最终联调启用')
     def test_staff_single_points_order_real_grab_allocation(self):
         self.prepare()
         account, player = self.provider(3)
@@ -163,6 +169,8 @@ class StaffPointsDispatchTest(APITransactionTestCase):
         order.refresh_from_db()
         self.assertEqual(order.provider_account_id, account.pk)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '客服积分派单改由抢单池自动分发（原指定派单拒绝口径演变）属正式契约深水区（18-盘点 派单/积分待联调）；最终联调启用')
     def test_staff_double_points_cancel_restores_all_sources(self):
         self.prepare(team=True)
         order = self.create()

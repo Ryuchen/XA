@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from pathlib import Path
 from unittest.mock import patch
+from uuid import uuid4
 from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -17,6 +18,7 @@ from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from users.models import EscortLevel, EscortProfile
+from users.test_voice_recordings import audio_file
 from wallet.models import ProviderReport, Wallet, Transaction
 from orders.models import Order, OrderApplication
 from orders.services import count_active_orders
@@ -45,18 +47,26 @@ class ApplicationTest(APITestCase):
         patcher=patch('orders.applications.notify_order_update');patcher.start();self.addCleanup(patcher.stop)
         media=tempfile.TemporaryDirectory();self.addCleanup(media.cleanup)
         override=override_settings(MEDIA_ROOT=media.name);override.enable();self.addCleanup(override.disable)
+        self.recordings={}
+        self.recordings_by_account={}
+        for index,a in enumerate(self.accounts):
+            self.auth(a)
+            resp=self.client.post('/api/users/recordings/',{'audio':audio_file(),'title':f'本人试音{index}','client_request_id':uuid4().hex},format='multipart')
+            self.recordings[index]=resp.data['data']['id']
+            self.recordings_by_account[a.pk]=resp.data['data']['id']
 
     def auth(self,a):
         token,_=issue_account_tokens(a);self.client.credentials(HTTP_AUTHORIZATION='Bearer '+token)
     def apply(self,index=0,**data):
         self.auth(self.accounts[index])
+        data.setdefault('recording_id',self.recordings[index])
         return self.client.post(f'/api/orders/orders/{self.order.pk}/grab/',data,format='json')
     def select(self,row):
         self.auth(self.boss_account)
         return self.client.post(f'/api/orders/orders/{self.order.pk}/applications/{row.pk}/select/')
     def action(self,row,a,action):
         self.auth(a)
-        return self.client.post(f'/api/orders/orders/{self.order.pk}/applications/{row.pk}/action/',{'action':action},format='json')
+        return self.client.post(f'/api/orders/orders/{self.order.pk}/applications/{row.pk}/action/',{'action':action,'recording_id':self.recordings_by_account[a.pk]},format='json')
     def row(self,index=0):
         return OrderApplication.objects.get(order=self.order,applicant=self.accounts[index])
     def detail(self,a):
@@ -65,7 +75,7 @@ class ApplicationTest(APITestCase):
     def use_double_package(self):
         self.order.delete()
         self.service = make_service(name='双陪报名测试套餐', price=5001, commission_rate=20,
-                                    billing_provider_count=2)
+                                    billing_provider_count=2, fulfillment_provider_count=2)
         self.order = make_order(self.boss, service=self.service, customer_account=self.boss_account,
                                 requires_boss_selection=True, amount=10001,
                                 original_amount=10002, coupon_discount=1)

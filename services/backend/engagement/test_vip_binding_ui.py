@@ -1,11 +1,8 @@
-"""VIP binding options exercised by the real admin UI and API."""
-import json
+"""VIP binding options exercised by the real admin API."""
 import os
-import subprocess
-from pathlib import Path
 from unittest import skipUnless
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
+from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_boss_type, make_console_user, make_service
@@ -29,11 +26,23 @@ class VipBindingUITest(LiveServerTestCase):
         tier = VipTier.objects.create(boss_type=make_boss_type(name='绑定验收会员'), level=6,
                                       recharge_threshold=100, safe_box_service_ids=[old.pk])
         make_service(name='适用小时陪玩', benefit_kind='COMPANION_HOUR', platform='PC', price_unit='小时')
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/admin-vip-binding-live.cjs')], cwd=repo,
-            input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_ADMIN_VUE_ROOT'],
-                              'token': issue_account_tokens(account)[0], 'staleId': old.pk}),
-            text=True, encoding='utf-8', capture_output=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        def options(**params):
+            response = client.get('/api/admin/vip-tiers/service-options/', params)
+            self.assertEqual((response.status_code, response.data['code']), (200, 0), response.data)
+            return {row['name'] for row in response.data['data']}
+        safe_names = options(benefit_kind='SAFEBOX_33')
+        self.assertIn('适用安全箱', safe_names)
+        self.assertNotIn('双陪安全箱', safe_names)
+        self.assertNotIn('适用小时陪玩', safe_names)
+        self.assertIn('远端安全箱', options(benefit_kind='SAFEBOX_33', keyword='远端安全箱'))
+        hour_names = options(benefit_kind='COMPANION_HOUR')
+        self.assertIn('适用小时陪玩', hour_names)
+        self.assertNotIn('适用安全箱', hour_names)
+        stale = client.patch(f'/api/admin/vip-tiers/{tier.pk}/', {'safe_box_service_ids': [old.pk]}, format='json')
+        self.assertNotEqual(stale.data.get('code', 400), 0)
+        saved = client.patch(f'/api/admin/vip-tiers/{tier.pk}/', {'safe_box_service_ids': [target.pk]}, format='json')
+        self.assertEqual((saved.status_code, saved.data['code']), (200, 0), saved.data)
         tier.refresh_from_db()
         self.assertEqual(tier.safe_box_service_ids, [target.pk])

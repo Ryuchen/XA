@@ -20,7 +20,7 @@
 
 ## 架构
 
-- **前端**：老板端、陪玩端和管理后台采用 React、TypeScript、Tailwind CSS 4、shadcn 和 Vite；微信授权保留最小桥接包。
+- **前端**：老板端、陪玩端和管理后台采用 React、TypeScript、Tailwind CSS 4、shadcn 和 Vite；微信授权走公众号网页授权。
 - **后端**：Django、Django REST Framework、Channels 和 Celery 提供业务接口、实时通信与后台任务。
 - **数据**：MySQL 存储业务数据，Redis 支持缓存、任务与实时通信。平台控制库和各门店业务库的访问边界以当前配置及[多租户方案](docs/development/01-架构权限与多租户.md)为准。
 - **部署**：本机开发使用 PowerShell、WSL2、Docker Compose 和 Nginx；发布配置使用 Compose 与 Caddy。
@@ -85,7 +85,6 @@ npm --prefix fronted ci
 ```powershell
 pnpm run typecheck
 pnpm run test:frontend
-pnpm run bridge:check
 pnpm run build:all
 ./.venv/Scripts/python.exe services/backend/manage.py check --settings=config.test_settings
 ```
@@ -96,12 +95,11 @@ pnpm run build:all
 
 ```text
 .
-├── fronted/                  三端网页、共享模块和微信授权桥接
+├── fronted/                  三端网页与共享模块
 │   ├── boss/                 老板端
 │   ├── provider/             陪玩端
 │   ├── admin/                管理后台
-│   ├── shared/               跨端共享模块
-│   └── wechat-bridge/        微信授权桥接包
+│   └── shared/               跨端共享模块
 ├── services/backend/         Django 业务服务、迁移和测试
 ├── packages/                 共享金额工具
 ├── deploy/
@@ -115,7 +113,7 @@ pnpm run build:all
 └── LICENSE                   项目许可声明
 ```
 
-旧端脚本及其调用方已逐项核对：无当前调用链的旧脚本和仅依赖旧端的测试已移除；仍与现有业务断言或当前端场景混用的 51 个脚本暂时保留。它们仍依赖已移除的旧端，不能作为当前三端的验收依据。具体处理、测试覆盖变化及剩余调用方见[混合调用复核](docs/ops/legacy-script-followup-52-20261115.md)。
+旧端脚本及其调用方已逐项核对：无当前调用链的旧脚本和仅依赖旧端的测试已移除；仍与现有业务断言或当前端场景混用的 51 个脚本暂时保留。它们仍依赖已移除的旧端，不能作为当前三端的验收依据。具体处理、测试覆盖变化及剩余调用方见[混合调用复核](docs/ops/records/legacy-script-followup-52-20261115.md)。
 
 ## 部署与外部接入
 
@@ -127,8 +125,11 @@ pnpm run build:all
 
 | 文档 | 内容 |
 | --- | --- |
+| [文档中心](docs/README.md) | 文档体系、格式标准、阅读路径与治理规则 |
+| [变更日志](CHANGELOG.md) | 全项目变更归纳合并（日期倒序，链接权威记录） |
 | [产品需求](docs/prd/README.md) | 三端业务规则和产品决策 |
 | [研发方案与进度](docs/development/README.md) | 实施方案、接口契约、工作包和验收追踪 |
+| [企业级总体规划](docs/development/26-企业级总体规划.md) | 阶段路线图、验收门禁、生产就绪与治理调整清单 |
 | [架构与数据资料](docs/architecture/README.md) | 目录边界、数据模型和流程参考 |
 | [开发与部署](deploy/README.md) | 本机资源、启动命令和运行边界 |
 | [工程脚本](scripts/README.md) | 场景入口、工程检查和脚本使用范围 |

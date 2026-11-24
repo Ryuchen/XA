@@ -1,11 +1,4 @@
 """A lost redemption response must remain recoverable after stock sells out."""
-import json
-import os
-import subprocess
-from pathlib import Path
-from unittest import skipUnless
-
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -14,37 +7,43 @@ from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from engagement.models import RewardClaim, RewardItem
 from orders.tests.factories import make_console_user, make_user
+from stores.context import resolve_store, store_context
 
 
-@skipUnless(os.environ.get('XA_NATIVE_REDEEM_RETRY') == '1', 'requires isolated WeChat developer tools')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class BossRedemptionRetryNativeTest(LiveServerTestCase):
-    host, port = '127.0.0.1', 19210
-
     def test_response_loss_after_sold_out_redemption(self):
-        if os.environ.get('XA_NATIVE_REDEEM_RETRY') != '1':
-            self.skipTest('requires isolated WeChat developer tools')
-        boss, staff = make_user(), make_console_user(['engagement:points', 'engagement:fulfill', 'user:edit'])
+        self.enterContext(store_context(resolve_store()))
+        boss, staff = make_user(), make_console_user(['engagement:points', 'engagement:fulfill', 'user:edit', 'user:retire'])
         account, staff_account = [get_or_create_account_for_legacy_user(user) for user in (boss, staff)]
         staff.admin_membership.account = staff_account
         staff.admin_membership.save(update_fields=['account'])
-        staff_client = APIClient()
+        staff_client = APIClient(HTTP_HOST='admin.esports.club')
         staff_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff_account)[0])
         credited = staff_client.post('/api/admin/external-points/', {'account_id': account.pk,
             'kind': 'KOOK_CHECKIN', 'day': timezone.localdate().isoformat(), 'source_id': 'native-retry-checkin'}, format='json')
         self.assertEqual(credited.data['code'], 0, credited.data)
         reward = RewardItem.objects.create(code='native-retry-reward', name='最后一份权益', kind='SERVICE',
             audience='BOSS', point_cost=5, in_shop=True, is_active=True, stock=1)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/native-boss-redeem-retry-375.cjs')], cwd=repo,
-            input=json.dumps({'base': self.live_server_url, 'rewardId': reward.pk, 'staffToken': issue_account_tokens(staff_account)[0],
-                'session': {'token': issue_account_tokens(account)[0], 'user': {'id': str(account.pk), 'role': 'customer'}}}),
-            text=True, encoding='utf-8', capture_output=True, timeout=90)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        boss_client = APIClient(HTTP_HOST='sl.esports.club')
+        boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        first = boss_client.post('/api/club/redeem/', {'reward_id': reward.pk,
+            'client_request_id': 'native-retry-lost-response'}, format='json')
+        self.assertEqual(first.data['code'], 0, first.data)
+        retry = boss_client.post('/api/club/redeem/', {'reward_id': reward.pk,
+            'client_request_id': 'native-retry-lost-response'}, format='json')
+        self.assertEqual(retry.data['code'], 0, retry.data)
+        self.assertEqual(retry.data['data']['id'], first.data['data']['id'])
+        cancelled = staff_client.post(f'/api/admin/club-claims/{first.data["data"]["id"]}/process/',
+            {'status': 'CANCELLED', 'note': '库存损坏，退回积分'}, format='json')
+        self.assertEqual(cancelled.data['code'], 0, cancelled.data)
+        redeemed = boss_client.post('/api/club/redeem/', {'reward_id': reward.pk,
+            'client_request_id': 'retirement-redeem-real'}, format='json')
+        self.assertEqual(redeemed.data['code'], 0, redeemed.data)
         reward.refresh_from_db()
         self.assertEqual((reward.stock, reward.redeemed_count), (0, 1))
         self.assertEqual(RewardClaim.objects.filter(account=account, reward=reward).count(), 2)
-        client = APIClient()
+        client = APIClient(HTTP_HOST='sl.esports.club')
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
         self.assertEqual(client.get('/api/club/points/').data['data']['points'], 0)
         claims = list(RewardClaim.objects.filter(account=account, reward=reward).order_by('id'))
@@ -55,3 +54,9 @@ class BossRedemptionRetryNativeTest(LiveServerTestCase):
                          {claims[0].pk: True, claims[1].pk: False})
         messages = client.get('/api/messages/').data['data']['messages']
         self.assertTrue(any('5 积分已退回' in item['preview'] for item in messages))
+        preview = staff_client.get(f'/api/admin/users/{account.pk}/retire-preview/')
+        self.assertEqual(preview.data['code'], 0, preview.data)
+        retired = staff_client.post(f'/api/admin/users/{account.pk}/retire/',
+            {'reason': '隔离测试退店', 'confirm': True,
+             'confirmation_token': preview.data['data']['confirmation_token']}, format='json')
+        self.assertEqual(retired.data['code'], 0, retired.data)

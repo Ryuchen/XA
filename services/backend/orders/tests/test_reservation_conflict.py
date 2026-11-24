@@ -119,7 +119,7 @@ class ValidateReservationWindowTest(TestCase):
         end = slot(hour=8) + timedelta(hours=MAX_DURATION_HOURS, minutes=15)
         with self.assertRaises(ReservationWindowError) as ctx:
             validate_reservation_window(start, end)
-        self.assertIn(f'{MAX_DURATION_HOURS} 小时', str(ctx.exception))
+        self.assertIn(f'{MAX_DURATION_HOURS * 60} 分钟', str(ctx.exception))
 
     def test_accepts_exact_max_duration(self):
         start = slot(hour=8)
@@ -151,8 +151,6 @@ class ReservationConflictBoundaryTest(TestCase):
         link_legacy_relations(self.boss, self.boss_account)
         self.provider = make_provider(deposit_mode='EARNINGS')
         self.provider_account = bind(self.provider)
-        self.provider_account.account_type = ClubAccount.AccountType.PROVIDER
-        self.provider_account.save(update_fields=['account_type'])
         self.service = make_service(price=1000)
 
         self.existing = create_reservation(
@@ -228,8 +226,6 @@ class ReservationConflictBoundaryTest(TestCase):
     def test_other_provider_is_not_affected(self):
         other = make_provider()
         other_account = bind(other)
-        other_account.account_type = ClubAccount.AccountType.PROVIDER
-        other_account.save(update_fields=['account_type'])
         self.assertFalse(
             find_conflicting_reservations(
                 other_account, slot(hour=10), slot(hour=12),
@@ -292,8 +288,6 @@ class ReservationPessimisticLockTest(TransactionTestCase):
         link_legacy_relations(self.boss, self.boss_account)
         self.provider = make_provider(deposit_mode='EARNINGS')
         self.provider_account = bind(self.provider)
-        self.provider_account.account_type = ClubAccount.AccountType.PROVIDER
-        self.provider_account.save(update_fields=['account_type'])
         self.service = make_service(price=1000)
 
     def _create(self, start_hour, end_hour):

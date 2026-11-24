@@ -1,11 +1,7 @@
 """A provider earns points, redeems a TAG, and receives real public display."""
-import json
 import os
-import subprocess
 from datetime import timedelta
-from pathlib import Path
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -20,12 +16,6 @@ from orders.tests.factories import make_console_user, make_provider, make_user
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class ProviderTagJourneyTest(LiveServerTestCase):
     host = '127.0.0.1'
-    port = 19210 if any(os.environ.get(flag) == '1' for flag in (
-        'XA_PROVIDER_TAG_EDIT_UI', 'XA_PROVIDER_TAG_QUEUE_UI',
-        'XA_PROVIDER_TAG_REDEEM_UI', 'XA_PROVIDER_TAG_UI',
-        'XA_PROVIDER_TAG_VUE_REVIEW', 'XA_TAG_EXPIRY_VUE_LIVE',
-        'XA_TAG_REVIEW_CONCURRENT',
-    )) else 0
 
     def test_tag_redemption_appears_until_expiry(self):
         provider, boss = make_provider(display_name='标签陪玩', is_verified=True, deposit_mode='CASH'), make_user()
@@ -54,81 +44,39 @@ class ProviderTagJourneyTest(LiveServerTestCase):
             self.assertTrue(process_event(event, now))
         reward = RewardItem.objects.create(code='provider-tag-journey', name='陪玩专属TAG', kind='TAG',
             audience='PROVIDER', point_cost=1, duration_days=1, highlighted=True, in_shop=True, is_active=True)
-        if os.environ.get('XA_PROVIDER_TAG_UI') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(repo/'scripts/provider-tag-journey-375.cjs')], cwd=repo,
-                input=json.dumps({'base':self.live_server_url, 'root':os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'],
-                    'adminRoot':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'], 'providerId':accounts[0].pk,'providerToken':issue_account_tokens(accounts[0])[0],
-                    'bossToken':issue_account_tokens(accounts[1])[0], 'bossId':str(accounts[1].pk),
-                    'staffToken':issue_account_tokens(accounts[2])[0]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-        else:
-            role = staff.admin_membership.roles.first()
-            role.permissions = [*role.permissions, 'dashboard:view']
-            role.save(update_fields=['permissions'])
-            if os.environ.get('XA_PROVIDER_TAG_REDEEM_UI') == '1':
-                repo = Path(settings.BASE_DIR).parent.parent
-                redeem = subprocess.run(['node', str(repo/'scripts/provider-tag-redeem-live.cjs')], cwd=repo,
-                    input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_PROVIDER_VUE_ROOT'],
-                                      'token':issue_account_tokens(accounts[0])[0], 'id':accounts[0].pk}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=45)
-                self.assertEqual(redeem.returncode, 0, redeem.stdout+redeem.stderr)
-                claim = {'id': RewardClaim.objects.get(account=accounts[0], reward=reward).pk}
-            else:
-                claim = ok(clients[0].post('/api/club/redeem/', {'reward_id':reward.pk,'details':{'tag':''},
-                    'client_request_id':'provider-tag-journey'}, format='json'))
-            url = f"/api/club/claims/{claim['id']}/"
-            process = f"/api/admin/club-claims/{claim['id']}/process/"
-            def check_ready(count):
-                self.assertEqual(ok(clients[2].get('/api/admin/dashboard/stats'))['ready_tag_review_total'],count)
-                queue = ok(clients[2].get('/api/admin/club-claims/', {'tag_ready_for_review':'1'}))
-                self.assertEqual(queue['total'],count)
-            check_ready(0)
-            ok(clients[0].patch(url, {'details':{'tag':'原标签'}}, format='json'))
-            check_ready(1)
-            if os.environ.get('XA_PROVIDER_TAG_QUEUE_UI') == '1':
-                repo = Path(settings.BASE_DIR).parent.parent
-                dashboard = subprocess.run(['node',str(repo/'scripts/dashboard-tag-review-375.cjs')],cwd=repo,
-                    input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                        'staffToken':issue_account_tokens(accounts[2])[0], 'claimId':claim['id'], 'ready':True}),
-                    text=True,encoding='utf-8',capture_output=True,timeout=45)
-                self.assertEqual(dashboard.returncode,0,dashboard.stdout+dashboard.stderr)
-            ok(clients[2].post(process, {'status':'FULFILLING','note':'正在核对'}, format='json'))
-            check_ready(1)
-            if os.environ.get('XA_PROVIDER_TAG_VUE_REVIEW') == '1':
-                repo = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run(['node', str(repo/'scripts/admin-tag-await-revision-live.cjs')], cwd=repo,
-                    input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                        'token':issue_account_tokens(accounts[2])[0],'claimId':claim['id'],'stale':True}),
-                    text=True,encoding='utf-8',capture_output=True,timeout=35)
-                self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-                returned = ok(clients[0].get(url))
-            else:
-                returned = ok(clients[2].post(process, {'status':'PENDING','note':'请修改标签'}, format='json'))
-            self.assertTrue(returned['tag_revision_required'])
-            check_ready(0)
-            locked = clients[2].post(process, {'status':'FULFILLING','note':'开始处理'}, format='json')
-            self.assertEqual(locked.status_code, 400)
-            prematurely_completed = clients[2].post(process, {'status':'COMPLETED',
-                'note':'审核通过', 'tag_reviewed':True}, format='json')
-            self.assertEqual(prematurely_completed.status_code, 400)
-            self.assertEqual(ok(clients[0].get(url))['status'], 'PENDING')
-            if os.environ.get('XA_PROVIDER_TAG_VUE_REVIEW') == '1':
-                repo = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run(['node', str(repo/'scripts/admin-tag-await-revision-live.cjs')], cwd=repo,
-                    input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                        'token':issue_account_tokens(accounts[2])[0],'claimId':claim['id']}),
-                    text=True,encoding='utf-8',capture_output=True,timeout=35)
-                self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-            unchanged = ok(clients[0].patch(url, {'details':{'tag':'原标签','note':'更新备注'}}, format='json'))
-            self.assertTrue(unchanged['tag_revision_required'])
-            check_ready(0)
-            revised = ok(clients[0].patch(url, {'details':{'tag':'海洋搭子'}}, format='json'))
-            self.assertFalse(revised['tag_revision_required'])
-            check_ready(1)
-            ok(clients[2].post(process, {'status':'COMPLETED','note':'已发放','tag_reviewed':True}, format='json'))
-            check_ready(0)
+        role = staff.admin_membership.roles.first()
+        role.permissions = [*role.permissions, 'dashboard:view']
+        role.save(update_fields=['permissions'])
+        claim = ok(clients[0].post('/api/club/redeem/', {'reward_id':reward.pk,'details':{'tag':''},
+            'client_request_id':'provider-tag-journey'}, format='json'))
+        url = f"/api/club/claims/{claim['id']}/"
+        process = f"/api/admin/club-claims/{claim['id']}/process/"
+        def check_ready(count):
+            self.assertEqual(ok(clients[2].get('/api/admin/dashboard/stats'))['ready_tag_review_total'],count)
+            queue = ok(clients[2].get('/api/admin/club-claims/', {'tag_ready_for_review':'1'}))
+            self.assertEqual(queue['total'],count)
+        check_ready(0)
+        ok(clients[0].patch(url, {'details':{'tag':'原标签'}}, format='json'))
+        check_ready(1)
+        ok(clients[2].post(process, {'status':'FULFILLING','note':'正在核对'}, format='json'))
+        check_ready(1)
+        returned = ok(clients[2].post(process, {'status':'PENDING','note':'请修改标签'}, format='json'))
+        self.assertTrue(returned['tag_revision_required'])
+        check_ready(0)
+        locked = clients[2].post(process, {'status':'FULFILLING','note':'开始处理'}, format='json')
+        self.assertEqual(locked.status_code, 400)
+        prematurely_completed = clients[2].post(process, {'status':'COMPLETED',
+            'note':'审核通过', 'tag_reviewed':True}, format='json')
+        self.assertEqual(prematurely_completed.status_code, 400)
+        self.assertEqual(ok(clients[0].get(url))['status'], 'PENDING')
+        unchanged = ok(clients[0].patch(url, {'details':{'tag':'原标签','note':'更新备注'}}, format='json'))
+        self.assertTrue(unchanged['tag_revision_required'])
+        check_ready(0)
+        revised = ok(clients[0].patch(url, {'details':{'tag':'海洋搭子'}}, format='json'))
+        self.assertFalse(revised['tag_revision_required'])
+        check_ready(1)
+        ok(clients[2].post(process, {'status':'COMPLETED','note':'已发放','tag_reviewed':True}, format='json'))
+        check_ready(0)
         claim = RewardClaim.objects.get(account=accounts[0],reward=reward)
         self.assertEqual((claim.status, claim.details['tag']), ('COMPLETED', '海洋搭子'))
         matches = ok(clients[2].get('/api/admin/club-claims/', {'search':'海洋搭子','kind':'TAG'}))
@@ -145,16 +93,8 @@ class ProviderTagJourneyTest(LiveServerTestCase):
         stale = clients[2].post(f'/api/admin/club-claims/{claim.pk}/review-tag/',
             {'tag_reviewed':True,'expected_tag':'旧文字'}, format='json')
         self.assertEqual(stale.status_code,409)
-        if os.environ.get('XA_PROVIDER_TAG_UI') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            review = subprocess.run(['node',str(repo/'scripts/admin-historical-tag-review-375.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'staffToken':issue_account_tokens(accounts[2])[0], 'claimId':claim.pk}),
-                text=True,encoding='utf-8',capture_output=True,timeout=60)
-            self.assertEqual(review.returncode,0,review.stdout+review.stderr)
-        else:
-            ok(clients[2].post(f'/api/admin/club-claims/{claim.pk}/review-tag/',
-                {'tag_reviewed':True,'expected_tag':'海洋搭子'},format='json'))
+        ok(clients[2].post(f'/api/admin/club-claims/{claim.pk}/review-tag/',
+            {'tag_reviewed':True,'expected_tag':'海洋搭子'},format='json'))
         tag = MemberTag.objects.get(event_key=f'claim:{claim.pk}:tag')
         self.assertEqual(tag.reviewed_by_id,accounts[2].pk)
         self.assertIsNotNone(tag.reviewed_at)
@@ -185,16 +125,8 @@ class ProviderTagJourneyTest(LiveServerTestCase):
         self.assertEqual(RewardClaim.objects.filter(account=accounts[0],reward=reward).count(),4)
         newest = RewardClaim.objects.filter(account=accounts[0],reward=reward).order_by('-id').first()
         expiry_before = MemberTag.objects.get(event_key=f'claim:{newest.pk}:tag').expires_at
-        if os.environ.get('XA_PROVIDER_TAG_UI') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            suspend = subprocess.run(['node',str(repo/'scripts/admin-tag-suspend-375.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'staffToken':issue_account_tokens(accounts[2])[0], 'claimId':newest.pk}),
-                text=True,encoding='utf-8',capture_output=True,timeout=60)
-            self.assertEqual(suspend.returncode,0,suspend.stdout+suspend.stderr)
-        else:
-            ok(clients[2].post(f'/api/admin/club-claims/{newest.pk}/suspend-tag/',
-                {'reason':'内容需要重新核实','expected_tag':'新标签2'},format='json'))
+        ok(clients[2].post(f'/api/admin/club-claims/{newest.pk}/suspend-tag/',
+            {'reason':'内容需要重新核实','expected_tag':'新标签2'},format='json'))
         ok(clients[2].post(f'/api/admin/club-claims/{newest.pk}/suspend-tag/',
             {'reason':'内容需要重新核实','expected_tag':'新标签2'},format='json'))
         changed = clients[2].post(f'/api/admin/club-claims/{newest.pk}/suspend-tag/',
@@ -204,17 +136,9 @@ class ProviderTagJourneyTest(LiveServerTestCase):
         self.assertFalse(current['tag_reviewed'])
         self.assertFalse(current['tag_revision_submitted'])
         self.assertEqual(current['tag_suspension_reason'],'内容需要重新核实')
-        if os.environ.get('XA_PROVIDER_TAG_UI') == '1' or os.environ.get('XA_PROVIDER_TAG_EDIT_UI') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            view = subprocess.run(['node',str(repo/'scripts/provider-tag-suspended-375.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'root':os.environ.get('XA_PROVIDER_VUE_ROOT') or os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'],
-                    'token':issue_account_tokens(accounts[0])[0],'id':accounts[0].pk,'claimId':newest.pk}),
-                text=True,encoding='utf-8',capture_output=True,timeout=45)
-            self.assertEqual(view.returncode,0,view.stdout+view.stderr)
-        else:
-            edited = ok(clients[0].patch(f'/api/club/claims/{newest.pk}/',
-                {'details':{'tag':'清海搭子'}}, format='json'))
-            self.assertTrue(edited['tag_editable'])
+        edited = ok(clients[0].patch(f'/api/club/claims/{newest.pk}/',
+            {'details':{'tag':'清海搭子'}}, format='json'))
+        self.assertTrue(edited['tag_editable'])
         revised_claim = ok(clients[0].get(f'/api/club/claims/{newest.pk}/'))
         self.assertEqual(revised_claim['details']['tag'],'清海搭子')
         self.assertTrue(revised_claim['tag_revision_submitted'])
@@ -228,30 +152,18 @@ class ProviderTagJourneyTest(LiveServerTestCase):
         self.assertEqual([tag['title'] for tag in visible], ['新标签1','新标签0','海洋搭子'])
         self.assertEqual(ok(clients[2].get('/api/admin/club-claims/', {'needs_tag_review':'1'}))['total'],1)
         self.assertEqual(ok(clients[2].get('/api/admin/dashboard/stats'))['pending_tag_review_total'],1)
-        if os.environ.get('XA_PROVIDER_TAG_UI') == '1':
-            dashboard = subprocess.run(['node',str(repo/'scripts/dashboard-tag-review-375.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'staffToken':issue_account_tokens(accounts[2])[0], 'claimId':newest.pk}),
-                text=True,encoding='utf-8',capture_output=True,timeout=45)
-            self.assertEqual(dashboard.returncode,0,dashboard.stdout+dashboard.stderr)
         notices = ok(clients[0].get('/api/messages/'))['messages']
         self.assertEqual(len([item for item in notices if item['title']=='标签暂停展示']),1)
         final_tag = '清海搭子'
         if os.environ.get('XA_TAG_REVIEW_CONCURRENT') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node',str(repo/'scripts/admin-tag-stale-revision-live.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'claimId':newest.pk,'staffToken':issue_account_tokens(accounts[2])[0],
-                    'providerToken':issue_account_tokens(accounts[0])[0]}),
-                text=True,encoding='utf-8',capture_output=True,timeout=40)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+            # A provider revision lands while the admin holds the old wording.
+            ok(clients[0].patch(f'/api/club/claims/{newest.pk}/', {'details':{'tag':'云海搭子'}}, format='json'))
+            stale_review = clients[2].post(f'/api/admin/club-claims/{newest.pk}/review-tag/',
+                {'tag_reviewed':True,'expected_tag':'清海搭子'}, format='json')
+            self.assertEqual(stale_review.status_code,409)
+            ok(clients[2].post(f'/api/admin/club-claims/{newest.pk}/review-tag/',
+                {'tag_reviewed':True,'expected_tag':'云海搭子'}, format='json'))
             final_tag = '云海搭子'
-        elif os.environ.get('XA_PROVIDER_TAG_UI') == '1':
-            review = subprocess.run(['node',str(repo/'scripts/admin-historical-tag-review-375.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'root':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'staffToken':issue_account_tokens(accounts[2])[0], 'claimId':newest.pk, 'suspended':True}),
-                text=True,encoding='utf-8',capture_output=True,timeout=60)
-            self.assertEqual(review.returncode,0,review.stdout+review.stderr)
         else:
             ok(clients[2].post(f'/api/admin/club-claims/{newest.pk}/review-tag/',
                 {'tag_reviewed':True,'expected_tag':'清海搭子'},format='json'))
@@ -265,18 +177,6 @@ class ProviderTagJourneyTest(LiveServerTestCase):
         ok(clients[2].post(f'/api/admin/club-claims/{newest.pk}/suspend-tag/',
             {'reason':'需要重新核实','expected_tag':final_tag},format='json'))
         ok(clients[0].patch(f'/api/club/claims/{newest.pk}/', {'details':{'tag':'蓝海搭子'}},format='json'))
-        if os.environ.get('XA_TAG_EXPIRY_VUE_LIVE') == '1':
-            expiry = timezone.now() + timedelta(seconds=15)
-            RewardClaim.objects.filter(pk=newest.pk).update(expires_at=expiry)
-            MemberTag.objects.filter(pk=newest_tag.pk).update(expires_at=expiry)
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node',str(repo/'scripts/tag-expiry-vue-live.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'adminRoot':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'providerRoot':os.environ['XA_PROVIDER_VUE_ROOT'], 'claimId':newest.pk,
-                    'staffToken':issue_account_tokens(accounts[2])[0], 'providerId':accounts[0].pk,
-                    'providerToken':issue_account_tokens(accounts[0])[0]}),
-                text=True,encoding='utf-8',capture_output=True,timeout=45)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         expired_at = timezone.now() - timedelta(seconds=1)
         RewardClaim.objects.filter(pk=newest.pk).update(expires_at=expired_at)
         MemberTag.objects.filter(pk=newest_tag.pk).update(expires_at=expired_at)

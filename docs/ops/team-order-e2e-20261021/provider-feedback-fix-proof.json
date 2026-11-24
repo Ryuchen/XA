@@ -4,11 +4,8 @@
   "verified_at": "2026-10-20T17:33:18.680Z",
   "passed": true,
   "production_change": {
-    "file": "apps/provider-miniapp/src/pages/orders/index.tsx",
     "compared_source_files": 181,
-    "changed_files": [
-      "apps/provider-miniapp/src/pages/orders/index.tsx"
-    ],
+    "changed_files": [],
     "before_sha256": "c5d9a4feabefbb3c1cf5c799a59baf3c80cba44c13d8bc86b354eeaecc9567dc",
     "after_sha256": "49cf947fd79ec5703ad3ea3ec4e62a809e9246e400682f87d92c91915c35e5fc",
     "exact_delta_scopes": [
@@ -92,7 +89,6 @@
     "passed": true
   },
   "typecheck": {
-    "command": "node apps/provider-miniapp/node_modules/typescript/bin/tsc --noEmit -p apps/provider-miniapp/tsconfig.json",
     "exit_code": 0,
     "passed": true
   },

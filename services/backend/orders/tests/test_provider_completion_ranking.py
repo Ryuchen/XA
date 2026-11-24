@@ -82,7 +82,8 @@ class ProviderCompletionRankingTest(APITestCase):
 
     def test_single_real_completion_counts_without_original_attribution(self):
         self.service.billing_provider_count = 1
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 1
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         order = self.create_specified(self.providers[:1])
         self.auth(self.providers[0])
         self.assertEqual(self.client.post(f'/api/orders/orders/{order.pk}/start/',

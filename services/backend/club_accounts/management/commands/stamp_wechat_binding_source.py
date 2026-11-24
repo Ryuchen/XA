@@ -16,7 +16,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             a=ClubAccount.objects.select_for_update().get(pk=options['account_id'],account_type='BOSS')
             source=options['source_appid']
-            if not source.startswith('wx') or len(source)!=18 or source==settings.WECHAT_MINIAPP_APPID:
+            if not source.startswith('wx') or len(source)!=18 or source==settings.WECHAT_H5_APPID:
                 raise CommandError('需提供从历史备份确认的旧AppID')
             if not a.openid or hashlib.sha256(a.openid.encode()).hexdigest()!=options['expected_openid_hash']:
                 raise CommandError('绑定已改变，停止处理')

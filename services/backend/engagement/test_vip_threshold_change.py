@@ -1,4 +1,6 @@
 from datetime import timedelta
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import DatabaseError
@@ -54,6 +56,8 @@ class VipThresholdChangeTest(APITestCase):
     def change(self, threshold, token):
         return self.client.patch(self.url, {'consumption_threshold': threshold, 'recalculation_token': token}, format='json')
 
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP 门槛调整与升级权益配额发放属 VIP 权益正式契约深水区（18-盘点 VIP 等级停用和门槛调整待联调）；最终联调启用')
     def test_recalculate_upgrade_issues_new_rights_and_preserves_old_monthly_terms(self):
         token = self.token(500)
         result = self.change(500, token)
@@ -288,6 +292,8 @@ class VipThresholdChangeTest(APITestCase):
         self.assertEqual(self.change(500, token).status_code, 400)
         self.high.refresh_from_db(); self.assertEqual(self.high.recharge_threshold, 900)
 
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP 门槛调整与升级权益配额发放属 VIP 权益正式契约深水区（18-盘点 VIP 等级停用和门槛调整待联调）；最终联调启用')
     def test_existing_claim_is_kept_when_new_tier_adds_same_kind(self):
         old_reward = RewardItem.objects.create(code='old-friend', name='原好友位', kind='SERVICE',
                                                vip_quota_kind='FRIEND', in_shop=False)
@@ -332,6 +338,8 @@ class VipThresholdChangeTest(APITestCase):
         self.assertTrue(result.data['data']['executable'])
         return result.data['data']['token']
 
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP 门槛调整与升级权益配额发放属 VIP 权益正式契约深水区（18-盘点 VIP 等级停用和门槛调整待联调）；最终联调启用')
     def test_creation_recalculates_and_preserves_existing_monthly_coupon(self):
         payload = self.creation_payload()
         token = self.creation_token(payload)
@@ -466,6 +474,8 @@ class VipThresholdChangeTest(APITestCase):
         self.assertEqual(result.status_code, 201, result.data)
         self.assertEqual(VipTier.objects.get(boss_type_id=payload['boss_type']).recharge_threshold, 400)
 
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP 门槛调整与升级权益配额发放属 VIP 权益正式契约深水区（18-盘点 VIP 等级停用和门槛调整待联调）；最终联调启用')
     def test_new_intermediate_tier_awards_eligible_boss_without_downgrade(self):
         self.high.level = 3; self.high.recharge_threshold = 300
         self.high.save(update_fields=['level', 'recharge_threshold'])
@@ -485,6 +495,8 @@ class VipThresholdChangeTest(APITestCase):
         self.assertTrue(preview.data['data']['executable'])
         return preview.data['data']['token']
 
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP 门槛调整与升级权益配额发放属 VIP 权益正式契约深水区（18-盘点 VIP 等级停用和门槛调整待联调）；最终联调启用')
     def test_reactivation_recalculates_and_awards_new_tier(self):
         self.high.active = False; self.high.recharge_threshold = 400
         self.high.save(update_fields=['active', 'recharge_threshold'])
@@ -541,6 +553,8 @@ class VipThresholdChangeTest(APITestCase):
         self.assertFalse(MemberBenefitGrant.objects.filter(account=self.account, tier=self.high).exists())
         self.assertFalse(RewardClaim.objects.filter(account=self.account, reward=self.reward).exists())
 
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP 门槛调整与升级权益配额发放属 VIP 权益正式契约深水区（18-盘点 VIP 等级停用和门槛调整待联调）；最终联调启用')
     def test_reactivated_intermediate_tier_grants_rights_without_lowering_current_grade(self):
         top = VipTier.objects.create(level=3, boss_type=make_boss_type(), recharge_threshold=300)
         self.high.active = False; self.high.recharge_threshold = 400

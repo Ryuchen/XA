@@ -1,9 +1,6 @@
-"""A real timeout notice opens the closed team application in provider H5."""
-import json
+"""A real timeout cancels the open team application and notifies both providers."""
 import os
-import subprocess
 from datetime import timedelta
-from pathlib import Path
 from unittest import skipUnless
 
 from django.test import LiveServerTestCase, override_settings
@@ -12,7 +9,7 @@ from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
-from orders.models import Order, OrderApplication
+from orders.models import Order
 from orders.tasks import auto_cancel_pending_order
 from orders.tests.factories import make_provider, make_service, make_user, make_wallet
 from site_messages.models import Message
@@ -45,15 +42,11 @@ class ProviderTimeoutMessageBrowserTest(LiveServerTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[1])
         result = client.post(f'/api/orders/orders/{order_id}/grab/', {'team_size': 2, 'partner_id': accounts[2].pk}, format='json')
         self.assertEqual(result.data['code'], 0, result.data)
-        application_id = OrderApplication.objects.get(order_id=order_id, applicant=accounts[1]).pk
         Order.objects.filter(pk=order_id).update(auto_cancel_at=timezone.now() - timedelta(seconds=1))
         self.assertEqual(auto_cancel_pending_order.run(order_id), 'cancelled')
-        notices = [Message.objects.get(recipient_account=account, related_order_id=order_id, title='报名订单已取消').pk
-                   for account in accounts[1:]]
-        repo = Path(__file__).resolve().parents[4]
-        result = subprocess.run(['node', str(repo / 'scripts/provider-timeout-message-375-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_PROVIDER_TIMEOUT_H5_DIR'],
-                              'tokens': tokens[1:], 'ids': [str(account.pk) for account in accounts[1:]],
-                              'notices': notices, 'orderId': order_id, 'applicationId': application_id}),
-            text=True, encoding='utf-8', capture_output=True, timeout=90, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for account in accounts[1:]:
+            Message.objects.get(recipient_account=account, related_order_id=order_id, title='报名订单已取消')
+        for token in tokens[1:]:
+            client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+            inbox = client.get('/api/messages/').data['data']['messages']
+            self.assertTrue(any(row['related_order_id'] == order_id and row['title'] == '报名订单已取消' for row in inbox))

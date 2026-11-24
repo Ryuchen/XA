@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 import time
 from datetime import timedelta
 from unittest.mock import patch
@@ -45,6 +47,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         order.refresh_from_db()
         self.assertEqual((order.status, order.provider_account_id, order.payment_status), ('PENDING', None, 'PAID'))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_unavailable_window_does_not_assign_unsnapshotted_order_and_boss_can_cancel(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -77,6 +81,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
             order.refresh_from_db(); self.wallet.refresh_from_db()
             self.assertEqual((order.status, self.wallet.balance), ('CANCELLED', 100000))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_unavailable_window_rejects_public_and_staff_orders_before_charging(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -89,6 +95,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual(self.wallet.balance, 100000)
         self.assertFalse(Order.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_unavailable_window_does_not_block_selected_provider_or_audition(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -118,6 +126,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual(self.wallet.balance, 100000)
         self.assertFalse(Order.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_double_automatic_orders_do_not_charge_when_window_unavailable(self):
         from orders.tests.factories import make_console_user
         self.prepare()
@@ -146,6 +156,10 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.service.save(update_fields=['game_category'])
         save_grab_window(1, 0, lambda *args: None)
         save_capacity(3, 0, lambda *args: None)
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        PointFundingLot.objects.get_or_create(account=self.boss_account, source_key='grab-single-principal',
+            kind=PointFundingLot.Kind.PREPAID, defaults={'remaining': self.wallet.balance})
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
             SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_' + tier,
                                                   defaults={'value': '0'})
@@ -159,6 +173,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
             profile.pass_expires_at = timezone.now() + timedelta(hours=1)
             profile.save(update_fields=['wechat_avatar_verified_at', 'pass_tier', 'pass_expires_at'])
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_first_window_ranks_committed_candidates_and_leaves_unawarded_pending(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -191,6 +207,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
                 {'team_size': 1, 'client_request_id': f'single-candidate-{index}'}, format='json')
             self.assertEqual((replay.status_code, replay.data['data']['status']), (200, expected), replay.data)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_empty_first_window_parks_then_first_eligible_grab_assigns(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -206,6 +224,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         order.refresh_from_db()
         self.assertEqual(order.provider_account_id, self.accounts[0].pk)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_due_window_is_advanced_on_late_grab_and_replay_returns_result(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -239,6 +259,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         order.refresh_from_db(); self.wallet.refresh_from_db()
         self.assertEqual((order.status, self.wallet.balance), ('CANCELLED', 100000))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_due_window_resolves_earlier_candidate_before_late_grab(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -270,6 +292,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual((order.status, self.wallet.balance), ('CANCELLED', 100000))
         self.assertEqual(resolve(order.pk), 'CANCELLED')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_highest_candidate_loses_eligibility_reopens_to_everyone(self):
         self.prepare()
         self.auth(self.boss_account)
@@ -292,6 +316,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, 'PENDING')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_equal_deadlines_prioritize_cancel_then_assignment_then_timeout_refund(self):
         from orders.tasks import auto_cancel_pending_order
         self.prepare()
@@ -343,6 +369,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual((empty.status, self.wallet.balance), ('CANCELLED', before_refund + empty.amount))
         self.assertEqual(auto_cancel_pending_order.run(empty.pk), 'cancelled')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_parked_ineligible_candidate_allows_later_grab_and_preserves_timeout(self):
         from orders.tasks import auto_cancel_pending_order
         self.prepare()

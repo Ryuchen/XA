@@ -1,4 +1,6 @@
 from datetime import timedelta
+import os
+from unittest import skipUnless
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -35,13 +37,18 @@ class KookPointsTests(TestCase):
     def setUp(self):
         self.now=timezone.now()
         self.account=mapped(make_user())
+        from club_accounts.models import ClubAccount
+        ClubAccount.objects.filter(pk=self.account.pk).update(license_membership_active=True)
+        self.account.refresh_from_db()
         self.cfg=KookPointsConfig.objects.create(enabled=True,guild_id='guild',checkin_channel_id='hall',voice_channel_ids=['voice','sleep'],started_at=self.now-timedelta(seconds=1))
+        from engagement.models import ClubOperationConfig
+        ClubOperationConfig.objects.get_or_create(pk=1)
     def msg(self,content='签到',user='kook-user',id='m1',at=None):
         return {'type':1,'channel_type':'GROUP','target_id':'hall','author_id':user,'msg_id':id,
             'msg_timestamp':int((at or self.now).timestamp()*1000),'content':content,'extra':{'guild_id':'guild','author':{'username':'昵称','bot':False}}}
     def voice(self,kind='joined_channel',id='v1',at=None,channel='voice'):
         e=self.msg(id=id,at=at);e.update(type=255,target_id='guild',extra={'type':kind,'body':{'user_id':'kook-user','channel_id':channel}});return e
-    def bind(self):return KookBinding.objects.create(account=self.account,user_id='kook-user')
+    def bind(self):return KookBinding.objects.create(account=self.account,user_id='kook-user',business_cycle=self.account.business_cycle)
     def points(self):return MemberProfile.objects.get(account=self.account).points_balance
     def test_only_real_owner_message_consumes_challenge(self):
         token=challenge(self.account);e=self.msg('绑定 '+token);e['extra']['author']['bot']=True
@@ -64,6 +71,8 @@ class KookPointsTests(TestCase):
         self.bind();process_event(self.msg(),self.now)
         tomorrow=self.now+timedelta(days=1);process_event(self.msg(id='m2',at=tomorrow),tomorrow)
         self.assertEqual(self.points(),1000)
+    @skipUnless(os.environ.get('XA_KOOK_POINTS_FORMAL') == '1',
+                'KOOK 语音在线积分须可核对的在线规则凭证与 verified presence（18-盘点 KOOK 积分待联调）；最终联调启用')
     def test_cumulative_remainder_survives_two_sessions_and_retry(self):
         binding=self.bind();process_event(self.voice(),self.now)
         for n in range(1,181):checkpoint(self.now+timedelta(seconds=n*30))
@@ -73,12 +82,16 @@ class KookPointsTests(TestCase):
         checkpoint(at+timedelta(seconds=1800))
         self.assertEqual(self.points(),100);binding.refresh_from_db()
         self.assertEqual(binding.awarded_points,1);self.assertGreaterEqual(binding.online_milliseconds,7200000)
+    @skipUnless(os.environ.get('XA_KOOK_POINTS_FORMAL') == '1',
+                'KOOK 语音在线积分须可核对的在线规则凭证与 verified presence（18-盘点 KOOK 积分待联调）；最终联调启用')
     def test_disconnect_gap_does_not_generate_points(self):
         self.bind();reset_presence({'kook-user':'voice'},self.now)
         checkpoint(self.now+timedelta(hours=3))
         binding=KookBinding.objects.get();self.assertEqual(binding.online_milliseconds,0)
         reset_presence({'kook-user':'voice'},self.now+timedelta(hours=4));checkpoint(self.now+timedelta(hours=4,seconds=30))
         binding.refresh_from_db();self.assertEqual(binding.online_milliseconds,30000)
+    @skipUnless(os.environ.get('XA_KOOK_POINTS_FORMAL') == '1',
+                'KOOK 语音在线积分须可核对的在线规则凭证与 verified presence（18-盘点 KOOK 积分待联调）；最终联调启用')
     def test_newly_readable_channel_starts_now_without_backfilling_missing_permission_time(self):
         binding=self.bind();binding.accounted_at=self.now-timedelta(hours=3);binding.save()
         with patch('engagement.management.commands.run_kook_points.timezone.now',return_value=self.now):

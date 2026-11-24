@@ -147,20 +147,6 @@ class WeChatPayV3:
                          f'serial_no="{self.merchant_serial}",signature="{signature}"')
         return SignedRequest(method, path_and_query, body, authorization)
 
-    def miniprogram_parameters(self, prepay_id: str, *, timestamp: str | None = None,
-                               nonce: str | None = None) -> dict:
-        if not isinstance(prepay_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,118}', prepay_id):
-            raise WeChatPayProtocolError('Invalid prepay ID')
-        timestamp = str(int(time.time())) if timestamp is None else timestamp
-        nonce = secrets.token_hex(16) if nonce is None else nonce
-        if not isinstance(timestamp, str) or not timestamp.isascii() or not timestamp.isdigit():
-            raise WeChatPayProtocolError('Invalid timestamp')
-        if not isinstance(nonce, str) or not re.fullmatch(r'[A-Za-z0-9]{1,32}', nonce):
-            raise WeChatPayProtocolError('Invalid nonce')
-        package = 'prepay_id=' + prepay_id
-        message = f'{self.app_id}\n{timestamp}\n{nonce}\n{package}\n'.encode('utf-8')
-        return {'timeStamp': timestamp, 'nonceStr': nonce, 'package': package,
-                'signType': 'RSA', 'paySign': _sign(self._merchant_key, message)}
 
     def verify_signed_message(self, headers: Mapping[str, str], body: bytes) -> None:
         """Authenticate exact response/callback bytes using the named trusted key."""

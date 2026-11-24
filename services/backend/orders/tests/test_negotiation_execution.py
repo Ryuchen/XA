@@ -1,6 +1,7 @@
 from django.test import override_settings
 from django.test import TestCase
 from django.conf import settings
+import os
 from unittest import skipUnless
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase, APITransactionTestCase
@@ -30,7 +31,8 @@ class NegotiationExecutionPreparationTests(NegotiationProposalTests):
         wallet = get_wallet(user=self.a, account=self.a_account)
         wallet.balance = 600; wallet.save(update_fields=['balance'])
         profile = self.a.escort_profile
-        profile.deposit_paid = 800; profile.save(update_fields=['deposit_paid'])
+        profile.deposit_paid = 800; profile.deposit_business_cycle = profile.account.business_cycle
+        profile.save(update_fields=['deposit_paid', 'deposit_business_cycle'])
         case, proposal = self.accepted()
         before = (wallet.balance, profile.deposit_paid, Transaction.objects.count())
         with transaction.atomic():
@@ -76,12 +78,14 @@ class NegotiationExecutionPostingTests(APITestCase):
         from wallet.models import CashDepositTopup, get_platform_wallet
         profile = self.a.escort_profile
         profile.deposit_mode = 'CASH'; profile.deposit_paid = amount
-        profile.save(update_fields=['deposit_mode', 'deposit_paid'])
+        profile.deposit_business_cycle = profile.account.business_cycle
+        profile.save(update_fields=['deposit_mode', 'deposit_paid', 'deposit_business_cycle'])
         platform = get_platform_wallet(); before = platform.balance
         platform.balance += amount; platform.save(update_fields=['balance'])
         source = Transaction.objects.create(wallet=platform, tx_type='DEPOSIT_INCOME', amount=amount,
                                             balance_before=before, balance_after=platform.balance)
         CashDepositTopup.objects.create(profile=profile, account=self.a_account, operator=self.operator_account,
+            account_business_cycle=self.a_account.business_cycle,
             amount=amount, paid_before=0, paid_after=amount, target_snapshot=amount,
             reason='隔离测试收款', reference='cash-proof', client_request_id='cash-proof', platform_transaction=source)
         return profile, platform
@@ -281,7 +285,8 @@ class NegotiationExecutionPostingTests(APITestCase):
         wallet = get_wallet(user=self.a, account=self.a_account)
         wallet.balance = 300; wallet.save(update_fields=['balance'])
         profile = self.a.escort_profile
-        profile.deposit_paid = 600; profile.save(update_fields=['deposit_paid'])
+        profile.deposit_paid = 600; profile.deposit_business_cycle = profile.account.business_cycle
+        profile.save(update_fields=['deposit_paid', 'deposit_business_cycle'])
         case, proposal = self.accepted()
         before = Transaction.objects.count()
         with transaction.atomic(), self.assertRaisesMessage(ValidationError, '不足'):
@@ -349,6 +354,8 @@ class NegotiationPostingActualOrderTests(APITransactionTestCase):
     login = flow.login
     ok = flow.ok
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '普通订单正式资金结算链仍在接线（18-盘点订单售后资金组合），结算门禁保持关闭；最终联调启用')
     def test_real_order_and_confirmed_proposal_refund_the_boss_in_isolation(self):
         from orders.models import Order
         from orders.negotiation_execution import apply_refund

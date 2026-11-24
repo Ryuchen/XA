@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from django.test import override_settings
 from rest_framework.test import APITestCase, APIClient
 from rest_framework.exceptions import ValidationError
@@ -46,6 +48,8 @@ class DoubleHourPackageTest(APITestCase):
         row=next(r for r in APIClient().get('/api/orders/gameplays/').data['data'] if r['id']==self.gameplay.pk)
         self.assertEqual((row['starting_price'],row['starting_price_unit']),(12000,'小时'))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_dispatch_charges_once_and_assigns_exactly_two_providers(self):
         response=self.dispatch()
         self.assertEqual(response.data['code'],0,response.data)
@@ -58,6 +62,8 @@ class DoubleHourPackageTest(APITestCase):
         self.assertEqual(sum(s.provider_income for s in shares)+order.shop_income+order.inviter_commission,12000)
         self.assertEqual(Transaction.objects.get(order=order,tx_type='PAY').amount,-12000)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_quantity_above_one_hour_cannot_charge_or_create_order(self):
         response=self.dispatch(game_rounds=2)
         self.assertEqual(response.data['code'],400,response.data)

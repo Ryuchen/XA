@@ -13,10 +13,18 @@ from orders.tests.factories import make_console_user
 from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase
 
 
-@override_settings(KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
+@override_settings(KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
 class AccountFieldsWorkflowTest(ReservationApiTestBase):
     def setUp(self):
         super().setUp()
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
+        PointFundingLot.objects.create(account=self.boss_account, source_key='account-fields-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=100000)
         editor = make_console_user(['dictionary:view', 'dictionary:edit', 'order:dispatch', 'order:view'])
         self.editor_account = get_or_create_account_for_legacy_user(editor)
         link_legacy_relations(editor, self.editor_account)

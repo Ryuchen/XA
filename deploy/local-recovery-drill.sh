@@ -5,9 +5,6 @@ umask 077
 cd "$(dirname "$0")/.."
 compose=(docker compose -p xa-local-validation --env-file .tools/local-validation.env
   -f deploy/compose/docker-compose.remote.yml -f deploy/compose.local-validation.yml)
-if [[ -r /etc/xa-local-validation/wechat.env ]]; then
-  compose+=(--env-file /etc/xa-local-validation/wechat.env -f deploy/compose.local-wechat.yml)
-fi
 bash deploy/local-validation.sh config
 active_test=$("${compose[@]}" exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -N' <<'SQL'
 SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='test_xa_test_container';

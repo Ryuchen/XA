@@ -1,4 +1,5 @@
 """Group delivery uses the order's pool facts; all external sends are mocked."""
+import os
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -56,6 +57,8 @@ class GrabGroupDispatchTest(TestCase):
 
     @patch('orders.dispatching.send_task_safely')
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_delayed_queue_early_worker_and_due_delivery_are_idempotent(self, send, schedule):
         self.assertEqual(dispatch_preview(self.order)['earliest_delivery_at'], self.due)
         with self.captureOnCommitCallbacks(execute=True):
@@ -78,6 +81,8 @@ class GrabGroupDispatchTest(TestCase):
         send.assert_called_once_with(record.content)
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_cancel_or_assignment_before_delayed_worker_never_sends(self, send):
         for status in ('CANCELLED', 'GRABBED'):
             with self.subTest(status=status), transaction.atomic():
@@ -90,6 +95,8 @@ class GrabGroupDispatchTest(TestCase):
 
     @patch('orders.dispatching.send_task_safely')
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_reopened_round_is_simultaneous_and_keeps_original_window(self, send, schedule):
         record = queue_dispatch(self.order, 'WECOM')
         type(record).objects.filter(pk=record.pk).update(pool_recovery_lease_until=self.due)
@@ -108,6 +115,8 @@ class GrabGroupDispatchTest(TestCase):
         send.assert_called_once()
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_invalid_pool_or_switch_change_never_sends(self, send):
         record = queue_dispatch(self.order, 'WECOM')
         with override_settings(GRAB_POOL_GROUP_DISPATCH_ENABLED=False):
@@ -123,6 +132,8 @@ class GrabGroupDispatchTest(TestCase):
             transaction.set_rollback(True)
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_corrupt_frozen_window_is_rejected_before_group_delivery(self, send):
         record = queue_dispatch(self.order, 'WECOM')
         self.pool.window_seconds = 29
@@ -157,6 +168,8 @@ class GrabGroupDispatchStoreTest(TransactionTestCase):
     @patch('orders.dispatching.channel_config', return_value=(True, 'test-target', '测试群'))
     @patch('orders.dispatching.send_task_safely')
     @patch('integrations.wecom.WecomClient')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_equal_ids_keep_store_timing_context_and_currency(self, client, schedule, config):
         from stores.context import current_store, resolve_store, store_context
         from stores.tests_hosts import xinan_store

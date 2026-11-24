@@ -1,11 +1,8 @@
-"""Real admin UI and account inboxes for unmapped current identities."""
-import json
+"""Account-only inboxes for unmapped current identities."""
 import os
-from pathlib import Path
-import subprocess
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
+from rest_framework.test import APIClient
 
 from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
@@ -31,25 +28,37 @@ class MessageAccountOnlyLiveTest(LiveServerTestCase):
         other = make_user(nickname='隔离同名')
         other_account = get_or_create_account_for_legacy_user(other)
         link_legacy_relations(other, other_account)
-        repo = Path(settings.BASE_DIR).parent.parent
-        payload = {'root':root, 'providerRoot':provider_root, 'providerId':provider.pk, 'origin':self.live_server_url, 'bossNo':boss.account_no,
-            'providerNo':provider.account_no, 'staffToken':issue_account_tokens(staff_account)[0],
-            'bossToken':issue_account_tokens(boss)[0], 'providerToken':issue_account_tokens(provider)[0],
-            'otherToken':issue_account_tokens(other_account)[0]}
-        run = subprocess.run(['node', str(repo / 'scripts/admin-message-account-only-live.cjs')], cwd=repo,
-            input=json.dumps(payload), text=True, encoding='utf-8', capture_output=True, timeout=60)
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+
+        def client_for(account):
+            client = APIClient()
+            client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+            return client
+
+        def inbox(account):
+            response = client_for(account).get('/api/messages/')
+            self.assertEqual(response.data['code'], 0, response.data)
+            return response.data['data']['messages']
+
+        push = client_for(staff_account).post('/api/admin/messages/push/', {
+            'title': '隔离业务账号通知', 'preview': '隔离测试摘要',
+            'recipient_account_ids': [boss.pk, provider.pk],
+            'client_request_id': 'account-only-message'}, format='json')
+        self.assertEqual(push.data['code'], 0, push.data)
+        self.assertEqual(push.data['data']['count'], 2)
         rows = Message.objects.filter(title='隔离业务账号通知')
         self.assertEqual(rows.count(), 2)
         self.assertEqual(set(rows.values_list('recipient_account_id', flat=True)), {boss.pk, provider.pk})
         self.assertEqual(rows.filter(recipient__isnull=True).count(), 2)
+        for account in (boss, provider):
+            self.assertEqual(len([item for item in inbox(account) if item['title'] == '隔离业务账号通知']), 1)
+        self.assertFalse(any(item['title'] == '隔离业务账号通知' for item in inbox(other_account)))
+        provider_notice = rows.get(recipient_account=provider)
+        detail = client_for(provider).get(f'/api/messages/{provider_notice.pk}/')
+        self.assertEqual(detail.data['code'], 0, detail.data)
+        provider_notice.refresh_from_db()
+        self.assertTrue(provider_notice.is_read)
         boss_notice = rows.get(recipient_account=boss)
-        token, refresh = issue_account_tokens(boss)
-        native = subprocess.run(['node', str(repo / 'scripts/native-reservation-notice-live.cjs')], cwd=repo,
-            input=json.dumps({'base':self.live_server_url, 'token':token, 'refresh':refresh,
-                'account':boss.pk, 'message':boss_notice.pk, 'expectedTitle':'隔离业务账号通知',
-                'expectedPreview':'隔离测试摘要', 'expectedTarget':''}),
-            text=True, encoding='utf-8', capture_output=True, timeout=30)
-        self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
+        detail = client_for(boss).get(f'/api/messages/{boss_notice.pk}/')
+        self.assertEqual(detail.data['code'], 0, detail.data)
         boss_notice.refresh_from_db()
         self.assertTrue(boss_notice.is_read)

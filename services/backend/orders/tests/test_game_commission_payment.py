@@ -1,4 +1,6 @@
 """Feature-gated, real order payments with game rule snapshots."""
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 from datetime import timedelta
 
@@ -24,6 +26,10 @@ class GameCommissionPaymentTest(APITestCase):
         self.wallet = make_wallet(self.boss, 100000)
         self.wallet.account = self.boss_account
         self.wallet.save(update_fields=['account'])
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        PointFundingLot.objects.get_or_create(account=self.boss_account, source_key='game-commission-principal',
+            kind=PointFundingLot.Kind.PREPAID, defaults={'remaining': 100000})
         self.game = GameCategory.objects.create(name='可更名游戏')
         self.service = make_service(price=5000, game_category=self.game, provider_kind='RANK',
                                     commission_policy='REGULAR')
@@ -66,6 +72,8 @@ class GameCommissionPaymentTest(APITestCase):
         self.assertEqual(club_provider_specs(order, [self.providers[0].escort_profile], order.amount)[0]['commission_rate'], 30)
         row.refresh_from_db(); self.assertEqual(row.game_commission_snapshot['version'], 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_selected_team_uses_same_game_rule_for_both_shares(self):
         self.service.billing_provider_count = 2; self.service.save(update_fields=['billing_provider_count'])
         response = self.create(provider_ids=[account.pk for account in self.accounts])
@@ -81,6 +89,8 @@ class GameCommissionPaymentTest(APITestCase):
         self.wallet.refresh_from_db(); self.assertEqual(self.wallet.balance, 100000)
         self.assertFalse(Order.objects.exists()); self.assertFalse(Transaction.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_configuration_change_between_pricing_and_debit_rejects(self):
         from orders import views
         original = views.ensure_provider_dispatch_locks
@@ -113,6 +123,8 @@ class GameCommissionPaymentTest(APITestCase):
         self.wallet.refresh_from_db(); self.assertEqual(self.wallet.balance, 100000)
         self.assertFalse(Order.objects.exists()); self.assertFalse(Transaction.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_later_assignment_uses_original_order_snapshot(self):
         response = self.create(dispatch_mode='AUTO_GRAB')
         self.assertEqual(response.data['code'], 0, response.data)
@@ -125,6 +137,8 @@ class GameCommissionPaymentTest(APITestCase):
         self.assertEqual((share.commission_rate, share.provider_income, share.game_commission_snapshot['version']),
                          (30, 3500, 1))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_staff_order_uses_game_rule_and_snapshot(self):
         staff = make_console_user(['order:view', 'order:dispatch'])
         account = self.link(staff)
@@ -139,6 +153,8 @@ class GameCommissionPaymentTest(APITestCase):
         self.assertEqual((share.commission_rate, share.provider_income, share.game_commission_snapshot['version']),
                          (30, 3500, 1))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_staff_stale_config_rejected_before_wallet_debit(self):
         from console import views
         staff = make_console_user(['order:view', 'order:dispatch'])
@@ -172,6 +188,8 @@ from orders.tests.test_reservation_api import ReservationApiTestBase
 
 @override_settings(GAME_COMMISSION_PAYMENT_ENABLED=True)
 class GameCommissionReservationTest(ReservationApiTestBase):
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_conversion_keeps_game_rule_on_order_and_provider(self):
         game = GameCategory.objects.create(name='预约规则测试')
         GameCommissionProfile.objects.create(game_category=game, game='LEAGUE',

@@ -166,7 +166,7 @@ def issue_tokens(account, method, proof_version):
             raise PlatformAuthError('验证器绑定已变化，请重新登录')
     elif method == 'WECHAT':
         credential = PlatformWechatIdentity.objects.filter(account=current, version=proof_version,
-            appid=settings.WECHAT_MINIAPP_APPID).first()
+            appid=settings.WECHAT_H5_APPID).first()
         if not credential:
             raise PlatformAuthError('微信绑定已变化，请重新登录')
     else:
@@ -204,7 +204,7 @@ def account_for_token(token):
         if not credential or str(credential.version) != token.get('otp_version'):
             raise TokenError('平台验证器绑定已变化')
     elif token.get('auth_method') == 'WECHAT':
-        identity = PlatformWechatIdentity.objects.filter(account=account, appid=settings.WECHAT_MINIAPP_APPID).first()
+        identity = PlatformWechatIdentity.objects.filter(account=account, appid=settings.WECHAT_H5_APPID).first()
         if not identity or str(identity.version) != token.get('wechat_version'):
             raise TokenError('平台微信绑定已变化')
     else:

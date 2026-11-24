@@ -7,12 +7,20 @@ from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_console_user, make_service, make_user, make_wallet
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
 class AdminOrderGameDetailsTest(APITestCase):
     def setUp(self):
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
         self.boss = make_user()
         self.boss_account = get_or_create_account_for_legacy_user(self.boss)
         make_wallet(self.boss, balance=50000)
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
+        PointFundingLot.objects.create(account=self.boss_account, source_key='game-details-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=50000)
         self.service = make_service(price=10000, billing_provider_count=1)
         self.staff = make_console_user(['order:view'])
         self.staff_account = get_or_create_account_for_legacy_user(self.staff)

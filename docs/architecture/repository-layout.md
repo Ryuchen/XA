@@ -4,7 +4,7 @@
 
 | 目录或文件 | 职责与入口 |
 | --- | --- |
-| `fronted/` | 三端 React 工作区、共享模块及微信授权桥接；由自身的 `package.json` 和 `package-lock.json` 管理 |
+| `fronted/` | 三端 React 工作区与共享模块；由自身的 `package.json` 和 `package-lock.json` 管理 |
 | `services/backend/` | Django 业务服务、管理命令、数据结构迁移和后端测试 |
 | `packages/money/` | 根 pnpm 工作区使用的金额工具 |
 | `docs/licenses/shadcn-vue/` | 已退役适配包保留的上游许可及说明 |

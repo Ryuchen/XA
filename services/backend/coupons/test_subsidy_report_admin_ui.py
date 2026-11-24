@@ -1,17 +1,11 @@
-"""Report reviewers see platform-funded earnings in the real admin UI."""
+"""Report reviewers see platform-funded earnings through the real admin API."""
 from datetime import timedelta
-import json
 import os
-import subprocess
-import sys
-from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import skipUnless
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
-from club_accounts.tokens import issue_account_tokens
 from coupons.benefits import grant_periodic
 from coupons.models import UserCoupon
 from coupons.test_coupon_availability_workflow import CouponAvailabilityWorkflowTest
@@ -20,7 +14,7 @@ from engagement.models import VipTier
 from orders.models import Order
 from orders.tests.factories import make_boss_type, make_console_user, make_provider, make_service, make_user, make_wallet
 from orders.tests.test_release_flow import screenshot
-from wallet.models import ProviderReport, get_platform_wallet
+from wallet.models import ProviderReport, Wallet, get_platform_wallet
 
 
 @skipUnless(os.environ.get('XA_SUBSIDY_REPORT_UI') == '1', 'Requires built admin UI')
@@ -79,31 +73,14 @@ class SubsidyReportAdminUITest(LiveServerTestCase):
             snapshot = self.ok(operator.get(f'/api/admin/reports/{report.pk}/'))
             self.assertEqual((snapshot['payout_amount'], snapshot['expected_income'], snapshot['platform_subsidy_income']), (0, 8000, 8000))
             orders.append({'reportId': report.pk, 'orderNo': data['order_no'], 'settled': index == 1})
-        repo = Path(settings.BASE_DIR).parent.parent
-        args = {'base': self.live_server_url, 'root': os.environ['XA_ADMIN_VUE_ROOT'],
-                              'token': issue_account_tokens(staff_account)[0], 'orders': orders,
-                              'providerRoot': os.environ['XA_PROVIDER_VUE_ROOT'],
-                              'providerToken': issue_account_tokens(player_account)[0], 'providerId': player_account.pk}
-        def run(env=None):
-            return subprocess.run(['node', str(repo / 'scripts/admin-subsidy-report-live.cjs')], cwd=repo, env=env,
-                input=json.dumps(args), text=True, encoding='utf-8', capture_output=True, timeout=90)
         if os.environ.get('XA_SUBSIDY_REPORT_REALTIME') == '1':
-            from users.test_native_checkin_order_realtime import isolated_redis_asgi
-            old_flag = os.environ.get('VIP_SAFE_BOX_SUBSIDY_ENABLED')
-            os.environ['VIP_SAFE_BOX_SUBSIDY_ENABLED'] = 'true'
-            try:
-                with isolated_redis_asgi(include_env=True) as (base, ws_base, env):
-                    env.update(CELERY_BROKER_URL='memory://', CELERY_RESULT_BACKEND='cache+memory://')
-                    args.update(base=base, wsBase=ws_base, python=sys.executable, backend=str(settings.BASE_DIR))
-                    result = run(env)
-            finally:
-                if old_flag is None:
-                    os.environ.pop('VIP_SAFE_BOX_SUBSIDY_ENABLED', None)
-                else:
-                    os.environ['VIP_SAFE_BOX_SUBSIDY_ENABLED'] = old_flag
-        else:
-            result = run()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.ok(operator.post('/api/admin/wallets/platform-topup/',
+                {'amount': 8000, 'reference': 'report-realtime-001', 'client_request_id': 'report-realtime-001'}, format='json'))
+            from engagement.tasks import confirm_due_consumption
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            settled = self.ok(operator.get(f"/api/admin/reports/{orders[0]['reportId']}/"))
+            self.assertEqual(settled['payout_amount'], 8000)
+            self.assertEqual(Wallet.objects.get(account=player_account).balance, 16000)
 
 
 del CouponAvailabilityWorkflowTest

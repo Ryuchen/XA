@@ -28,8 +28,6 @@
     "real_migrations": true
   },
   "official_compilers": {
-    "wxml_templates": 49,
-    "wxss_stylesheets": 52,
     "passed": true
   },
   "isolated_http": {
@@ -100,47 +98,36 @@
   ],
   "source_sha256": [
     {
-      "path": "apps/boss-miniapp/native/core/provider-selection.js",
       "sha256": "20cec125ca1a070a60ebce8a9ad3b854a134b1f6906c27459358f1b2daecd349"
     },
     {
-      "path": "apps/boss-miniapp/native/core/companions-page.js",
       "sha256": "f4d83c1312b42b00c54bfc9802fe7f7e6b5dbb8ad94607f8957f2003e867aa97"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/companion-picker/index.wxml",
       "sha256": "0ba47ff56fe9c56871b8f140bd788f9a92cb654415d12e45bca99860fa80307f"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/companion-picker/index.wxss",
       "sha256": "b1052bef12e8e05e1a7333c61c3f84c7b17b731612aa59a1a574eed69169a2e3"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/companion-detail/index.js",
       "sha256": "59f0b61f625afdcdec99857a7c03b5d06a5ef916e1b0ceeb1f3c70139cec5401"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/companion-detail/index.wxml",
       "sha256": "25651109746d4c81c1083816f8d5820a53fe2c19a0b74571e1487695ba200c0b"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/checkout/index.js",
       "sha256": "98af40700b4c057330bf6a2ceacd4aad562fe8c22578bb434f4dc49f301ec218"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/checkout/index.wxml",
       "sha256": "668c022a6d097e7a1da6374f7b75f7f35ab6296abdcf3579f982a5ca62af0c6d"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/checkout/index.wxss",
       "sha256": "591ead94274bc7ddebccdac3e8e0f34e8358e0f0b852032468854d605f60f030"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/service/index.js",
       "sha256": "26709bdd41c8acbde7f2ad5876095e3d6429432a4e7fc9810abf5a94b0960eb9"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/service/index.wxml",
       "sha256": "9d9e397ae89bc83e93bc8f1eb41b27970715d2bd9f9ab4dcac9b803083658935"
     },
     {

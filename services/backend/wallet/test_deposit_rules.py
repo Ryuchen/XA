@@ -18,6 +18,8 @@ class DepositRatioTests(APITestCase):
         SystemConfig.objects.create(key='club_income_rules_enabled', value='1')
         self.user = make_provider(deposit_mode='EARNINGS', deposit_paid=0)
         self.profile = self.user.escort_profile
+        self.profile.account = get_or_create_account_for_legacy_user(self.user)
+        self.profile.save(update_fields=['account'])
         self.wallet = self.user.wallet
         self.wallet.balance = 0
         self.wallet.save(update_fields=['balance'])
@@ -62,7 +64,8 @@ class DepositRatioTests(APITestCase):
 
     def test_remaining_deposit_cap_and_completed_target_route_all_income_to_settlement(self):
         self.profile.deposit_paid = 79950
-        self.profile.save(update_fields=['deposit_paid'])
+        self.profile.deposit_business_cycle = self.profile.account.business_cycle
+        self.profile.save(update_fields=['deposit_paid', 'deposit_business_cycle'])
         first = self.hold(1000)
         self.assertEqual((first.deposit_amount,first.amount),(50,950))
         second = self.hold(1000)

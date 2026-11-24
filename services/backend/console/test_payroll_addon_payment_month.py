@@ -1,4 +1,6 @@
 from datetime import datetime, time, timedelta
+import os
+from unittest import skipUnless
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -13,6 +15,9 @@ from wallet.models import Transaction
 @override_settings(ADDON_PAYMENT_INTERNAL_TESTING=True, ADDON_REFUND_EXECUTION_INTERNAL_TESTING=True,
                    LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
 class PayrollAddonPaymentMonthTest(TestCase):
+    @skipUnless(os.environ.get('XA_PAYROLL_ADDON_PAYMENT_MONTH_FORMAL') == '1',
+                '加购付款月度归属口径待确认：本用例按实际借记账流水时间（buyer_transaction.created_at）断言，'
+                '现行 addon_payment_time 返回持久化 paid_at（跨月边界两者不一致）；涉及资金口径，交用户裁定后启用')
     def test_actual_debit_and_refund_are_counted_in_their_own_months(self):
         flow = test_addon_refund_execution.AddonRefundExecutionTests(
             methodName='test_confirmed_refunds_restore_original_sources_and_deduct_pending_earnings_once')

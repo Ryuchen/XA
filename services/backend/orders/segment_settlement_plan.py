@@ -75,7 +75,6 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
     if marked_execution_id(order) and not _allow_recorded_refunds:
         # A zero agreement can close one participant even though it creates
         # no refund row. Never treat that segment as a free, unworked seat.
-        from .models import OrderOriginalShareTransfer
         if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
             _fail('零退款后转单须先核对原协商和逐段结算')
 
@@ -98,7 +97,6 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
                 except (DjangoValidationError, RestValidationError, ValueError):
                     _fail('零退款及转单资金版本待核对')
         if not has_agreement:
-            from .models import OrderOriginalShareTransfer
             transfer = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).order_by('created_at', 'pk').first()
             if transfer and order.refund_records.exists():
                 from .ordinary_positive_pretransfer import verify as verify_positive_pretransfer

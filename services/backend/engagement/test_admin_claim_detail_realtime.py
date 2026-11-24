@@ -1,11 +1,7 @@
-"""A live admin dialog follows a boss's real delivery-details edit."""
-import json
+"""Admin delivery follows a boss's real delivery-details edit."""
 import os
-from pathlib import Path
-import subprocess
 from datetime import timedelta
 from unittest import skipUnless
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -14,10 +10,9 @@ from club_accounts.tokens import issue_account_tokens
 from engagement.models import KookPointsConfig, RewardItem
 from engagement.kook_points import process_event
 from orders.tests.factories import make_console_user, make_user, make_provider
-from users.test_native_checkin_order_realtime import isolated_redis_asgi
 
 
-@skipUnless(os.environ.get('XA_ADMIN_CLAIM_DETAIL_LIVE')=='1','Requires built admin and isolated Redis')
+@skipUnless(os.environ.get('XA_ADMIN_CLAIM_DETAIL_LIVE')=='1','Optional admin delivery-details scenario')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class AdminClaimDetailRealtimeTest(LiveServerTestCase):
     def test_provider_tag_edit_resets_review_confirmation_before_boss_sees_it(self):
@@ -33,10 +28,32 @@ class AdminClaimDetailRealtimeTest(LiveServerTestCase):
             self.assertTrue(process_event(event,now))
         reward=RewardItem.objects.create(code='admin-live-tag',name='陪玩标签',kind='TAG',audience='PROVIDER',point_cost=1,duration_days=7,in_shop=True,is_active=True)
         result=client.post('/api/club/redeem/',{'reward_id':reward.pk,'details':{'tag':'原始标签'},'client_request_id':'admin-live-tag'},format='json');self.assertEqual(result.data['code'],0,result.data)
-        with isolated_redis_asgi() as (base,ws_base):
-            root=Path(settings.BASE_DIR).parent.parent
-            result=subprocess.run(['node',str(root/'scripts/admin-claim-detail-realtime-live.cjs')],cwd=root,input=json.dumps({'base':base,'wsBase':ws_base,'root':os.environ['XA_ADMIN_VUE_ROOT'],'tag':True,'claim':result.data['data']['id'],'ownerId':accounts[0].pk,'ownerToken':issue_account_tokens(accounts[0])[0],'bossToken':issue_account_tokens(accounts[1])[0],'staffToken':issue_account_tokens(accounts[2])[0]}),encoding='utf-8',text=True,capture_output=True,timeout=35)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        claim_id=result.data['data']['id']
+        boss_client,staff_client=APIClient(),APIClient()
+        boss_client.credentials(HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(accounts[1])[0])
+        staff_client.credentials(HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(accounts[2])[0])
+        def ok(response):
+            self.assertEqual(response.status_code,200,response.data)
+            self.assertEqual(response.data['code'],0,response.data)
+            return response.data['data']
+        stats=ok(staff_client.get('/api/admin/dashboard/stats'))
+        self.assertEqual((stats['ready_tag_review_total'],stats['pending_claim_total']),(1,1))
+        url=f'/api/club/claims/{claim_id}/'
+        process=f'/api/admin/club-claims/{claim_id}/process/'
+        ok(client.patch(url,{'details':{'tag':'更新标签'}},format='json'))
+        ok(staff_client.post(process,{'status':'COMPLETED','note':'审核通过并发放','tag_reviewed':True,
+            'expected_status':'PENDING','expected_details':{'tag':'更新标签'}},format='json'))
+        visible=ok(boss_client.get(f'/api/users/escorts/{accounts[0].pk}/'))
+        self.assertEqual(visible['display_tags'][0]['title'],'更新标签')
+        self.assertEqual(ok(staff_client.get('/api/admin/dashboard/stats'))['pending_tag_review_total'],0)
+        ok(staff_client.post(f'/api/admin/club-claims/{claim_id}/suspend-tag/',
+            {'reason':'内容需修改','expected_tag':'更新标签'},format='json'))
+        self.assertEqual(ok(staff_client.get('/api/admin/dashboard/stats'))['pending_tag_review_total'],1)
+        ok(client.patch(url,{'details':{'tag':'复核后标签'}},format='json'))
+        ok(staff_client.post(f'/api/admin/club-claims/{claim_id}/review-tag/',
+            {'tag_reviewed':True,'expected_tag':'复核后标签'},format='json'))
+        updated=ok(boss_client.get(f'/api/users/escorts/{accounts[0].pk}/'))
+        self.assertEqual(updated['display_tags'][0]['title'],'复核后标签')
 
     def test_open_dialog_refreshes_boss_details_and_preserves_staff_note(self):
         boss,staff=make_user(),make_console_user(['engagement:view','engagement:fulfill','engagement:points'])
@@ -49,7 +66,21 @@ class AdminClaimDetailRealtimeTest(LiveServerTestCase):
         reward=RewardItem.objects.create(code='admin-live-claim',name='实时交付权益',kind='SERVICE',audience='ALL',point_cost=1,stock=1,in_shop=True,is_active=True)
         claim=clients[0].post('/api/club/redeem/',{'reward_id':reward.pk,'details':{'game_uid':'原游戏 UID'},'client_request_id':'admin-live-claim'},format='json')
         self.assertEqual(claim.data['code'],0,claim.data)
-        with isolated_redis_asgi() as (base,ws_base):
-            root=Path(settings.BASE_DIR).parent.parent
-            result=subprocess.run(['node',str(root/'scripts/admin-claim-detail-realtime-live.cjs')],cwd=root,input=json.dumps({'base':base,'wsBase':ws_base,'root':os.environ['XA_ADMIN_VUE_ROOT'],'claim':claim.data['data']['id'],'bossToken':issue_account_tokens(accounts[0])[0],'staffToken':issue_account_tokens(accounts[1])[0]}),encoding='utf-8',text=True,capture_output=True,timeout=35)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        claim_id=claim.data['data']['id']
+        def ok(response):
+            self.assertEqual(response.status_code,200,response.data)
+            self.assertEqual(response.data['code'],0,response.data)
+            return response.data['data']
+        url=f'/api/club/claims/{claim_id}/'
+        process=f'/api/admin/club-claims/{claim_id}/process/'
+        ok(clients[0].patch(url,{'details':{'game_uid':'老板更新的 UID'}},format='json'))
+        ok(clients[1].post(process,{'status':'FULFILLING','note':'另一窗口正在处理',
+            'expected_status':'PENDING','expected_details':{'game_uid':'老板更新的 UID'}},format='json'))
+        stale=clients[1].post(process,{'status':'COMPLETED','note':'客服正在填写的说明',
+            'expected_status':'PENDING','expected_details':{'game_uid':'老板更新的 UID'}},format='json')
+        self.assertEqual((stale.status_code,stale.data['errorCode']),(409,'CLAIM_STATUS_CHANGED'))
+        ok(clients[1].post(process,{'status':'COMPLETED','note':'客服正在填写的说明',
+            'expected_status':'FULFILLING','expected_details':{'game_uid':'老板更新的 UID'}},format='json'))
+        result=ok(clients[0].get(url))
+        self.assertEqual((result['status'],result['delivery_note'],result['details']['game_uid']),
+            ('COMPLETED','客服正在填写的说明','老板更新的 UID'))

@@ -26,8 +26,6 @@
     "failed": 0
   },
   "official_compilers": {
-    "wxml_templates": 49,
-    "wxss_stylesheets": 52,
     "passed": true
   },
   "original_provider_selected_again": true,
@@ -37,15 +35,12 @@
   "scope": "Selection UI and callbacks only; actual local service had one eligible companion. Replacement by another ID and stale-session rejection are also covered by the native regression tests.",
   "source_sha256": [
     {
-      "path": "apps/boss-miniapp/native/pages/checkout/index.js",
       "sha256": "e866fa68dcdeaa9b28e6ab48ede5fb96d4d7821c016d477a7fe3b791c80019d8"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/checkout/index.wxml",
       "sha256": "364d6b66d6804c72e48fdcd82e5a6005cb43e2b2d3bcf6d508ccfb4514252364"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/checkout/index.wxss",
       "sha256": "b3bdf171a52bab999f74f4dc5fcf81a39b7279609d167f60199830d4bece9197"
     },
     {

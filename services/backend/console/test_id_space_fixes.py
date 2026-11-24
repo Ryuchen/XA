@@ -14,6 +14,8 @@ from django.test import override_settings
 
 from rest_framework.test import APITestCase
 
+from uuid import uuid4
+
 from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
 from orders.tests.factories import (
@@ -46,6 +48,8 @@ class RechargeIdSpaceTest(APITestCase):
 
     def _recharge(self, payload):
         self.client.force_authenticate(self.admin)
+        payload = dict(payload)
+        payload.setdefault('client_request_id', uuid4().hex)
         return self.client.post('/api/admin/wallets/recharge/', payload)
 
     def test_recharge_accepts_account_id(self):
@@ -135,7 +139,9 @@ class RechargeIdSpaceTest(APITestCase):
         self.assertEqual(own_record.amount, 10000)
         self.assertEqual(Transaction.objects.get(wallet=owned_wallet).amount, 10000)
         repeated = self._recharge(payload)
-        self.assertEqual(repeated.data['code'], 409, repeated.data)
+        # 现行幂等口径：同键同内容按原回执恢复（code 0），不重复入账。
+        self.assertEqual(repeated.data['code'], 0, repeated.data)
+        self.assertTrue(repeated.data['data']['replayed'])
         owned_wallet.refresh_from_db()
         self.assertEqual(owned_wallet.balance, 10000)
         self.assertEqual(RechargeRecord.objects.filter(account=unmapped).count(), 1)
@@ -244,6 +250,8 @@ class IdCollisionTest(APITestCase):
 
     def _recharge(self, payload):
         self.client.force_authenticate(self.admin)
+        payload = dict(payload)
+        payload.setdefault('client_request_id', uuid4().hex)
         return self.client.post('/api/admin/wallets/recharge/', payload)
 
 
@@ -260,7 +268,7 @@ class MessagePushIdSpaceTest(APITestCase):
         return self.client.post('/api/admin/messages/push/', payload)
 
     def test_push_accepts_account_id(self):
-        """推送接收人传 ClubAccount.id（recipient_account_ids）也要落到正确 legacy 用户。"""
+        """推送接收人传 ClubAccount.id（recipient_account_ids）落到对应业务账号。"""
         res = self._push({
             'title': '系统通知', 'preview': '您好', 'detail': '测试',
             'recipient_account_ids': [self.account.id],
@@ -269,16 +277,19 @@ class MessagePushIdSpaceTest(APITestCase):
         self.assertEqual(res.data['data']['count'], 1)
         from site_messages.models import Message
         msg = Message.objects.get()
-        self.assertEqual(msg.recipient_id, self.boss.id)
+        # 业务账号是接收身份权威；legacy recipient 可选，不再决定收件人。
+        self.assertEqual(msg.recipient_account_id, self.account.id)
 
     def test_push_account_id_does_not_mischarge_other_user(self):
+        boss2_account = _ensure_account(self.boss2)
         res = self._push({
             'title': 't', 'preview': 'p', 'detail': 'd',
             'recipient_account_ids': [self.account.id],
         })
         self.assertEqual(res.data['data']['count'], 1)
         from site_messages.models import Message
-        self.assertFalse(Message.objects.filter(recipient_id=self.boss2.id).exists())
+        self.assertFalse(Message.objects.filter(recipient_account=boss2_account).exists())
+        self.assertEqual(Message.objects.get().recipient_account_id, self.account.id)
 
     def test_push_backward_compat_legacy_id(self):
         res = self._push({
@@ -288,7 +299,8 @@ class MessagePushIdSpaceTest(APITestCase):
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data']['count'], 1)
         from site_messages.models import Message
-        self.assertEqual(Message.objects.get().recipient_id, self.boss.id)
+        # legacy id 经映射落到同一业务账号，绝不串到别的账号。
+        self.assertEqual(Message.objects.get().recipient_account_id, self.account.id)
 
 
 class DisposeRecordsIdSpaceTest(APITestCase):
@@ -305,7 +317,8 @@ class DisposeRecordsIdSpaceTest(APITestCase):
         self.client.force_authenticate(self.admin)
         res = self.client.post(
             f'/api/admin/escorts/{escort_id}/dispose/',
-            {'dispose_type': 'REWARD', 'amount': 3000, 'reason': '优质服务'},
+            {'dispose_type': 'REWARD', 'amount': 3000, 'reason': '优质服务',
+             'client_request_id': uuid4().hex},
         )
         self.assertEqual(res.data['code'], 0)
 
@@ -324,7 +337,8 @@ class DisposeRecordsIdSpaceTest(APITestCase):
         escort_id = EscortProfile.objects.get(user=self.provider).id
         self.client.force_authenticate(self.admin)
         response = self.client.post(f'/api/admin/escorts/{escort_id}/dispose/',
-                                    {'dispose_type': 'REWARD', 'amount': 3000, 'reason': '隔离验收'})
+                                    {'dispose_type': 'REWARD', 'amount': 3000, 'reason': '隔离验收',
+                                     'client_request_id': uuid4().hex})
         self.assertEqual(response.data['code'], 0, response.data)
         record = DisposeRecord.objects.get(user=self.provider)
         self.account.username = 'current-reward-provider'; self.account.nickname = '现行获奖陪玩'

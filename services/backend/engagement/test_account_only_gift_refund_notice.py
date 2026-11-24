@@ -1,12 +1,7 @@
 """Gift rights remain owned by the order's explicit business account."""
-import json
-import os
-from pathlib import Path
-import subprocess
 from tempfile import TemporaryDirectory
 
 from django.test import LiveServerTestCase, override_settings
-from django.conf import settings
 from rest_framework.test import APIClient
 
 from club_accounts.models import LegacyAccountMap
@@ -69,12 +64,3 @@ class AccountOnlyGiftRefundNoticeTest(LiveServerTestCase):
         notices = [row for row in ok(clients[0].get('/api/messages/'))['messages'] if row['title'] == '权益状态已调整']
         self.assertEqual(notices, [])
         self.assertFalse([row for row in ok(clients[2].get('/api/messages/'))['messages'] if row['title'] == '权益状态已调整'])
-        if os.environ.get('XA_GIFT_RIGHTS_BROWSER') == '1':
-            from wallet.test_deposit_realtime_workflow import single_asgi
-            with single_asgi() as (api, _):
-                root = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run(['node', str(root / 'scripts/gift-refund-rights-browser.cjs')], cwd=root,
-                    input=json.dumps({'api':api, 'token':issue_account_tokens(accounts[0])[0],
-                                      'account':accounts[0].pk, 'order':order['id']}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=45)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

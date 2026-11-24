@@ -7,7 +7,7 @@ from orders.models import Order
 from orders.state_machine import transition
 from orders.tests.factories import make_user, make_wallet, make_order
 from users.models import BossType
-from users.boss_types import default_miniapp_boss_type
+from users.boss_types import default_boss_type
 from wallet.models import RechargeRecord
 from .models import VipTier, MemberBenefitGrant, Broadcast, ConsumptionConfirmation
 from .services import update_vip, completed_consumption, config, award_order_points
@@ -21,7 +21,7 @@ class ConsumptionVipTests(TestCase):
         self.user=make_user()
         self.account=mapped(self.user)
         make_wallet(self.user,balance=1000000)
-        self.guest=default_miniapp_boss_type()
+        self.guest=default_boss_type()
         self.account.boss_type=self.guest;self.account.save(update_fields=['boss_type'])
         self.user.boss_type=self.guest;self.user.save(update_fields=['boss_type'])
         self.tiers=[]

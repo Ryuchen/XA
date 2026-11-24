@@ -1680,7 +1680,7 @@ class AdminBannerSerializer(EntityNumberModelSerializer):
                 raise serializers.ValidationError({'link_value': '请选择已启用的玩法或运营内容'})
         elif link_type == Banner.LinkType.PAGE:
             if target not in {'catalog', 'companions', 'gifts', 'coupons', 'checkin', 'points', 'membership', 'support'}:
-                raise serializers.ValidationError({'link_value': '请选择支持的小程序业务入口'})
+                raise serializers.ValidationError({'link_value': '请选择支持的网页业务入口'})
         if link_type != Banner.LinkType.NONE:
             attrs['link_value'] = target
         return attrs

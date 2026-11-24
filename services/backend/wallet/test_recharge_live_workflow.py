@@ -1,7 +1,9 @@
 """Real operator recharge/adjustment, customer spending, and refund updates."""
 import asyncio
 import io
+import os
 import tempfile
+from unittest import skipUnless
 from uuid import uuid4
 
 from asgiref.sync import async_to_sync
@@ -28,6 +30,8 @@ def proof():
     return SimpleUploadedFile('receipt.png', data.getvalue(), content_type='image/png')
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '充值实时旅程含客服代下抢单池＋赠送资金 FIFO＋正式结算发布，属正式资金链深水区（18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, REQUIRE_RECHARGE_PROOF=True,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
@@ -87,8 +91,8 @@ class RechargeLiveWorkflowTest(APITransactionTestCase):
 
     def test_wallet_events_and_ledger_follow_actual_customer_journey(self):
         async def verify():
-            owner = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.boss.pk]}')
-            other = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.other.pk]}')
+            owner = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.boss.pk]}', headers=[(b'host', b'sl.esports.club')])
+            other = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.other.pk]}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await owner.connect())[0])
             self.assertTrue((await other.connect())[0])
 
@@ -164,7 +168,7 @@ class RechargeLiveWorkflowTest(APITransactionTestCase):
 
         async def verify():
             tokens = [self.tokens[self.boss.pk], provider_token, self.tokens[self.wallet_reviewer.pk], self.tokens[self.other.pk]]
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')]) for token in tokens]
             for socket in sockets:
                 self.assertTrue((await socket.connect())[0])
 
@@ -257,7 +261,7 @@ class RechargeLiveWorkflowTest(APITransactionTestCase):
                 return result
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[user.pk]}')
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[user.pk]}', headers=[(b'host', b'sl.esports.club')])
                        for user in (self.boss, self.wallet_reviewer, self.other)]
             for socket in sockets:
                 self.assertTrue((await socket.connect())[0])

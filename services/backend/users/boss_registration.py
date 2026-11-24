@@ -120,8 +120,8 @@ class BossRegistrationView(APIView):
                 if (ClubAccount.objects.select_for_update().filter(username__iexact=username).exists()
                         or user_model.objects.select_for_update().filter(username__iexact=username).exists()):
                     return _fail('该登录账号已被使用，请更换', 409, 'USERNAME_IN_USE')
-                from .boss_types import default_miniapp_boss_type
-                boss_type = default_miniapp_boss_type()
+                from .boss_types import default_boss_type
+                boss_type = default_boss_type()
                 if not boss_type.is_active:
                     return _fail('默认老板类型暂不可用，请联系客服', 503, 'DEFAULT_BOSS_TYPE_UNAVAILABLE')
                 display_name = nickname.strip() or username

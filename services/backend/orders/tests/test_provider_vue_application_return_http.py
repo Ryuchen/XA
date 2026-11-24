@@ -61,7 +61,7 @@ class ProviderVueApplicationReturnTest(ReactLiveHTTPTestCase):
             result = subprocess.run(['node', str(repo / 'scripts/scenarios/three-role-application-progress-live.cjs')],
                 input=json.dumps({'providerRoot':provider_root, 'adminRoot':admin_root, 'base':base, 'wsBase':ws_base,
                     'orderId':order['id'], 'orderNo':order['order_no'], 'bossId':self.accounts[self.boss.pk].pk,
-                    'image':str(repo / 'apps/boss-miniapp/native/assets/icons/chat.png'),
+                    'image':str(repo / 'scripts/fixtures/chat.png'),
                     'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],
                     'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
                     'first':{'id':self.accounts[self.provider.pk].pk,'token':issue_account_tokens(self.accounts[self.provider.pk])[0]},

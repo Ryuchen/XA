@@ -33,6 +33,8 @@ class CardAssignmentTest(APITestCase):
         self.assertEqual(order.responsible_staff_id, self.accounts[self.admin.pk].pk)
 
     def test_unbound_card_cannot_be_selected_or_listed(self):
+        self.card.staff_account = None
+        self.card.save(update_fields=['staff_account'])
         self.ok(self.recharge())
         self.login(self.boss)
         response = self.client.get('/api/support/contact-cards/')
@@ -48,7 +50,9 @@ class CardAssignmentTest(APITestCase):
                        GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True, ORDER_SETTLEMENT_MODE='COMPLETION')
     def test_staff_dispatch_snapshots_selected_staff(self):
         from console.grab_config import save_grab_window
+        from engagement.models import ClubOperationConfig
         save_grab_window(1, 0, lambda *_: None)
+        ClubOperationConfig.objects.get_or_create(pk=1)
         self.card.staff_account = self.accounts[self.admin.pk]
         self.card.save(update_fields=['staff_account'])
         self.ok(self.recharge())

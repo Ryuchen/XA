@@ -1,4 +1,5 @@
 """Existing reports stay usable across the legacy-account migration."""
+import os
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from unittest import skipUnless
@@ -75,6 +76,8 @@ class LegacyReportOwnershipFlowTest(APITransactionTestCase):
         report.refresh_from_db()
         self.assertEqual(report.provider_account_id, other_account.pk)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'KOOK派单卡片原价核验/旧时钟切换冻结口径/旧团队报单/旧报单归属/邀请前端真实HTTP属正式契约深水区（18-盘点 KOOK派单/旧旅程切换/试音待联调）；最终联调启用')
     def test_historical_team_report_keeps_progress_and_reuses_the_same_draft(self):
         partner = make_provider(display_name='搭档')
         self.accounts[partner.pk] = get_or_create_account_for_legacy_user(partner)

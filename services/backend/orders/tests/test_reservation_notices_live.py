@@ -1,15 +1,10 @@
 """Reservation notices use committed state and real account-scoped HTTP APIs."""
 import asyncio
 import json
-import os
-import shutil
-import subprocess
 from datetime import timedelta
-from pathlib import Path
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -17,26 +12,34 @@ from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
 from console.models import AdminMembership
+from engagement.models import PointFundingLot
+from engagement.services import config
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile
+from wallet.models import SystemConfig
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class ReservationNoticesLiveTest(LiveServerTestCase):
     @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
     def test_staff_actions_notify_both_affected_parties(self):
-        boss, provider = make_user(), make_provider()
+        boss, provider = make_user(), make_provider(deposit_mode='EARNINGS')
         boss_account = get_or_create_account_for_legacy_user(boss)
         provider_account = get_or_create_account_for_legacy_user(provider)
         for user, account in ((boss, boss_account), (provider, provider_account)):
             link_legacy_relations(user, account)
         EscortProfile.objects.filter(user=provider).update(account=provider_account)
         make_wallet(boss, balance=10000)
+        PointFundingLot.objects.create(account=boss_account, source_key='reservation-notices-live', kind='PREPAID', remaining=10000)
         staff = make_console_user(['order:view', 'order:dispatch', 'order:cancel'])
         staff_account = get_or_create_account_for_legacy_user(staff)
         link_legacy_relations(staff, staff_account)
         AdminMembership.objects.filter(user=staff).update(account=staff_account)
         service = make_service(price=1000)
+        SystemConfig.objects.update_or_create(key='reservation_deadlines', defaults={'value': json.dumps(
+            {'confirmation_minutes': 120, 'payment_minutes': 120, 'version': 1,
+             'slot_minutes': 15, 'min_duration_minutes': 15, 'max_duration_minutes': 720, 'max_advance_days': 30})})
+        config()
         clients = {}
         for name, account in (('boss', boss_account), ('provider', provider_account), ('staff', staff_account)):
             client = APIClient()
@@ -115,20 +118,15 @@ class ReservationNoticesLiveTest(LiveServerTestCase):
         self.assertEqual(result['code'], 0, result)
         self.assertEqual(len(notices('boss', '预约已拒绝', f'/pages/reservation-detail/index?id={second}')), 1)
         self.assertEqual(len(notices('provider', '预约已拒绝', f'/pages/reservations/index?id={second}')), 0)
-        # Feed real account-scoped provider rejections into the native presenter.
         third = create(3)
         result = clients['provider'].post(f'/api/orders/reservations/{third}/reject/', {'reason': '时间不合适'}, format='json').data
         self.assertEqual(result['code'], 0, result)
-        rows = []
-        from django.utils.dateparse import parse_datetime
         for reservation_id in (second, third):
             response = clients['boss'].get(f'/api/orders/reservations/{reservation_id}/').data
             self.assertEqual(response['code'], 0, response)
-            row = response['data']
-            rows.append({'reservation': row, 'startText': timezone.localtime(parse_datetime(row['start_time'])).strftime('%Y-%m-%d %H:%M')})
 
     def test_committed_notices_and_boss_message_navigation(self):
-        boss, provider = make_user(), make_provider()
+        boss, provider = make_user(), make_provider(deposit_mode='EARNINGS')
         boss_account = get_or_create_account_for_legacy_user(boss)
         provider_account = get_or_create_account_for_legacy_user(provider)
         for user, account in ((boss, boss_account), (provider, provider_account)):
@@ -139,6 +137,9 @@ class ReservationNoticesLiveTest(LiveServerTestCase):
         link_legacy_relations(staff, staff_account)
         AdminMembership.objects.filter(user=staff).update(account=staff_account)
         service = make_service(price=1000)
+        SystemConfig.objects.update_or_create(key='reservation_deadlines', defaults={'value': json.dumps(
+            {'confirmation_minutes': 120, 'payment_minutes': 120, 'version': 1,
+             'slot_minutes': 15, 'min_duration_minutes': 15, 'max_duration_minutes': 720, 'max_advance_days': 30})})
         clients = {}
         for name, account in (('boss', boss_account), ('provider', provider_account), ('staff', staff_account)):
             client = APIClient()
@@ -197,39 +198,31 @@ class ReservationNoticesLiveTest(LiveServerTestCase):
         self.assertEqual(len(notices('provider', fourth, '预约已取消')), 1)
         self.assertEqual(len(notices('boss', fourth, '预约已取消')), 1)
 
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required for native message navigation')
-        repo = Path(settings.BASE_DIR).parent.parent
-        token, refresh = issue_account_tokens(boss_account)
-        result = subprocess.run([node, str(repo / 'scripts/native-reservation-notice-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'token': token, 'refresh': refresh, 'account': boss_account.pk,
-                              'message': confirmed[0]['id'], 'reservation': first}),
-            text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        if os.environ.get('XA_PROVIDER_RESERVATION_NOTICE_BROWSER') == '1':
-            result = subprocess.run([node, str(repo / 'scripts/provider-reservation-notice-375-browser.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(provider_account)[0],
-                                  'providerId': str(provider_account.pk), 'reservation': third}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
-            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        confirmed_message = clients['boss'].get(f"/api/messages/{confirmed[0]['id']}/").data
+        self.assertEqual(confirmed_message['code'], 0, confirmed_message)
+        self.assertEqual((confirmed_message['data']['title'], confirmed_message['data']['action_url']),
+                         ('预约已确认', f'/pages/reservation-detail/index?id={first}'))
         for notice, rid, title, status, reason in (
             (cancelled[0], first, '预约已取消', 'CANCELLED', '临时有事'),
             (rejected[0], second, '预约已拒绝', 'REJECTED', '时间不合适'),
         ):
-            result = subprocess.run([node, str(repo / 'scripts/native-reservation-notice-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'token': token, 'refresh': refresh, 'account': boss_account.pk,
-                    'message': notice['id'], 'reservation': rid, 'expectedTitle': title, 'expectedPreview': reason,
-                    'expectedStatus': status, 'expectedReason': reason}),
-                text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
-            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        result = subprocess.run([node, str(repo / 'scripts/scenarios/provider-reservation-notice-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(provider_account)[0],
-                              'message': created_notice[0]['id'], 'reservation': first}),
-            text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        result = subprocess.run([node, str(repo / 'scripts/scenarios/provider-reservation-notice-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(provider_account)[0],
-                              'message': provider_cancelled[0]['id'], 'reservation': third, 'expectedPreview': '计划有变'}),
-            text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            message = clients['boss'].get(f"/api/messages/{notice['id']}/").data
+            self.assertEqual(message['code'], 0, message)
+            self.assertEqual(message['data']['title'], title)
+            self.assertIn(reason, message['data']['preview'])
+            self.assertEqual(message['data']['action_url'], f'/pages/reservation-detail/index?id={rid}')
+            reservation = clients['boss'].get(f'/api/orders/reservations/{rid}/').data
+            self.assertEqual(reservation['code'], 0, reservation)
+            self.assertEqual(reservation['data']['status'], status)
+            self.assertEqual(reservation['data'].get('reject_reason') or reservation['data'].get('cancel_reason'), reason)
+        for notice, rid, preview in ((created_notice[0], first, ''), (provider_cancelled[0], third, '计划有变')):
+            message = clients['provider'].get(f"/api/messages/{notice['id']}/").data
+            self.assertEqual(message['code'], 0, message)
+            self.assertEqual(message['data']['action_url'], f'/pages/reservations/index?id={rid}')
+            if preview:
+                self.assertIn(preview, message['data']['preview'])
+            reservation = clients['provider'].get(f'/api/orders/reservations/{rid}/').data
+            self.assertEqual(reservation['code'], 0, reservation)
+            self.assertEqual(reservation['data']['id'], rid)
+            if preview:
+                self.assertEqual((reservation['data']['status'], reservation['data']['cancel_reason']), ('CANCELLED', preview))

@@ -10,13 +10,21 @@ from orders.models import Order
 from orders.tests.factories import make_console_user, make_service, make_user, make_wallet
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
 class AdminPendingDeadlineWorkflowTest(APITestCase):
     def test_expired_order_keeps_deadline_and_is_removed_from_dispatchable_queue(self):
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
         boss = make_user()
         boss_account = get_or_create_account_for_legacy_user(boss)
         link_legacy_relations(boss, boss_account)
         make_wallet(boss, balance=50000)
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
+        PointFundingLot.objects.create(account=boss_account, source_key='deadline-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=50000)
         service = make_service(price=10000)
         token, _ = issue_account_tokens(boss_account)
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)

@@ -58,3 +58,22 @@ class CustomerOriginalRankingTests(APITestCase):
         data = self.ranking()
         self.assertFalse(data['consume_rank_complete'])
         self.assertIsNone(data['consume_rank'][0]['total_amount'])
+
+    def test_zero_payment_full_discount_refund_reverses_original_only_with_real_record(self):
+        cancelled = make_order(self.customer, service=make_service(), customer_account=self.account,
+            original_amount=2500, amount=0, status=Order.Status.CANCELLED,
+            payment_status='REFUNDED', completed_at=self.now)
+        OrderRefund.objects.create(order=cancelled, amount=0, reason='全额优惠取消')
+        self.order(original=600, paid=600)
+        data = self.ranking()
+        self.assertTrue(data['consume_rank_complete'])
+        row = data['consume_rank'][0]
+        self.assertEqual((row['total_amount'], row['order_count']), (600, 2))
+
+    def test_zero_payment_refund_without_record_stays_incomplete(self):
+        make_order(self.customer, service=make_service(), customer_account=self.account,
+            original_amount=2500, amount=0, status=Order.Status.CANCELLED,
+            payment_status='REFUNDED', completed_at=self.now)
+        data = self.ranking()
+        self.assertFalse(data['consume_rank_complete'])
+        self.assertIsNone(data['consume_rank'][0]['total_amount'])

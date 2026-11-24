@@ -1,12 +1,8 @@
-"""Opt-in: render the built provider H5 against isolated, real Django HTTP."""
-import json
+"""Opt-in: real team invitation confirm/withdraw flows against isolated Django HTTP."""
 import os
-import subprocess
 from datetime import timedelta
-from pathlib import Path
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -60,12 +56,23 @@ class ProviderTeamMobile375Test(LiveServerTestCase):
             self.assertEqual(response.data['code'], 0, response.data)
             invitation = OrderApplication.objects.get(order=order, applicant=accounts[1], partner=accounts[2])
             invitations.append({'orderId': order.pk, 'applicationId': invitation.pk})
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-team-mobile-375-live.cjs')],
-            input=json.dumps({'partnerToken': tokens[2], 'bossToken': tokens[0], 'partnerId': str(accounts[2].pk),
-                              'invitations': invitations}), text=True, encoding='utf-8', capture_output=True,
-            timeout=90, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
+        detail = client.get(f"/api/orders/orders/{invitations[0]['orderId']}/").data['data']
+        self.assertFalse(detail['applications'][0]['ready'])
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[2])
+        confirmed = client.post(f"/api/orders/orders/{invitations[0]['orderId']}/applications/{invitations[0]['applicationId']}/action/",
+                                {'action': 'CONFIRM_TEAM'}, format='json')
+        self.assertEqual(confirmed.data['code'], 0, confirmed.data)
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
+        detail = client.get(f"/api/orders/orders/{invitations[0]['orderId']}/").data['data']
+        self.assertTrue(detail['applications'][0]['ready'])
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[2])
+        declined = client.post(f"/api/orders/orders/{invitations[1]['orderId']}/applications/{invitations[1]['applicationId']}/action/",
+                               {'action': 'WITHDRAW'}, format='json')
+        self.assertEqual(declined.data['code'], 0, declined.data)
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
+        detail = client.get(f"/api/orders/orders/{invitations[1]['orderId']}/").data['data']
+        self.assertEqual(detail['applications'], [])
         first = OrderApplication.objects.get(pk=invitations[0]['applicationId'])
         second = OrderApplication.objects.get(pk=invitations[1]['applicationId'])
         self.assertTrue(first.partner_confirmed)

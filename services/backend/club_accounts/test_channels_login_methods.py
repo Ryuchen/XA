@@ -21,12 +21,12 @@ class ChannelLoginMethodTests(TransactionTestCase):
         with store_context(self.store):
             self.account = ClubAccount.objects.create_account(
                 username='socket-password-sms-provider', account_type='PROVIDER',
-                is_phone_verified=True,
+                is_phone_verified=True, phone='13800000001',
             )
 
     def connect_and_ping(self, token):
         async def check():
-            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token)
+            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token, headers=[(b'host', b'sl.esports.club')])
             try:
                 connected, _ = await socket.connect()
                 self.assertTrue(connected)
@@ -38,7 +38,7 @@ class ChannelLoginMethodTests(TransactionTestCase):
 
     def assert_revoked(self, token):
         async def check():
-            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token)
+            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token, headers=[(b'host', b'sl.esports.club')])
             try:
                 connected, _ = await socket.connect()
                 if connected:

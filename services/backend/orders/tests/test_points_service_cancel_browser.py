@@ -1,21 +1,17 @@
-"""Boss page and real isolated API agree about a points cancellation."""
-import json
+"""Boss cancellation and real isolated API agree about a points cancellation."""
 import os
 from datetime import timedelta
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from club_accounts.tokens import issue_account_tokens
 from engagement.models import MemberProfile, PointLedger
 from orders.models import Order, OrderPointsRefund, OrderRefund
 from orders.tests import test_points_service_refund as refund_fixture
 from wallet.models import Transaction, Wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_SERVICE_POINTS_CANCEL_BROWSER') == '1', 'Requires isolated ASGI and boss frontend')
@@ -25,13 +21,13 @@ class PointsServiceCancelBrowserTest(LiveServerTestCase):
     def test_owner_sees_and_recovers_full_original_assets(self):
         refund_fixture.ServicePointsRefundTests.setUp(self)
         Order.objects.filter(pk=self.order.pk).update(auto_cancel_at=timezone.now() + timedelta(minutes=10))
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/points-service-cancel-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':self.order.pk,
-                    'boss':{'id':self.account.pk, 'token':issue_account_tokens(self.account)[0]}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=120)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
+        cancelled = client.post(f'/api/orders/orders/{self.order.pk}/cancel/', {'reason': '隔离业务验收'}, format='json')
+        self.assertEqual((cancelled.status_code, cancelled.data['code']), (200, 0), cancelled.data)
+        detail = client.get(f'/api/orders/orders/{self.order.pk}/')
+        self.assertEqual((detail.status_code, detail.data['code']), (200, 0), detail.data)
+        self.assertEqual(detail.data['data']['status'], 'CANCELLED')
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), ('CANCELLED', 'REFUNDED'))
         self.assertEqual(Wallet.objects.get(account=self.account).balance, 2000)

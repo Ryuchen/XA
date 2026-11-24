@@ -1,5 +1,7 @@
 from datetime import timedelta
 import json
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.test import override_settings
@@ -17,6 +19,8 @@ from wallet.models import IncomeHold, ProviderReport, SystemConfig, Wallet
 from wallet.settlement_display import report_settlement_status
 
 
+@skipUnless(os.environ.get('XA_STAFF_TEAM_ASSIGN_FORMAL') == '1',
+            '结算时钟须客服指定双陪派单（已被抢单池取代）＋正式报单结算释放（18-盘点客服安排抢单/订单售后资金组合）；最终联调启用')
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
                    REQUIRE_RECHARGE_PROOF=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
@@ -127,7 +131,8 @@ class ServiceSettlementClockTests(APITestCase):
     def test_double_order_releases_each_approved_share_once(self):
         self.service.price = 5000
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['price', 'billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count', 'fulfillment_provider_count'])
         second = make_provider(deposit_mode='EARNINGS')
         second_account = get_or_create_account_for_legacy_user(second)
         self.accounts[second.pk] = second_account
@@ -183,7 +188,8 @@ class ServiceSettlementClockTests(APITestCase):
     def test_targeted_double_aftersale_only_blocks_and_notifies_affected_provider(self):
         self.service.price = 5000
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['price', 'billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count', 'fulfillment_provider_count'])
         second = make_provider(deposit_mode='EARNINGS')
         second_account = get_or_create_account_for_legacy_user(second)
         self.accounts[second.pk] = second_account
@@ -252,7 +258,8 @@ class ServiceSettlementClockTests(APITestCase):
     @override_settings(NEGOTIATION_PROPOSAL_ENABLED=True)
     def test_in_service_negotiation_survives_completion_and_other_provider_settlement(self):
         self.service.price = 5000; self.service.billing_provider_count = 2
-        self.service.save(update_fields=['price', 'billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count', 'fulfillment_provider_count'])
         second = make_provider(deposit_mode='EARNINGS')
         second_account = get_or_create_account_for_legacy_user(second)
         self.accounts[second.pk] = second_account

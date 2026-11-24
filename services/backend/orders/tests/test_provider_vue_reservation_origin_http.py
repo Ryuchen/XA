@@ -1,7 +1,6 @@
 from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A converted appointment remains identifiable on the provider order."""
 import json
-import os
 import shutil
 import subprocess
 from datetime import timedelta
@@ -67,12 +66,6 @@ class ProviderVueReservationOriginHTTPTest(LiveServerTestCase):
                 text=True, encoding='utf-8', capture_output=True, timeout=40, cwd=repo)
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         browser(accounts[1], True)
-        if os.environ.get('XA_RESERVATION_ORIGIN_NATIVE') == '1':
-            native = subprocess.run(['node', str(repo / 'scripts/native-reservation-origin-iphone12.cjs')],
-                input=json.dumps({'base':self.live_server_url, 'token':issue_account_tokens(accounts[0])[0],
-                    'bossId':accounts[0].pk, 'orderId':oid, 'reservationId':rid}),
-                text=True, encoding='utf-8', capture_output=True, timeout=50, cwd=repo)
-            self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
         ok(clients[1].post(f'/api/orders/orders/{oid}/start/', {'entry_image':flow.screenshot()}, format='multipart'))
         ok(clients[3].post(f'/api/admin/orders/{oid}/transfer/', {'transfers':[
             {'old_provider_id':accounts[1].pk, 'new_provider_id':accounts[2].pk,

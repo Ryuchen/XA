@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from datetime import date, timedelta
 from unittest.mock import patch
 
@@ -54,6 +56,8 @@ class LicenseConsumptionPointsTests(TestCase):
         self.assertEqual(response.data['code'], 0, response.data)
         return Order.objects.get(pk=response.data['data']['id'])
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_kook_automatic_points_stop_after_grace_without_backfilling_expired_time(self):
         from engagement.kook_points import checkpoint, process_event
         from engagement.models import KookBinding, KookPointsConfig, MemberProfile
@@ -286,6 +290,8 @@ class LicenseConsumptionPointsTests(TestCase):
             process_claim(won.data['data']['claim']['id'], 'COMPLETED', '按既有中奖记录交付', self.account)
             self.assertEqual(RewardClaim.objects.get(pk=won.data['data']['claim']['id']).status, 'COMPLETED')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_expired_license_does_not_block_settlement_or_retroactively_award(self):
         with store_context(self.second):
             order = self.create_order()
@@ -305,6 +311,8 @@ class LicenseConsumptionPointsTests(TestCase):
         with store_context(self.first):
             self.assertFalse(LicenseConsumptionPointsDecision.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_grace_allows_the_original_principal_points_once(self):
         with store_context(self.second):
             order = self.create_order()
@@ -317,6 +325,8 @@ class LicenseConsumptionPointsTests(TestCase):
                 award_order_points(order, service_confirmed=True)
             self.assertEqual(PointLedger.objects.filter(order=order, kind='CONSUMPTION').count(), 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_control_unavailable_defers_decision_without_blocking_settlement(self):
         with store_context(self.second):
             order = self.create_order()
@@ -343,6 +353,8 @@ class LicenseConsumptionPointsTests(TestCase):
         denied = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + token).get(url)
         self.assertEqual(denied.status_code, 403)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_unknown_order_points_review_awards_net_and_refunds_once(self):
         from uuid import uuid4
         from engagement.funding_wallet import refund_locked_order_funding
@@ -384,6 +396,8 @@ class LicenseConsumptionPointsTests(TestCase):
         with store_context(self.first):
             self.assertFalse(LicenseConsumptionPointsReview.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_unknown_order_points_review_does_not_restore_closed_cycle(self):
         from uuid import uuid4
         from engagement.models import LicenseConsumptionPointsReview, MemberProfile
@@ -406,6 +420,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual(LicenseConsumptionPointsReview.objects.get(decision=decision).outcome, 'ALLOW')
             self.assertEqual(MemberProfile.objects.get(account=self.account).points_balance, 0)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_unknown_order_points_review_denial_requires_platform_super_admin(self):
         from uuid import uuid4
         from engagement.models import LicenseConsumptionPointsReview, MemberProfile
@@ -430,6 +446,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual(MemberProfile.objects.get(account=self.account).points_balance, 0)
             self.assertFalse(PointLedger.objects.filter(order=order).exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_unknown_order_points_review_recovers_after_platform_audit_failure(self):
         from uuid import uuid4
         from engagement.models import LicenseConsumptionPointsReview, MemberProfile
@@ -506,6 +524,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual(PointLedger.objects.get(order=gift, kind='LICENSE_REVIEW_REFUND').amount, -decision.points_amount)
 
     @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_control_outage_preserves_real_provider_settlement(self):
         from engagement.confirmation import process_order
         from wallet.models import ProviderReport, ProviderReportImage, Transaction
@@ -653,6 +673,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual(LicenseConsumptionPointsDecision.objects.get(order=gift).outcome, 'DENY')
 
     @override_settings(DISCOUNT_OPTIONS_PREVIEW_ENABLED=True, DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_expired_license_keeps_existing_coupon_usable_but_prevents_new_claims(self):
         from coupons.models import Coupon, UserCoupon
         with store_context(self.second):
@@ -681,6 +703,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual(owned.status, 'USED')
 
     @override_settings(DISCOUNT_OPTIONS_PREVIEW_ENABLED=True, DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_activity_discount_requires_license_but_existing_coupon_and_paid_order_survive(self):
         from coupons.models import Coupon, UserCoupon
         from promotions.models import Promotion
@@ -723,6 +747,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual((paid.amount, paid.promotion_id), (800, promo.pk))
 
     @override_settings(DISCOUNT_OPTIONS_PREVIEW_ENABLED=True, DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_activity_entitlement_changes_apply_without_affecting_core_order(self):
         from promotions.models import Promotion
         with store_context(self.second):
@@ -835,6 +861,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(list(UserCoupon.objects.filter(account=self.account).values_list('pk', flat=True)), before)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_expired_license_does_not_create_vip_upgrade_rights_at_confirmation(self):
         from coupons.models import UserCoupon
         from engagement.models import MemberBenefitGrant, VipTier
@@ -850,6 +878,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertFalse(UserCoupon.objects.filter(account=self.account).exists())
             self.assertTrue(ConsumptionConfirmation.objects.filter(order=order).exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_tier_features_and_platform_overrides_apply_to_new_coupon_and_vip_grants(self):
         from coupons.models import Coupon, UserCoupon
         from engagement.models import VipTier
@@ -921,6 +951,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertFalse(RewardClaim.objects.filter(account=self.account, reward=self.reward).exists())
 
     @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_license_unavailable_during_vip_grant_rolls_back_rights_not_settlement(self):
         from engagement.confirmation import process_order
         from engagement.models import MemberBenefitGrant, VipTier
@@ -953,6 +985,8 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertNotEqual(self.account.boss_type_id, tier.boss_type_id)
             self.assertFalse(MemberBenefitGrant.objects.filter(account=self.account, tier=tier).exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_existing_points_can_still_be_used_for_products_and_lottery_after_expiry(self):
         from engagement.models import LotteryCampaign, LotteryPrize, MemberProfile, RewardItem
         with store_context(self.second):

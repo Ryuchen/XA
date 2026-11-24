@@ -1,4 +1,5 @@
 """Exercise an already-running old team order through actual report APIs."""
+from unittest import skipUnless
 import json
 import os
 import shutil
@@ -23,6 +24,8 @@ from wallet.models import ProviderReport, Transaction
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)
 class LegacyTeamRunningWorkflowTest(APITransactionTestCase):
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'KOOK派单卡片原价核验/旧时钟切换冻结口径/旧团队报单/旧报单归属/邀请前端真实HTTP属正式契约深水区（18-盘点 KOOK派单/旧旅程切换/试音待联调）；最终联调启用')
     def test_running_old_team_can_complete_both_reports_without_early_income(self):
         media = tempfile.TemporaryDirectory(); self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))

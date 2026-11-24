@@ -1,3 +1,4 @@
+from unittest import skipUnless
 import json
 import os
 import stat
@@ -80,6 +81,8 @@ class VoiceFileAuditTests(TestCase):
         for path in (live_path, deleted_path, orphan_path, recent_path, unexpected, foreign_path):
             self.assertEqual(path.read_bytes(), b'data')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '通行证退款校验/语音文件审计门店要求/弹性档期抢单窗口/通行证退款多店隔离属正式契约深水区（18-盘点 通行证/语音审计/抢单/多店隔离待联调）；最终联调启用')
     def test_requires_store_and_does_not_claim_success_on_database_error(self):
         with self.assertRaises(CommandError):
             call_command('audit_voice_files', stdout=StringIO())

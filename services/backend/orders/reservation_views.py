@@ -421,7 +421,6 @@ class _ReservationTransitionView(APIView):
             if self.target_status == Reservation.Status.CONFIRMED:
                 if r.provider_account_id != account.pk:
                     raise ReservationError('仅被预约的陪玩本人可确认')
-                from django.conf import settings
                 if settings.PROVIDER_WECHAT_GATE_ENABLED:
                     from users.models import EscortProfile
                     profile = EscortProfile.objects.select_for_update().filter(account_id=r.provider_account_id).first()

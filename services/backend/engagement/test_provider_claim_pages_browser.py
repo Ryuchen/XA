@@ -1,11 +1,6 @@
 """Provider earns isolated KOOK points and redeems real rewards across pages."""
-import json
-import os
-import subprocess
 from datetime import timedelta
-from pathlib import Path
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -75,30 +70,29 @@ class ProviderClaimPagesBrowserTest(LiveServerTestCase):
             result = ok(admin.get('/api/admin/club-claims/', {'account_type': identity, 'page_size': 100}))
             self.assertEqual({row['id'] for row in result['list']}, expected)
             self.assertTrue(all(row['account_type'] == identity for row in result['list']))
-        if os.environ.get('XA_ADMIN_CLAIM_IDENTITIES') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(repo / 'scripts/admin-claim-identities-375.cjs')], cwd=repo,
-                input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'token': issue_account_tokens(staff_account)[0], 'bossId': boss_claim['id'], 'providerId': ids[-1]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=70)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        if os.environ.get('XA_PROVIDER_CLAIM_BROWSER') == '1':
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(repo / 'scripts/provider-claim-pages-375.cjs')], cwd=repo,
-                input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'],
-                    'token': token, 'staffToken': issue_account_tokens(staff_account)[0],
-                    'accountId': account.pk, 'oldest': ids[0], 'secondOldest': ids[1],
-                    'dropRedeemResponse': os.environ.get('XA_DROP_REDEEM_RESPONSE') == '1'}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual(ok(client.get(f'/api/club/claims/{ids[0]}/'))['details']['game_uid'], 'provider-375')
-            self.assertEqual(ok(client.get(f'/api/club/claims/{ids[1]}/'))['details']['game_uid'], '未保存的UID')
-            self.assertEqual(ok(client.get(f'/api/club/claims/{ids[1]}/'))['status'], 'CANCELLED')
-            self.assertEqual(ok(client.get('/api/club/points/'))['points'], 3)
-            new_claim = RewardClaim.objects.filter(account=account,reward=reward).exclude(pk__in=ids).get()
-            self.assertEqual(new_claim.details['game_uid'], '新兑换UID')
-            self.assertEqual(new_claim.details['note'], '新兑换说明')
-            physical_claim = RewardClaim.objects.get(account=account,reward=physical)
-            self.assertEqual({key:physical_claim.details[key] for key in ('recipient','phone','address')},
-                {'recipient':'收件陪玩','phone':'13800138000','address':'测试收货地址'})
-            self.assertEqual(ok(admin.get(f'/api/admin/club-claims/{physical_claim.pk}/'))['details']['address'], '测试收货地址')
+        ok(client.patch(f'/api/club/claims/{ids[0]}/', {'details': {'game_uid': 'provider-375'}}, format='json'))
+        ok(admin.post(f'/api/admin/club-claims/{ids[1]}/process/', {'status': 'FULFILLING', 'note': '客服正在处理'}, format='json'))
+        locked = client.patch(f'/api/club/claims/{ids[1]}/', {'details': {'game_uid': '未保存的UID'}}, format='json')
+        self.assertEqual((locked.status_code, locked.data['errorCode']), (409, 'CLAIM_NOT_EDITABLE'))
+        ok(admin.post(f'/api/admin/club-claims/{ids[1]}/process/',
+            {'status': 'PENDING', 'note': '请补充游戏UID', 'expected_status': 'FULFILLING', 'expected_details': {}}, format='json'))
+        ok(client.patch(f'/api/club/claims/{ids[1]}/', {'details': {'game_uid': '未保存的UID'}}, format='json'))
+        ok(client.post('/api/club/redeem/', {'reward_id': reward.pk,
+            'details': {'game_uid': '新兑换UID', 'note': '新兑换说明'},
+            'client_request_id': 'provider-pages-new'}, format='json'))
+        ok(admin.post(f'/api/admin/club-claims/{ids[0]}/process/', {'status': 'COMPLETED', 'note': '陪玩权益已交付'}, format='json'))
+        ok(admin.post(f'/api/admin/club-claims/{ids[1]}/process/', {'status': 'CANCELLED', 'note': '确认无法交付，退回积分'}, format='json'))
+        ok(client.post('/api/club/redeem/', {'reward_id': physical.pk,
+            'details': {'recipient': '收件陪玩', 'phone': '13800138000', 'address': '测试收货地址'},
+            'client_request_id': 'provider-pages-physical'}, format='json'))
+        self.assertEqual(ok(client.get(f'/api/club/claims/{ids[0]}/'))['details']['game_uid'], 'provider-375')
+        self.assertEqual(ok(client.get(f'/api/club/claims/{ids[1]}/'))['details']['game_uid'], '未保存的UID')
+        self.assertEqual(ok(client.get(f'/api/club/claims/{ids[1]}/'))['status'], 'CANCELLED')
+        self.assertEqual(ok(client.get('/api/club/points/'))['points'], 3)
+        new_claim = RewardClaim.objects.filter(account=account,reward=reward).exclude(pk__in=ids).get()
+        self.assertEqual(new_claim.details['game_uid'], '新兑换UID')
+        self.assertEqual(new_claim.details['note'], '新兑换说明')
+        physical_claim = RewardClaim.objects.get(account=account,reward=physical)
+        self.assertEqual({key:physical_claim.details[key] for key in ('recipient','phone','address')},
+            {'recipient':'收件陪玩','phone':'13800138000','address':'测试收货地址'})
+        self.assertEqual(ok(admin.get(f'/api/admin/club-claims/{physical_claim.pk}/'))['details']['address'], '测试收货地址')

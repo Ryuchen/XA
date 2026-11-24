@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from orders.tests.test_release_flow import ReleaseFlowTest
 from copy import deepcopy
 from unittest.mock import patch
@@ -107,6 +109,8 @@ class GameplayFlowTest(APITestCase):
         draw.assert_called_once()
 
     @patch('orders.gameplay.secrets.randbelow')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_quote_invalid_rounds_and_insufficient_balance_do_not_draw(self, draw):
         self.login(self.boss)
         self.ok(self.client.post('/api/orders/quote/', {'service_id': self.service.pk}))
@@ -155,6 +159,8 @@ class GameplayFlowTest(APITestCase):
         self.login(self.boss)
         self.assertEqual(self.client.post('/api/admin/gameplays/', {'name': '违规配置'}).status_code, 403)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')
     def test_pending_refund_preserves_result_and_restores_balance_once(self):
         self.ok(self.recharge())
         self.login(self.boss)

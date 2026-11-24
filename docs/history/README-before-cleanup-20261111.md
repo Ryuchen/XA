@@ -2,11 +2,11 @@
 
 # XA 电竞陪玩管理系统
 
-> 旧端脚本已删除，历史命令不再适用；具体处理见[脚本核对记录](../ops/legacy-script-audit-20261115.md)。
+> 旧端脚本已删除，历史命令不再适用；具体处理见[脚本核对记录](../ops/records/legacy-script-audit-20261115.md)。
 
-当前交付源码为 [`fronted/`](../../fronted/README.md) 的老板端、陪玩端和管理后台（React + Tailwind CSS 4 + shadcn）。老板端和陪玩端同时适配手机与桌面，后台适配桌面及1366×1024横屏平板；老板端仅微信快捷登录，最小小程序只承担授权桥接。下方旧小程序、Vue、历史部署及币种称呼保留作迁移追溯，当前技术与产品标准以 [`AGENTS.md`](../../AGENTS.md) 为准。
+当前交付源码为 [`fronted/`](../../fronted/README.md) 的老板端、陪玩端和管理后台（React + Tailwind CSS 4 + shadcn）。老板端和陪玩端同时适配手机与桌面，后台适配桌面及1366×1024横屏平板；老板端微信登录走公众号网页授权／扫码。下方旧 Vue、历史部署及币种称呼保留作迁移追溯（微信小程序相关内容已按用户 2026-11-17 决定删除），当前技术与产品标准以 [`AGENTS.md`](../../AGENTS.md) 为准。
 
-系统现支持多门店：每店独立名称、三端入口、账号、钱包、订单、运营和薪资/ROI数据；平台门店管理授权与店内角色分开。原有数据保留在默认门店，新门店使用独立业务库。初始化、迁移、授权、门店入口及验证边界见[门店与多租户说明](../../docs/ops/multitenancy-20261104.md)。
+系统现支持多门店：每店独立名称、三端入口、账号、钱包、订单、运营和薪资/ROI数据；平台门店管理授权与店内角色分开。原有数据保留在默认门店，新门店使用独立业务库。初始化、迁移、授权、门店入口及验证边界见[门店与多租户说明](../ops/records/multitenancy-20261104.md)。
 
 **当前开发环境标准入口：** PowerShell 7 执行 `./deploy/dev.ps1 Up`，统一管理 WSL 容器、独立测试库连接、五个本地域名入口、受控后端和源码热更新；状态、重启与停止命令见 [deploy 开发环境部署](../../deploy/README.md)。下方旧端口与历史部署不作为当前三端日常开发入口。
 
@@ -14,31 +14,29 @@ XA 是一套单仓多端的游戏陪玩业务系统，覆盖老板下单、陪�
 
 项目包含四个运行单元：
 
-- **老板端**：微信小程序，老板快捷登录后选择游戏、服务项目、陪玩和客服并下单。
+- **老板端**：Web 网页，老板快捷登录后选择游戏、服务项目、陪玩和客服并下单。
 - **陪玩端**：H5 / Web，陪玩抢单、开始服务、完成服务、报单、回复评价、管理资料和申请提现。
 - **管理端**：Web 运营后台，管理老板、陪玩、订单、派单、审核、充值、钱包、通行证、签到奖励、消息和基础配置。
 - **服务端**：Django REST Framework + Channels + Celery，统一承载业务接口、WebSocket、异步任务、MySQL 和 Redis。
 
-> 当前发布范围与验收结果见 [发布与联调说明](../../docs/RELEASE_READINESS.md)。老板端发布微信小程序，打手端发布 H5，运营使用 Web 后台。采用“联系客服付款 → 后台凭证充值 → 余额下单 → 履约报单 → 审核结算”流程，微信客服由企业微信原生工作台接待。
+> 当前发布范围与验收结果见 [发布与联调说明](../ops/deployment/RELEASE_READINESS.md)。老板端发布 Web 网页，打手端发布 H5，运营使用 Web 后台。采用“联系客服付款 → 后台凭证充值 → 余额下单 → 履约报单 → 审核结算”流程，微信客服由企业微信工作台接待。
 >
 > **1 元人民币 = 10 兴安币 = 100 内部账务单位**。界面展示兴安币，后端存储整数账务单位。例如实收 100 元对应 1,000 币，API 金额为 10,000。
 
-2026-10-06 已完成腾讯云全量重新部署及应用数据清空，微信体验版为 `2026.10.6`。旧业务账号和运营数据已移除，新超级管理员与陪玩账号的交付及验收见 [重新部署与清空记录](../../docs/REDEPLOY_RESET_20261006.md)。
+2026-10-06 已完成腾讯云全量重新部署及应用数据清空。旧业务账号和运营数据已移除，新超级管理员与陪玩账号的交付及验收见 [重新部署与清空记录](../ops/deployment/REDEPLOY_RESET_20261006.md)。
 
-同日后续更新已将陪玩 H5 部署为 `2026.10.6.1`，管理后台修复 API 前缀导致的 404 后更新为 `2026.10.6.2`。小程序 `2026.10.6.1` 已完成官方开发包上传，待在公众平台设为体验版。更新范围、备份与验收见 [最新版更新部署记录](../../docs/UPDATE_DEPLOYMENT_20261006.md)。
+同日后续更新已将陪玩 H5 部署为 `2026.10.6.1`，管理后台修复 API 前缀导致的 404 后更新为 `2026.10.6.2`。更新范围、备份与验收见 [最新版更新部署记录](../ops/deployment/UPDATE_DEPLOYMENT_20261006.md)。
 
-派单管理支持复制发单文案和推送到 KOOK / 企业微信群，只展示打手实得；活动订单按折后成交价重新抽成。使用与配置见 [一键发单说明](../../docs/GROUP_DISPATCH.md)。
+派单管理支持复制发单文案和推送到 KOOK / 企业微信群，只展示打手实得；活动订单按折后成交价重新抽成。使用与配置见 [一键发单说明](../development/topics/grab/GROUP_DISPATCH.md)。
 
-本机 WSL 的完整容器运行、真实微信登录绑定及复验命令见 [本地部署验收记录](../../docs/LOCAL_DEPLOYMENT_VALIDATION.md)。管理端入口为 `http://127.0.0.1:18081`，陪玩端为 `http://127.0.0.1:18082`；这些地址仅供本机验证。
+本机 WSL 的完整容器运行、真实微信登录绑定及复验命令见 [本地部署验收记录](../ops/deployment/LOCAL_DEPLOYMENT_VALIDATION.md)。管理端入口为 `http://127.0.0.1:18081`，陪玩端为 `http://127.0.0.1:18082`；这些地址仅供本机验证。
 
 ## 目录结构
 
 ```text
 XA/
 ├── apps/
-│   ├── boss-miniapp/         # 老板原生微信小程序（native/ 唯一页面源码）
 │   ├── provider-vue/         # 陪玩 H5 / Web（Vue 3 + Vite + shadcn-vue）
-│   ├── provider-miniapp/     # 旧 Taro 陪玩端，待移除及迁移测试
 │   └── admin-web/            # 运营管理后台（Vue 3 + Vite + shadcn-vue）
 ├── services/
 │   └── backend/              # Django REST / Channels / Celery 服务
@@ -85,7 +83,7 @@ XA/
 
 | 组件 | 技术 | 本地端口 |
 | --- | --- | --- |
-| 老板端 | 微信原生 JavaScript、WXML、WXSS | 微信开发者工具 |
+| 老板端 | React、TypeScript、Tailwind CSS 4、shadcn | `fronted/boss` |
 | 陪玩端 | Vue 3、Vite、TypeScript、shadcn-vue | `3002` |
 | 管理端 | Vue 3、Vite 5、shadcn-vue、Pinia | `5180` |
 | 服务端 | Django、DRF、Channels、Daphne、Celery | `8000` |
@@ -96,7 +94,6 @@ XA/
 - Node.js `>= 22`（见 `.nvmrc`）
 - pnpm `9.0.0`（见根 `package.json#packageManager`）
 - Docker Desktop 与 Docker Compose v2
-- 微信开发者工具（仅老板微信小程序构建需要）
 
 ```bash
 corepack enable
@@ -151,7 +148,7 @@ docker compose down
 
 ### 3. 启动三个前端
 
-老板端直接在微信开发者工具中导入 `apps/boss-miniapp`，读取 `native/`。在 `native/config.js` 配置开发服务地址；原生代码修改后由开发者工具重新编译。
+老板端在 `fronted/` 工作区运行，当前统一入口见 [deploy 开发环境部署](../../deploy/README.md)。
 
 陪玩端和管理端分别在终端运行：
 
@@ -170,25 +167,15 @@ pnpm run admin:dev
 - 后端接口：`http://127.0.0.1:8000/api`
 
 
-## 微信小程序构建与登录
+## 微信登录配置
 
-### 构建
+（微信小程序构建与开发者工具导入说明已按用户 2026-11-17 决定删除；老板端微信登录走公众号网页授权／扫码。）
 
-```bash
-pnpm run boss:build
-```
-
-在微信开发者工具中导入 `apps/boss-miniapp`，项目配置的 `miniprogramRoot` 为 `native/`，直接读取 `native/app.json`。`boss:build` 执行原生结构、语法和本机可用的官方编译器检查，不生成 Taro `dist/`。
-
-发布前配置 `native/config.js` 的 `trial` / `release` 地址，开启开发者工具域名校验（注意 `project.private.config.json` 的覆盖设置），并执行 `node scripts/check-native.mjs --require-compiler`。正式三端构建用 `pnpm build:release`，会在配置缺失或官方编译器不可用时停止；完整步骤见 [发布与联调说明](../../docs/RELEASE_READINESS.md)。
-
-### 登录配置
-
-真实微信快捷登录需要在 `.env` 中配置与 `apps/boss-miniapp/project.config.json` 一致的 AppID：
+真实微信快捷登录需要在 `.env` 中配置公众号 AppID：
 
 ```dotenv
-WECHAT_APPID=微信小程序AppID
-WECHAT_SECRET=微信小程序AppSecret
+WECHAT_APPID=微信公众号AppID
+WECHAT_SECRET=微信公众号AppSecret
 WECHAT_MOCK_LOGIN=false
 ```
 
@@ -205,7 +192,7 @@ docker compose up -d --build web celery-worker celery-beat
 3. 无匹配账号时才创建新老板账号；
 4. 手机号冲突时拒绝自动绑定，交由运营人员处理。
 
-`WECHAT_MOCK_LOGIN=true` 只适合本地 H5 联调，生产或微信开发者工具真机联调必须关闭，否则无法验证真实微信身份，也可能产生非预期测试账号。
+`WECHAT_MOCK_LOGIN=true` 只适合本地 H5 联调，生产或真机联调必须关闭，否则无法验证真实微信身份，也可能产生非预期测试账号。
 
 陪玩开始服务、完成服务时默认必须上传入队和结单截图。旧版客户端灰度升级期间可临时设置
 `REQUIRE_ORDER_EVIDENCE_IMAGES=false`，生产稳定后应恢复为 `true`；即使关闭该开关，报单正式提交仍会校验完整凭证。
@@ -237,9 +224,6 @@ docker compose exec web python manage.py seed_stage_test_data \
 ## 常用构建与检查
 
 ```bash
-# 正式老板微信小程序
-pnpm run boss:build
-
 # 陪玩与管理端正式交付构建
 pnpm run provider:build:h5
 pnpm run admin:build
@@ -252,7 +236,7 @@ docker compose config --quiet
 docker compose -f docker-compose.web.yml config --quiet
 ```
 
-`build:all` 检查老板原生代码并构建打手 H5 和管理后台。`build:release` 先检查正式原生地址、有效域名校验开关及 AppID，再强制通过官方原生编译器；需要先配置 `native/config.js` 并把公开构建变量导入终端。`provider:build` 构建陪玩 Vue H5；`build:mini` 仅检查老板微信小程序。旧 Taro 陪玩端仍存在，其测试引用尚待迁移。
+`build:all` 构建打手 H5 和管理后台；`provider:build` 构建陪玩 Vue H5。（老板端小程序构建与原生检查说明已按用户 2026-11-17 决定删除。）
 
 ## Docker 部署说明
 
@@ -285,10 +269,10 @@ docker compose -f docker-compose.web.yml up -d --build
 - `ryuchen/xa-provider`：陪玩端 H5。命名空间可由工作流配置覆盖。
 
 分支、版本、Git SHA 和 `latest` 标签由工作流自动生成；发布镜像同时附带 SBOM、OCI
-元数据和构建来源证明。推送镜像需要 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`；自动 SSH 部署的额外凭证见 [对接凭证清单](../../docs/INTEGRATION_CREDENTIALS.md)。
+元数据和构建来源证明。推送镜像需要 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`；自动 SSH 部署的额外凭证见 [对接凭证清单](../ops/integrations/INTEGRATION_CREDENTIALS.md)。
 
-基础整合编排属于**开发/验收配置**；正式部署采用 [发布说明](../../docs/RELEASE_READINESS.md) 中的 release 叠加编排。生产上线前至少还应使用非
-root 数据库账号、关闭 Django Debug、限制 Allowed Hosts/CORS、配置 HTTPS 与微信合法域名、
+基础整合编排属于**开发/验收配置**；正式部署采用 [发布说明](../ops/deployment/RELEASE_READINESS.md) 中的 release 叠加编排。生产上线前至少还应使用非
+root 数据库账号、关闭 Django Debug、限制 Allowed Hosts/CORS、配置 HTTPS 与微信网页授权域名、
 托管静态与媒体文件、备份数据库并接入日志和监控。
 
 ## 接口与实时通信
@@ -298,7 +282,7 @@ root 数据库账号、关闭 Django Debug、限制 Allowed Hosts/CORS、配置 
 - 媒体文件：`/media`
 - 订单与消息实时更新：Django Channels WebSocket
 
-具体字段、权限和流程请以 [接口文档](../../docs/API.md) 与服务端路由为准。
+具体字段、权限和流程请以 [接口文档](product/API.md) 与服务端路由为准。
 
 ## 常见问题
 
@@ -316,11 +300,7 @@ docker compose logs --tail=200 web
 
 ### 微信快捷登录每次都创建新账号
 
-检查 `WECHAT_APPID`、`WECHAT_SECRET` 是否与小程序一致，并确认 `WECHAT_MOCK_LOGIN=false`。真实环境还需确认原老板账号已保存正确 `openid`，或具备唯一且已验证的手机号供首次绑定。
-
-### 微信开发者工具提示找不到 `dist/app.json`
-
-当前老板端应读取 `native/app.json`。核对 `apps/boss-miniapp/project.config.json` 的 `miniprogramRoot` 为 `native/`，在仓库根执行 `pnpm run boss:build` 后重新导入 `apps/boss-miniapp`，不要继续导入旧 `dist/` 项目。
+检查 `WECHAT_APPID`、`WECHAT_SECRET` 是否与公众号一致，并确认 `WECHAT_MOCK_LOGIN=false`。真实环境还需确认原老板账号已保存正确 `openid`，或具备唯一且已验证的手机号供首次绑定。
 
 ### MySQL 报 `Access denied` / `1045`
 
@@ -339,13 +319,13 @@ lsof -nP -iTCP:5180 -sTCP:LISTEN
 
 ## 项目文档
 
-- [业务闭环与本轮验收](../../docs/BUSINESS_CLOSURE.md)
-- [上线对接密钥、Token 与配置清单](../../docs/INTEGRATION_CREDENTIALS.md)
-- [当前产品需求与验收基线](../../docs/PRD_CURRENT.md)
-- [历史产品需求文档](../../docs/PRD.md)
-- [代码现状版产品文档](../../docs/PRODUCT_DOCUMENTATION.md)
+- [业务闭环与本轮验收](../development/topics/order-combos/BUSINESS_CLOSURE.md)
+- [上线对接密钥、Token 与配置清单](../ops/integrations/INTEGRATION_CREDENTIALS.md)
+- [当前产品需求与验收基线](product/PRD_CURRENT.md)
+- [历史产品需求文档](product/PRD.md)
+- [代码现状版产品文档](product/PRODUCT_DOCUMENTATION.md)
 - [系统架构与业务边界](../../docs/architecture/ARCHITECTURE.md)
-- [接口文档](../../docs/API.md)
+- [接口文档](product/API.md)
 - [数据模型 ER 图](../../docs/architecture/ER.md)
 - [核心流程时序图](../../docs/architecture/Sequence.md)
 - [三端视觉规范](../../docs/DESIGN_SYSTEM.md)

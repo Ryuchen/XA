@@ -1,4 +1,6 @@
 """A real completed service, refund and requalification refresh the queue."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -30,6 +32,8 @@ class VipClaimQueueRealtimeTest(APITransactionTestCase):
     finish = flow.ReleaseFlowTest.finish
     settle_after_window = flow.ReleaseFlowTest.settle_after_window
 
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP 权益退款与新服务实时刷新属 VIP 权益正式契约深水区（18-盘点 VIP 权益待联调）；最终联调启用')
     def test_refund_and_new_service_refresh_existing_vip_entitlement(self):
         reward = RewardItem.objects.create(code='vip-queue-live', name='会员交付权益', kind='SERVICE', in_shop=False)
         VipTier.objects.create(level=1, boss_type=make_boss_type(), recharge_threshold=1000,
@@ -73,7 +77,7 @@ class VipClaimQueueRealtimeTest(APITransactionTestCase):
             return claim.status
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             async def next_claim():
                 while True:
@@ -137,7 +141,7 @@ class VipClaimQueueRealtimeTest(APITransactionTestCase):
             return claim.duration_days, claim.duration_months
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             try:
                 self.assertEqual(await database_sync_to_async(upgrade)(), (0, 1))

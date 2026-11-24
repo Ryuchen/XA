@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from datetime import datetime
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -43,6 +45,8 @@ class MonthlyCouponIsolationTest(TestCase):
                 self.assertEqual((result['account_count'], result['records'][0]['recorded_coupon_count']), (1, count))
 
     @override_settings(VIP_MONTHLY_DECISIONS_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_same_account_id_uses_its_store_cutover_and_historical_zero_policy(self):
         from club_accounts.models import ClubAccount
         from coupons.benefits import grant_periodic

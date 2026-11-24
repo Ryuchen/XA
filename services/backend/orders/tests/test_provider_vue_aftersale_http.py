@@ -1,7 +1,6 @@
 from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """The active Vue provider page shows actual aftersale and refund outcomes."""
 import json
-import os
 import shutil
 import subprocess
 from datetime import timedelta
@@ -73,12 +72,6 @@ class ProviderVueAfterSaleHTTPTest(LiveServerTestCase):
         for user,path in ((self.boss,f'/api/orders/orders/{order_id}/'),(self.staff,f'/api/admin/orders/{order_id}/')):
             self.login(user)
             self.assertEqual(self.ok(self.client.get(path))['refund_summary']['amount'],summary['amount'])
-        if os.environ.get('XA_AFTERSALE_RECEIPT_NATIVE') == '1':
-            native = subprocess.run(['node',str(repo / 'scripts/native-aftersale-receipt-iphone12.cjs')],
-                input=json.dumps({'base':self.live_server_url,'orderId':order_id,'bossId':self.accounts[self.boss.pk].pk,
-                    'token':self.tokens[self.boss.pk],'refundAmount':2500 if partial else 10000,
-                    'refundText':'250' if partial else '1000'}),text=True,encoding='utf-8',capture_output=True,timeout=40,cwd=repo)
-            self.assertEqual(native.returncode,0,native.stdout+native.stderr)
         if ambiguous:
             self.login(self.provider)
             Transaction.objects.filter(order_id=order_id, remark__startswith='推荐分佣：').update(remark='历史收入')

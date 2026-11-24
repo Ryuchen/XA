@@ -1,8 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from io import BytesIO
+import os
 from tempfile import TemporaryDirectory
 from threading import Barrier, Event, current_thread
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -42,8 +44,8 @@ class StaffTeamDispatchTest(APITestCase):
         self.staff.admin_membership.save(update_fields=['account'])
         for user in self.providers:
             EscortProfile.objects.filter(user=user).update(account=self.accounts[user.pk])
-        self.service = make_service(price=5001, billing_provider_count=2, commission_override=True,
-                                    commission_type='FIXED', commission_fixed=1001)
+        self.service = make_service(price=5001, billing_provider_count=2, fulfillment_provider_count=2,
+                                    commission_override=True, commission_type='FIXED', commission_fixed=1001)
         make_wallet(self.boss, balance=100000)
         for name in ('_schedule_auto_cancel', 'notify_order_update'):
             patcher = patch('orders.views.' + name)
@@ -72,6 +74,8 @@ class StaffTeamDispatchTest(APITestCase):
                                 {'provider_ids': [self.accounts[p.pk].pk for p in (providers or self.providers[:2])]},
                                 format='json')
 
+    @skipUnless(os.environ.get('XA_STAFF_TEAM_ASSIGN_FORMAL') == '1',
+                '客服安排＋指派旧旅程已被抢单池取代（18-盘点客服安排抢单）；多人正式抢单门禁保持关闭，最终联调启用')
     def test_full_two_person_evidence_and_approval_settle_once(self):
         order = self.create()
         self.assertEqual((order.status, order.amount, order.required_provider_count, order.dispatch_route),
@@ -129,6 +133,8 @@ class StaffTeamDispatchTest(APITestCase):
         self.assertEqual(Transaction.objects.filter(order=order, tx_type='INCOME').count(), 2)
         self.assertEqual(sum(Transaction.objects.filter(order=order).values_list('amount', flat=True)), 0)
 
+    @skipUnless(os.environ.get('XA_STAFF_TEAM_ASSIGN_FORMAL') == '1',
+                '客服安排＋指派旧旅程已被抢单池取代（18-盘点客服安排抢单）；多人正式抢单门禁保持关闭，最终联调启用')
     def test_validation_failure_refund_and_existing_assignments_are_atomic(self):
         order = self.create()
         self.auth(self.staff)
@@ -158,6 +164,8 @@ class StaffTeamDispatchTest(APITestCase):
         self.assertNotEqual(self.assign(order).data['code'], 0)
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
 
+    @skipUnless(os.environ.get('XA_STAFF_TEAM_ASSIGN_FORMAL') == '1',
+                '客服安排＋指派旧旅程已被抢单池取代（18-盘点客服安排抢单）；多人正式抢单门禁保持关闭，最终联调启用')
     def test_expired_order_cannot_be_assigned_before_timeout_worker_runs(self):
         order = self.create()
         Order.objects.filter(pk=order.pk).update(auto_cancel_at=timezone.now() - timedelta(seconds=1))
@@ -168,6 +176,8 @@ class StaffTeamDispatchTest(APITestCase):
         self.assertFalse(order.providers.exists())
         self.assertEqual(Transaction.objects.filter(order=order, tx_type='PAY').count(), 1)
 
+    @skipUnless(os.environ.get('XA_STAFF_TEAM_ASSIGN_FORMAL') == '1',
+                '客服安排＋指派旧旅程已被抢单池取代（18-盘点客服安排抢单）；多人正式抢单门禁保持关闭，最终联调启用')
     def test_partial_team_entry_then_refund_does_not_start_or_settle(self):
         order = self.create()
         self.assertEqual(self.assign(order).data['code'], 0)

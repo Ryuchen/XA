@@ -9,7 +9,9 @@
 """
 
 from datetime import timedelta
+from uuid import uuid4
 
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -88,7 +90,7 @@ class CouponListTest(APITestCase):
         res = self.client.get('/api/coupons/')
         item = res.data['data'][0]
         self.assertTrue(item['is_claimed'])
-        self.assertTrue(item['claimable'])
+        self.assertFalse(item['claimable'])
 
 
 class CouponClaimTest(APITestCase):
@@ -123,11 +125,11 @@ class CouponClaimTest(APITestCase):
         res = self.client.post(f'/api/coupons/{coupon.id}/claim/')
         self.assertEqual(res.data['code'], 400)
 
-    def test_claim_duplicate_returns_400(self):
+    def test_claim_duplicate_is_idempotent(self):
         coupon = make_coupon()
         make_user_coupon(self.user, coupon=coupon)
         res = self.client.post(f'/api/coupons/{coupon.id}/claim/')
-        self.assertEqual(res.data['code'], 400)
+        self.assertEqual(res.data['code'], 0)
         self.assertEqual(
             UserCoupon.objects.filter(user=self.user, coupon=coupon).count(), 1
         )
@@ -164,21 +166,34 @@ class MyCouponListTest(APITestCase):
         self.assertNotIn(high_claim.id, ids)
 
 
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, GRAB_SINGLE_WINDOW_ENABLED=True,
+                   GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
 class OrderCouponIntegrationTest(APITestCase):
     """下单用券抵扣集成。"""
 
     def setUp(self):
+        from console.grab_config import save_grab_window
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
+        save_grab_window(30, 0, lambda *args: None)
+        ClubOperationConfig.objects.get_or_create(pk=1)
         self.user = make_user()
+        self.account = get_or_create_account_for_legacy_user(self.user)
+        link_legacy_relations(self.user, self.account)
         self.service = make_service(price=10000)
         make_wallet(self.user, balance=100000)
-        self.client.force_authenticate(self.user)
+        PointFundingLot.objects.create(account=self.account, source_key='order-coupon-prepaid',
+            kind='PREPAID', remaining=100000)
+        from rest_framework.test import APIClient
+        from club_accounts.tokens import issue_account_tokens
+        self.client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
 
     def test_order_with_coupon_deducts_discount(self):
         coupon = make_coupon(threshold=10000, amount=2000)
         uc = make_user_coupon(self.user, coupon=coupon)
         res = self.client.post('/api/orders/create/', {
             'service_id': self.service.id,
-            'user_coupon_id': uc.id,
+            'user_coupon_id': uc.id, 'client_request_id': uuid4().hex,
         })
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data']['amount'], 8000)
@@ -193,7 +208,7 @@ class OrderCouponIntegrationTest(APITestCase):
         uc = make_user_coupon(self.user, coupon=coupon)
         res = self.client.post('/api/orders/create/', {
             'service_id': service.id,
-            'user_coupon_id': uc.id,
+            'user_coupon_id': uc.id, 'client_request_id': uuid4().hex,
         })
         self.assertEqual(res.data['code'], 0)
         # discount = min(5000, 1500) = 1500，应付 0
@@ -204,7 +219,7 @@ class OrderCouponIntegrationTest(APITestCase):
         uc = make_user_coupon(self.user, coupon=coupon)
         res = self.client.post('/api/orders/create/', {
             'service_id': self.service.id,
-            'user_coupon_id': uc.id,
+            'user_coupon_id': uc.id, 'client_request_id': uuid4().hex,
         })
         self.assertEqual(res.data['code'], 400)
         uc.refresh_from_db()
@@ -214,7 +229,7 @@ class OrderCouponIntegrationTest(APITestCase):
         uc = make_user_coupon(self.user, status=UserCoupon.Status.USED)
         res = self.client.post('/api/orders/create/', {
             'service_id': self.service.id,
-            'user_coupon_id': uc.id,
+            'user_coupon_id': uc.id, 'client_request_id': uuid4().hex,
         })
         self.assertEqual(res.data['code'], 400)
 
@@ -223,13 +238,13 @@ class OrderCouponIntegrationTest(APITestCase):
         uc = make_user_coupon(self.user, coupon=coupon)
         res = self.client.post('/api/orders/create/', {
             'service_id': self.service.id,
-            'user_coupon_id': uc.id,
+            'user_coupon_id': uc.id, 'client_request_id': uuid4().hex,
         })
         self.assertEqual(res.data['code'], 400)
 
     def test_order_without_coupon_pays_full(self):
         res = self.client.post('/api/orders/create/', {
-            'service_id': self.service.id,
+            'service_id': self.service.id, 'client_request_id': uuid4().hex,
         })
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data']['amount'], 10000)

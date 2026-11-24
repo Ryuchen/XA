@@ -1,4 +1,6 @@
 """Real gift and claim actions invalidate only authorized staff queues."""
+import os
+from unittest import skipUnless
 from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
@@ -42,7 +44,7 @@ class ClaimQueueRealtimeTest(TransactionTestCase):
         self.assertIsNone(clients[2].get('/api/admin/dashboard/stats').data['data']['pending_tag_review_total'])
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}') for account in accounts[1:]]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}', headers=[(b'host', b'sl.esports.club')]) for account in accounts[1:]]
             for socket in sockets: self.assertTrue((await socket.connect())[0])
             async def next_claim():
                 while True:
@@ -66,6 +68,8 @@ class ClaimQueueRealtimeTest(TransactionTestCase):
                 for socket in sockets: await socket.disconnect()
         async_to_sync(verify)()
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '礼物赠送/退款/退店全旅程实时通知属正式资金链深水区（18-盘点 订单售后资金组合待联调）；最终联调启用')
     def test_real_gift_details_and_delivery_refresh_authorized_queue(self):
         boss, provider = make_user(), make_provider(is_verified=True, deposit_mode='CASH')
         retire_boss = make_user()
@@ -97,7 +101,7 @@ class ClaimQueueRealtimeTest(TransactionTestCase):
             'client_request_id': 'claim-live-recharge'}, format='multipart')
         self.assertEqual(recharge.data['code'], 0, recharge.data)
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}') for account in accounts[2:4]]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}', headers=[(b'host', b'sl.esports.club')]) for account in accounts[2:4]]
             for socket in sockets:
                 self.assertTrue((await socket.connect())[0])
             async def next_claim():

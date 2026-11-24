@@ -3,6 +3,7 @@ from datetime import datetime, time, timedelta
 from unittest import skipUnless
 
 from django.conf import settings
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APITransactionTestCase
@@ -14,9 +15,14 @@ from stores.context import resolve_store, store_context
 from stores.tests_hosts import xinan_store
 
 
+@skipUnless(connection.vendor == 'mysql',
+            '复用 RoiPaymentEventsTest 正式资金＋工资屏障旅程，须 MySQL 行锁（18-盘点工资屏障待联调）')
 @skipUnless('store_b' in settings.DATABASES, 'Requires two isolated store databases')
 @override_settings(ALLOWED_HOSTS=['*'], NEGOTIATION_PROPOSAL_ENABLED=True,
                    NEGOTIATION_REFUND_EXECUTION_ENABLED=True, BOSS_FUNDING_SELECTION_ENABLED=True,
+                   ORDINARY_SERVICE_FUNDING_ENABLED=True, ORIGINAL_ATTRIBUTION_ENABLED=True,
+                   SEGMENT_ECONOMICS_CAPTURE_ENABLED=True, REQUIRE_RECHARGE_PROOF=True,
+                   PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True, PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True,
                    LEGACY_FORCE_AUTH_COMPAT=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)

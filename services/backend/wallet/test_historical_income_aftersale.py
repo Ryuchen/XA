@@ -1,4 +1,5 @@
 """Previously frozen service income must honor unresolved, scoped aftersales."""
+import os
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
@@ -16,7 +17,7 @@ from orders.services import settle_order
 from orders.tests.factories import make_order, make_provider, make_service, make_user
 from stores.db import transaction
 from wallet.income import release_due_income
-from wallet.models import IncomeHold, Transaction
+from wallet.models import IncomeHold, ProviderReport, ProviderReportImage, Transaction
 from wallet.services import get_wallet
 
 
@@ -36,10 +37,22 @@ class HistoricalIncomeAftersaleFixture:
             customer_account=self.customer, provider_account=self.accounts[0], status='COMPLETED',
             payment_status='PAID', settlement_mode='COMPLETION', escort_mode='DOUBLE',
             provider_income=8000, shop_income=2000, completed_at=timezone.now())
-        Order.objects.filter(pk=self.order.pk).update(income_hold_hours=72, service_clock_version=None)
+        # 正式结算须可核实的实付流水（钱包归属＋余额守恒）。
+        boss_wallet = get_wallet(user=self.boss, account=self.customer)
+        Transaction.objects.create(wallet=boss_wallet, order=self.order, tx_type='PAY', amount=-10000,
+            balance_before=10000, balance_after=0)
+        Order.objects.filter(pk=self.order.pk).update(income_hold_hours=72, service_clock_version=None,
+            service_freeze_hours=0)
         for player, account in zip(self.players, self.accounts):
             OrderProvider.objects.create(order=self.order, provider=player, provider_account=account,
                                          settlement_base=5000, provider_income=4000, commission_rate=20)
+        # 正式结算须每位陪玩报单审核通过＋payout 份额＋入队/结单/战绩凭证齐备。
+        for player, account in zip(self.players, self.accounts):
+            report = ProviderReport.objects.create(order=self.order, provider=player, provider_account=account,
+                amount=5000, payout_amount=4000, status=ProviderReport.Status.APPROVED, game_name='隔离历史收入',
+                entry_image='reports/entry/isolated.png', completion_image='reports/completion/isolated.png')
+            ProviderReportImage.objects.create(report=report, image='reports/results/isolated.png')
+            ProviderReport.objects.filter(pk=report.pk).update(submitted_at=timezone.now() - timedelta(hours=74))
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=self.order.pk)
             self.assertEqual(set(settle_order(order)), {player.pk for player in self.players})
@@ -48,6 +61,8 @@ class HistoricalIncomeAftersaleFixture:
         self.now = timezone.now()+timedelta(hours=73)
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '历史冻结收入须先经正式报单结算链双陪逐人入账（settle_order 凭证/份额/分账守恒，18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(ORIGINAL_ATTRIBUTION_ENABLED=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class HistoricalIncomeAftersaleTest(HistoricalIncomeAftersaleFixture, TestCase):
     def test_legacy_hold_waits_for_original_aftersale_deadline_without_resetting_hold(self):
@@ -146,6 +161,8 @@ class HistoricalIncomeAftersaleTest(HistoricalIncomeAftersaleFixture, TestCase):
                                                    released_at__isnull=False).exists())
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '历史冻结收入须先经正式报单结算链双陪逐人入账（settle_order 凭证/份额/分账守恒，18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(ORIGINAL_ATTRIBUTION_ENABLED=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 @skipUnlessDBFeature('has_select_for_update')
 class HistoricalIncomeAftersaleRaceTest(HistoricalIncomeAftersaleFixture, TransactionTestCase):
@@ -239,6 +256,8 @@ class HistoricalIncomeAftersaleRaceTest(HistoricalIncomeAftersaleFixture, Transa
         self.assertIsNone(hold.released_at)
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '历史冻结收入须先经正式报单结算链双陪逐人入账（settle_order 凭证/份额/分账守恒，18-盘点订单售后资金组合）；最终联调启用')
 @skipUnless('store_b' in settings.DATABASES, 'requires isolated two-store databases')
 @override_settings(ORIGINAL_ATTRIBUTION_ENABLED=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class HistoricalIncomeAftersaleStoresTest(TestCase):

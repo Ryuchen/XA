@@ -1,12 +1,14 @@
 """钱包配置回落与提现申请的单元测试。"""
 
 from unittest import mock
+from uuid import uuid4
 
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
+from club_accounts.services import get_or_create_account_for_legacy_user
 from orders.models import Order, OrderProvider
 from orders.tests.factories import (
     make_completed_order, make_order, make_provider, make_service, make_service_category,
@@ -302,6 +304,7 @@ class WithdrawApplyTest(APITestCase):
             'payee_name': '李四',
         }
         payload.update(overrides)
+        payload.setdefault('client_request_id', uuid4().hex)
         self.client.force_authenticate(self.provider)
         return self.client.post('/api/wallet/withdraw/', payload)
 
@@ -352,6 +355,8 @@ class DepositPayTest(APITestCase):
         SystemConfig.objects.create(key='provider_deposit_targets',
             value='{"cash_target":50000,"earnings_target":100000,"version":0}')
         self.provider = make_provider(deposit_required=50000)
+        self.provider.escort_profile.account = get_or_create_account_for_legacy_user(self.provider)
+        self.provider.escort_profile.save(update_fields=['account'])
         make_wallet(self.provider, balance=80000)
 
     def _profile(self):
@@ -369,7 +374,7 @@ class DepositPayTest(APITestCase):
 
     def test_pay_success(self):
         self.client.force_authenticate(self.provider)
-        res = self.client.post(self.DEPOSIT_URL, {'amount': 30000})
+        res = self.client.post(self.DEPOSIT_URL, {'amount': 30000, 'client_request_id': 'deposit-pay-success'})
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data']['deposit_paid'], 30000)
         self.assertEqual(res.data['data']['deposit_remaining'], 20000)
@@ -396,7 +401,7 @@ class DepositPayTest(APITestCase):
         self.assertEqual(platform_wallet.balance, 0)
 
         self.client.force_authenticate(self.provider)
-        res = self.client.post(self.DEPOSIT_URL, {'amount': 30000})
+        res = self.client.post(self.DEPOSIT_URL, {'amount': 30000, 'client_request_id': 'deposit-pay-platform'})
         self.assertEqual(res.data['code'], 0)
 
         provider_wallet = Wallet.objects.get(user=self.provider)
@@ -429,10 +434,10 @@ class DepositPayTest(APITestCase):
         self.client.force_authenticate(self.provider)
 
         self.assertEqual(
-            self.client.post(self.DEPOSIT_URL, {'amount': 20000}).data['code'], 0
+            self.client.post(self.DEPOSIT_URL, {'amount': 20000, 'client_request_id': 'deposit-twice-1'}).data['code'], 0
         )
         self.assertEqual(
-            self.client.post(self.DEPOSIT_URL, {'amount': 30000}).data['code'], 0
+            self.client.post(self.DEPOSIT_URL, {'amount': 30000, 'client_request_id': 'deposit-twice-2'}).data['code'], 0
         )
 
         provider_wallet = Wallet.objects.get(user=self.provider)
@@ -468,7 +473,7 @@ class DepositPayTest(APITestCase):
         self.client.force_authenticate(self.provider)
         with mock.patch('wallet.views.get_platform_wallet', _broken_platform_wallet):
             with self.assertRaises(RuntimeError):
-                self.client.post(self.DEPOSIT_URL, {'amount': 30000})
+                self.client.post(self.DEPOSIT_URL, {'amount': 30000, 'client_request_id': 'deposit-rollback-credit'})
 
         provider_wallet = Wallet.objects.get(user=self.provider)
         platform_wallet.refresh_from_db()
@@ -486,7 +491,7 @@ class DepositPayTest(APITestCase):
             side_effect=RuntimeError('平台系统账户不存在'),
         ):
             with self.assertRaises(RuntimeError):
-                self.client.post(self.DEPOSIT_URL, {'amount': 30000})
+                self.client.post(self.DEPOSIT_URL, {'amount': 30000, 'client_request_id': 'deposit-rollback-unavailable'})
 
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 80000)
         self.assertEqual(self._profile().deposit_paid, 0)

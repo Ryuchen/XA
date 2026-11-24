@@ -1,16 +1,8 @@
 """Real completed orders remain navigable when a provider has many evaluations."""
-import json
-import os
-from pathlib import Path
-import subprocess
-from contextlib import nullcontext
-
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 from orders.tests import test_provider_aftersale_status as flow
 from wallet.models import Wallet
-from users.test_native_checkin_order_realtime import isolated_redis_asgi
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
@@ -45,22 +37,24 @@ class ProviderEvaluationPaginationTest(LiveServerTestCase):
         focused=self.ok(self.client.get('/api/orders/evaluations/mine/', {'order_id':orders[0],'page':1}))
         self.assertEqual((focused['filtered_total'], focused['list'][0]['id'],focused['total']),(1,evaluations[0],21))
         self.assertEqual(len(self.ok(self.client.get('/api/orders/evaluations/mine/'))['list']),21)
-        root=os.environ.get('XA_PROVIDER_VUE_ROOT')
-        if root:
-            role = self.staff.admin_membership.roles.first()
-            role.permissions = [*role.permissions, 'evaluation:view', 'evaluation:delete']
-            role.save(update_fields=['permissions'])
-            repo=Path(settings.BASE_DIR).parent.parent
-            realtime = os.environ.get('XA_EVALUATION_PAGE_REALTIME') == '1'
-            backend = isolated_redis_asgi() if realtime else nullcontext((self.live_server_url, None))
-            with backend as (base, ws_base):
-                result=subprocess.run(['node',str(repo/'scripts/provider-evaluation-pagination-live.cjs')],cwd=repo,
-                    input=json.dumps({'root':root,'base':base,'wsBase':ws_base,'orderId':orders[0],
-                        'reviewId':evaluations[0], 'bossToken':self.tokens[self.boss.pk],
-                        'staffToken':self.tokens[self.staff.pk],
-                        'id':self.accounts[self.provider.pk].pk,'token':self.tokens[self.provider.pk]}),
-                    text=True,encoding='utf-8',capture_output=True,timeout=60)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-            self.login(self.boss)
-            detail=self.ok(self.client.get(f'/api/orders/orders/{orders[0]}/'))
-            self.assertEqual(detail['evaluations'], [])
+        role = self.staff.admin_membership.roles.first()
+        role.permissions = [*role.permissions, 'evaluation:view', 'evaluation:delete']
+        role.save(update_fields=['permissions'])
+        self.login(self.provider)
+        replied = self.ok(self.client.post(f'/api/orders/evaluations/{evaluations[0]}/reply/',
+            {'reply_content': '感谢您的评价', 'reply_version': 0}, format='json'))
+        self.assertEqual(replied['reply_content'], '感谢您的评价')
+        self.login(self.boss)
+        detail = self.ok(self.client.get(f'/api/orders/orders/{orders[0]}/'))
+        self.assertEqual(detail['evaluations'][0]['reply_content'], '感谢您的评价')
+        self.login(self.provider)
+        self.assertEqual(self.ok(self.client.get('/api/orders/evaluations/mine/', {'page':1,'page_size':20}))['pending_total'], 20)
+        self.login(self.staff)
+        removed = self.client.delete(f'/api/admin/evaluations/{evaluations[0]}/', {'reply_version': 1}, format='json')
+        self.assertEqual(removed.data['code'], 0, removed.data)
+        self.login(self.provider)
+        after = self.ok(self.client.get('/api/orders/evaluations/mine/', {'page':1,'page_size':20}))
+        self.assertEqual((after['total'], after['pending_total'], len(after['list'])), (20, 20, 20))
+        self.login(self.boss)
+        detail = self.ok(self.client.get(f'/api/orders/orders/{orders[0]}/'))
+        self.assertEqual(detail['evaluations'], [])

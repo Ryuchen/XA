@@ -1,14 +1,11 @@
 """Checkout renders effective store rules and pays using real isolated APIs."""
-import json
 import os
 from datetime import timedelta
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
+from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from coupons.benefits import grant_periodic
@@ -18,11 +15,12 @@ from engagement.services import config
 from orders.models import Order
 from orders.tests.factories import make_boss_type, make_service, make_user
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_VIP_TERMS_BROWSER') == '1', 'Requires isolated ASGI and boss Vite')
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
+                   VIP_MONTHLY_DECISIONS_ENABLED=True, DISCOUNT_OPTIONS_PREVIEW_ENABLED=True,
+                   DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=True)
 class VipDiscountBrowserTest(LiveServerTestCase):
     def test_updated_safe_box_terms_are_visible_and_paid(self):
         user = make_user(); account = get_or_create_account_for_legacy_user(user)
@@ -38,12 +36,16 @@ class VipDiscountBrowserTest(LiveServerTestCase):
         voucher = UserCoupon.objects.get(account=account, coupon__scope='SAFE_BOX')
         tier.season_discount = 50; tier.safe_box_service_ids = [new.pk]
         tier.save(update_fields=['season_discount', 'safe_box_service_ids'])
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/vip-discount-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'service':new.pk, 'token':issue_account_tokens(account)[0], 'account':account.pk}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        preview = client.post('/api/orders/discount-options-preview/', {'service_id': new.pk}, format='json')
+        self.assertEqual(preview.data['code'], 0, preview.data)
+        safe = next(row for row in preview.data['data']['options'] if row['coupon_id'] == voucher.pk)
+        self.assertEqual(safe['amount'], 5000)
+        created = client.post('/api/orders/create/', {'service_id': new.pk,
+            'discount_selection_token': safe['selection_token'], 'expected_amount': safe['amount'],
+            'game_region': '隔离大区', 'game_nickname': '隔离老板',
+            'client_request_id': 'vip-browser-payment'}, format='json')
+        self.assertEqual(created.data['code'], 0, created.data)
         order = Order.objects.get(customer_account=account)
         voucher.refresh_from_db(); voucher.coupon.refresh_from_db()
         self.assertEqual((order.amount, voucher.status, voucher.coupon.discount_rate, voucher.coupon.service_ids),

@@ -1,9 +1,12 @@
+from django.db import transaction
 from django.test import TestCase
 from django.utils import timezone
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
+from engagement.models import PointFundingLot
 from engagement.refunds import reverse_refund_benefits
+from engagement.services import allocate_order_points
 from orders.models import Order, OrderProvider, OrderRefund
 from orders.tests.factories import make_console_user, make_order, make_provider, make_user
 from rest_framework.test import APIClient
@@ -46,6 +49,10 @@ class RefundFulfillmentCountTests(TestCase):
         customer_wallet = get_wallet(user=boss, account=accounts[boss.pk])
         Transaction.objects.create(wallet=customer_wallet, order=order, tx_type='PAY', amount=-10000,
                                    balance_before=10000, balance_after=0)
+        PointFundingLot.objects.create(account=accounts[boss.pk], source_key='refund-fulfilled-prepaid',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=10000)
+        with transaction.atomic():
+            allocate_order_points(order, customer_wallet, 10000)
         for provider in (first, second):
             wallet = get_wallet(user=provider, account=accounts[provider.pk])
             wallet.balance = 4000

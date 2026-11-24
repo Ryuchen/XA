@@ -58,15 +58,6 @@ class WeChatPayProtocolTest(unittest.TestCase):
         with self.assertRaises(WeChatPayProtocolError):
             self.client.sign_request('GET', '/v3/test', b'unexpected body')
 
-    def test_miniprogram_signature_uses_configured_app_and_exact_package(self):
-        result = self.client.miniprogram_parameters('prepay-123', timestamp='1700000000', nonce='testnonce')
-        self.assertEqual(result['signType'], 'RSA')
-        self.assertEqual(result['package'], 'prepay_id=prepay-123')
-        self.merchant.public_key().verify(base64.b64decode(result['paySign']),
-            b'wx-test\n1700000000\ntestnonce\nprepay_id=prepay-123\n',
-            padding.PKCS1v15(), hashes.SHA256())
-        with self.assertRaises(WeChatPayProtocolError):
-            self.client.miniprogram_parameters('id\ninjected')
 
     def test_signed_notification_is_verified_before_decryption(self):
         payload = {'appid': 'wx-test', 'amount': {'total': 100}, 'trade_state': 'SUCCESS'}

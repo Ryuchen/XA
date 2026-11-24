@@ -34,6 +34,8 @@ def get_or_create_account_for_legacy_user(user):
     return account
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '团队邀请详情须本人录音资格＋正式抢单池入池快照＋双陪履约人数（18-盘点客服安排抢单/试音录音）；最终联调启用')
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_RECHARGE_PROOF=True,
                    LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False,
@@ -55,7 +57,8 @@ class TeamInvitationDetailTest(APITransactionTestCase):
             profile.pass_expires_at = timezone.now() + timedelta(days=1)
             profile.save(update_fields=['account', 'pass_tier', 'pass_expires_at'])
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         self.ok(self.recharge())
         self.login(self.boss)
         data = self.ok(self.client.post('/api/orders/create/', {

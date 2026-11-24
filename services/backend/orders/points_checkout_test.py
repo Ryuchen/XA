@@ -105,12 +105,6 @@ def ordinary_production_enabled():
                 and getattr(settings, 'PLATFORM_PASS_REPAYMENT_ENABLED', False))
 
 
-def default_principal_funding_enabled():
-    """Opt-in payment using the ordinary ledger without opening source selection."""
-    return bool(getattr(settings, 'DEFAULT_PRINCIPAL_SERVICE_FUNDING_ENABLED', False)
-                and ordinary_production_enabled())
-
-
 def ordinary_refund_production_order(order, *, allow_open=False):
     """One ordinary main refund, with no add-ons or transfers."""
     from .ordinary_funding_continuation import refunded_continuation_active

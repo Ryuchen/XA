@@ -1,11 +1,7 @@
 """Gift benefit from boss purchase through staff delivery and boss review."""
-import json
 import os
-import subprocess
-from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -20,9 +16,6 @@ from orders.tests.test_release_flow import screenshot
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class GiftClaimMiniappJourneyTest(LiveServerTestCase):
     host = '127.0.0.1'
-    port = 19210 if any(os.environ.get(flag) == '1' for flag in (
-        'XA_NATIVE_GIFT_CLAIM', 'XA_ADMIN_CLAIM_BROWSER',
-    )) else 0
 
     def test_gift_entitlement_delivery_is_visible_to_boss(self):
         media = TemporaryDirectory(prefix='xa-gift-claim-')
@@ -60,7 +53,7 @@ class GiftClaimMiniappJourneyTest(LiveServerTestCase):
             'gift_amount': 0, 'trade_no': 'gift-claim-recharge', 'proof_image': screenshot(),
             'client_request_id': 'gift-claim-recharge'}, format='multipart'))
         if os.environ.get('XA_NATIVE_GIFT_CLAIM') == '1':
-            self.native(boss_account, provider_account.pk, gift.pk, staff_account)
+            self.delivery_with_return(boss_account, provider_account.pk, gift.pk, staff_account)
         else:
             ok(boss_client.post('/api/orders/gifts/send/', {'gift_service_id': gift.pk, 'quantity': 1,
                 'provider_id': provider_account.pk, 'expected_amount': 2100, 'client_request_id': 'gift-claim-send'}, format='json'))
@@ -71,12 +64,12 @@ class GiftClaimMiniappJourneyTest(LiveServerTestCase):
             filtered = ok(staff_client.get('/api/admin/club-claims/', {'status': 'PENDING', 'source': 'GIFT', 'search': '赠礼专属'}))
             self.assertEqual([row['id'] for row in filtered['list']], [claim.pk])
             self.assertEqual(ok(staff_client.get('/api/admin/club-claims/', {'status': 'COMPLETED', 'source': 'GIFT'}))['total'], 0)
-            if os.environ.get('XA_ADMIN_CLAIM_BROWSER') == '1':
-                self.admin_browser(fulfiller_account, claim.pk, boss=boss_account)
-                self.admin_browser(points_account, claim.pk, points_only=True)
-            else:
-                ok(staff_client.post(f'/api/admin/club-claims/{claim.pk}/process/',
-                    {'status': 'COMPLETED', 'note': '权益已交付'}, format='json'))
+            self.admin_delivery(fulfiller_account, claim.pk, boss=boss_account)
+            points_client = APIClient()
+            points_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(points_account)[0])
+            forbidden = points_client.post(f'/api/admin/club-claims/{claim.pk}/process/',
+                {'status': 'COMPLETED', 'note': '越权交付'}, format='json')
+            self.assertEqual(forbidden.status_code, 403)
         self.assertEqual(ok(boss_client.get(f'/api/club/claims/{claim.pk}/'))['delivery_note'], '权益已交付')
         if os.environ.get('XA_NATIVE_GIFT_CLAIM') == '1':
             self.assertEqual(ok(boss_client.get(f'/api/club/claims/{claim.pk}/'))['details']['game_uid'], '老板未保存UID')
@@ -93,30 +86,65 @@ class GiftClaimMiniappJourneyTest(LiveServerTestCase):
         self.assertEqual((conflict.status_code, conflict.data['errorCode']), (409, 'CLAIM_STATUS_CHANGED'))
         self.assertEqual(len([item for item in ok(boss_client.get('/api/messages/'))['messages']
                               if item['title'] == '权益交付进度更新']), 3 if os.environ.get('XA_NATIVE_GIFT_CLAIM') == '1' else 1)
-        if os.environ.get('XA_ADMIN_CLAIM_BROWSER') == '1':
+        if os.environ.get('XA_NATIVE_GIFT_CLAIM') != '1':
             ok(boss_client.post('/api/orders/gifts/send/', {'gift_service_id': gift.pk, 'quantity': 1,
                 'provider_id': provider_account.pk, 'expected_amount': 2100, 'client_request_id': 'gift-claim-race'}, format='json'))
             other_claim = RewardClaim.objects.filter(account=boss_account, reward=reward).exclude(pk=claim.pk).get()
-            self.admin_browser(fulfiller_account, other_claim.pk, boss=boss_account, other_staff=staff_account)
+            self.admin_delivery(fulfiller_account, other_claim.pk, boss=boss_account, other_staff=staff_account)
             self.assertEqual(ok(boss_client.get(f'/api/club/claims/{other_claim.pk}/'))['delivery_note'], '第一位客服已交付')
             self.assertEqual(len([item for item in ok(boss_client.get('/api/messages/'))['messages']
                                   if item['title'] == '权益交付进度更新']), 2)
 
-    def native(self, account, provider_id, gift_id, staff):
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / '.tools/native-recharge-checkout-375-20261102/native-gift-claim-375.cjs')],
-            cwd=repo, input=json.dumps({'base': self.live_server_url, 'staffToken': issue_account_tokens(staff)[0],
-                'providerId': provider_id, 'giftId': gift_id,
-                'session': {'token': issue_account_tokens(account)[0], 'user': {'id': str(account.pk), 'role': 'customer'}}}),
-            text=True, encoding='utf-8', capture_output=True, timeout=55)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+    def delivery_with_return(self, account, provider_id, gift_id, staff):
+        boss_client, staff_client = APIClient(), APIClient()
+        boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        staff_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+        def ok(response):
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertEqual(response.data['code'], 0, response.data)
+            return response.data['data']
+        ok(boss_client.post('/api/orders/gifts/send/', {'gift_service_id': gift_id, 'quantity': 1,
+            'provider_id': provider_id, 'expected_amount': 2100, 'client_request_id': 'gift-claim-send'}, format='json'))
+        claim = RewardClaim.objects.get(account=account, source='GIFT')
+        process = f'/api/admin/club-claims/{claim.pk}/process/'
+        ok(staff_client.post(process, {'status': 'FULFILLING', 'note': '客服正在处理'}, format='json'))
+        locked = boss_client.patch(f'/api/club/claims/{claim.pk}/',
+            {'details': {**claim.details, 'game_uid': '老板未保存UID'}}, format='json')
+        self.assertEqual((locked.status_code, locked.data['errorCode']), (409, 'CLAIM_NOT_EDITABLE'))
+        ok(staff_client.post(process, {'status': 'PENDING', 'note': '请补充游戏UID',
+            'expected_status': 'FULFILLING', 'expected_details': claim.details}, format='json'))
+        saved = {**claim.details, 'game_uid': '老板未保存UID'}
+        ok(boss_client.patch(f'/api/club/claims/{claim.pk}/', {'details': saved}, format='json'))
+        ok(staff_client.post(process, {'status': 'COMPLETED', 'note': '权益已交付',
+            'expected_status': 'PENDING', 'expected_details': saved}, format='json'))
 
-    def admin_browser(self, staff, claim_id, points_only=False, boss=None, other_staff=None):
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/admin-gift-claim-375.cjs')], cwd=repo,
-            input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                'token': issue_account_tokens(staff)[0], 'claimId': claim_id, 'pointsOnly': points_only,
-                'raceOnly': bool(other_staff), 'otherStaffToken': issue_account_tokens(other_staff)[0] if other_staff else '',
-                'bossToken': issue_account_tokens(boss)[0] if boss else ''}),
-            text=True, encoding='utf-8', capture_output=True, timeout=75)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+    def admin_delivery(self, staff, claim_id, boss, other_staff=None):
+        staff_client, boss_client = APIClient(), APIClient()
+        staff_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+        boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss)[0])
+        def ok(response):
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertEqual(response.data['code'], 0, response.data)
+            return response.data['data']
+        process = f'/api/admin/club-claims/{claim_id}/process/'
+        details = {'game_uid': 'new-uid-375', 'note': '最新交付要求'}
+        ok(boss_client.patch(f'/api/club/claims/{claim_id}/', {'details': details}, format='json'))
+        if other_staff:
+            other_client = APIClient()
+            other_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(other_staff)[0])
+            ok(other_client.post(process, {'status': 'COMPLETED', 'note': '第一位客服已交付',
+                'expected_status': 'PENDING', 'expected_details': details}, format='json'))
+            conflict = staff_client.post(process, {'status': 'COMPLETED', 'note': '第二位客服的说明',
+                'expected_status': 'PENDING', 'expected_details': details}, format='json')
+            self.assertEqual((conflict.status_code, conflict.data['errorCode']), (409, 'CLAIM_STATUS_CHANGED'))
+            self.assertEqual(ok(staff_client.get(f'/api/admin/club-claims/{claim_id}/'))['delivery_note'], '第一位客服已交付')
+            return
+        ok(boss_client.patch(f'/api/club/claims/{claim_id}/',
+            {'details': {'game_uid': 'updated-uid-375', 'note': '变更后的交付要求'}}, format='json'))
+        stale = staff_client.post(process, {'status': 'COMPLETED', 'note': '权益已交付',
+            'expected_status': 'PENDING', 'expected_details': details}, format='json')
+        self.assertEqual((stale.status_code, stale.data['errorCode']), (409, 'CLAIM_DETAILS_CHANGED'))
+        self.assertEqual(ok(staff_client.get(f'/api/admin/club-claims/{claim_id}/'))['status'], 'PENDING')
+        self.assertEqual(len([item for item in ok(boss_client.get('/api/messages/'))['messages']
+                              if item['title'] == '权益交付进度更新']), 0)
+        ok(staff_client.post(process, {'status': 'COMPLETED', 'note': '权益已交付'}, format='json'))

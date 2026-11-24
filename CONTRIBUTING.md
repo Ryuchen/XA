@@ -4,7 +4,7 @@
 
 ## 源码与工具
 
-- `fronted/boss`、`fronted/provider`、`fronted/admin`：三端 React 网页；`fronted/shared` 为共享模块，`fronted/wechat-bridge` 为最小微信授权桥接包。
+- `fronted/boss`、`fronted/provider`、`fronted/admin`：三端 React 网页；`fronted/shared` 为共享模块。微信授权走公众号网页授权，不保留小程序桥接包。
 - `services/backend`：Django REST、WebSocket、异步任务、业务测试和数据库结构迁移。
 - `packages/money`：共享金额工具。旧 Vue/Sass 包保留供追溯，不纳入当前根 workspace。
 - `deploy/dev.ps1`：日常本机开发环境的统一入口。
@@ -15,7 +15,7 @@ Node.js 使用 22.12+。根工具使用 `package.json` 指定的 pnpm；三端�
 
 仓库根目录执行 `./deploy/dev.ps1 Up|Status|Verify`。后端修改后使用 `RestartBackend`，代理修改后使用 `Reload`；不要自行启动临时后端或三套 Windows Vite。资源准备与环境边界见 [deploy/README.md](deploy/README.md)。
 
-前端常规检查入口为 `pnpm run verify:frontend`，包括类型检查、共享模块测试、最小微信桥接检查和三端构建。旧 `build:mini`、`style:check`、`release:check`、`build:release` 不再作为当前检查入口。
+前端常规检查入口为 `pnpm run verify:frontend`，包括类型检查、共享模块测试和三端构建。旧 `build:mini`、`style:check`、`release:check`、`build:release` 不再作为当前检查入口。
 
 后端使用隔离测试配置与独立数据库，按受影响业务选择真实接口、资金、权限、重试和并发测试。数据库迁移须保留；首次部署仍执行结构迁移和平台、门店配置初始化。本机开发库不清空或重建，不接触生产资金、真实客户和真实消息接收人。
 

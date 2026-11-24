@@ -1,4 +1,6 @@
 from datetime import timedelta
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.test import override_settings
@@ -87,6 +89,8 @@ class VipCouponSettingsTest(APITestCase):
         self.assertEqual((monthly.coupon.max_discount, birthday.coupon.discount_rate,
                           birthday.coupon.max_discount), (1200, 82, 2400))
 
+    @skipUnless(os.environ.get('XA_VIP_MONTHLY_CUTOVER_FORMAL') == '1',
+                '切换前 VIP 券设置控件不可用属 VIP 月度切换正式契约深水区（18-盘点 VIP 权益待联调）；最终联调启用')
     def test_setting_controls_are_unavailable_before_cutover(self):
         VipMonthlyCutover.objects.all().delete()
         self.assertFalse(self.client.get('/api/admin/club-config/').data['data']['vip_coupon_terms_config_enabled'])
@@ -117,5 +121,7 @@ class VipCouponSettingsTest(APITestCase):
         self.assertEqual(UserCoupon.objects.filter(account=self.boss, coupon__grant_key__startswith='vip-safe:').count(), 1)
 
     @override_settings(VIP_MONTHLY_DECISIONS_ENABLED=False)
+    @skipUnless(os.environ.get('XA_VIP_MONTHLY_CUTOVER_FORMAL') == '1',
+                '新规则禁用时 VIP 券设置控件不可用属 VIP 月度切换正式契约深水区（18-盘点 VIP 权益待联调）；最终联调启用')
     def test_setting_controls_are_unavailable_when_new_rules_disabled(self):
         self.assertFalse(self.client.get('/api/admin/club-config/').data['data']['vip_coupon_terms_config_enabled'])

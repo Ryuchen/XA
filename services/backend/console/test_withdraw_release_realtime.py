@@ -54,7 +54,8 @@ class WithdrawReleaseRealtimeTest(APITransactionTestCase):
         tokens = [issue_account_tokens(account)[0] for account in accounts]
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={tokens[index]}')
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={tokens[index]}',
+                                             headers=[(b'host', b'sl.esports.club')])
                        for index in (0, 0, 1, 2, 3)]
             for socket in sockets:
                 self.assertTrue((await socket.connect())[0])
@@ -77,7 +78,8 @@ class WithdrawReleaseRealtimeTest(APITransactionTestCase):
 
                 # The disconnected device misses the release event and must
                 # recover current ownership through the same real HTTP API.
-                reconnected = WebsocketCommunicator(application, f'/ws/orders/?token={tokens[0]}')
+                reconnected = WebsocketCommunicator(application, f'/ws/orders/?token={tokens[0]}',
+                                                    headers=[(b'host', b'sl.esports.club')])
                 self.assertTrue((await reconnected.connect())[0])
                 try:
                     response = await database_sync_to_async(other.post)(url + 'claim/')
@@ -89,9 +91,7 @@ class WithdrawReleaseRealtimeTest(APITransactionTestCase):
                     current = await database_sync_to_async(reviewer.get)(url)
                     self.assertEqual(current.data['data']['claimed_by_account'], accounts[1].pk)
                     self.assertFalse(current.data['data']['claim_is_mine'])
-                    rejected = await database_sync_to_async(reviewer.post)(url + 'approve/', {
-                        'payout_reference': 'ISOLATED-NO-PAYOUT',
-                    }, format='json')
+                    rejected = await database_sync_to_async(reviewer.post)(url + 'approve/', {}, format='json')
                     self.assertEqual(rejected.status_code, 409)
                 finally:
                     await reconnected.disconnect()

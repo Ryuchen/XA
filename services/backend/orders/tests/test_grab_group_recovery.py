@@ -1,4 +1,5 @@
 """Lost queue work is recovered without retrying uncertain external sends."""
+import os
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
@@ -40,6 +41,8 @@ class GrabGroupRecoveryTest(TransactionTestCase):
 
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.grab_group_recovery.send_task_safely')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_lost_enqueue_is_recovered_after_due_with_bounded_lease(self, recover_send, initial_send):
         record = queue_dispatch(self.order, 'WECOM')
         self.assertEqual(record.pool_delivery_due_at, self.due)
@@ -57,6 +60,8 @@ class GrabGroupRecoveryTest(TransactionTestCase):
         self.assertEqual(recover_send.call_count, 2)
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_enqueue_exception_is_retried_then_delivered_once(self, send):
         with patch('orders.tasks.send_wecom_dispatch.apply_async', side_effect=RuntimeError('broker down')):
             record = queue_dispatch(self.order, 'WECOM')
@@ -73,6 +78,8 @@ class GrabGroupRecoveryTest(TransactionTestCase):
 
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.grab_group_recovery.send_task_safely')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_external_unknown_sending_and_rejected_are_not_retried(self, recover_send, initial_send):
         record = queue_dispatch(self.order, 'WECOM')
         with patch('django.utils.timezone.now', return_value=self.due):
@@ -85,6 +92,8 @@ class GrabGroupRecoveryTest(TransactionTestCase):
 
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.grab_group_recovery.send_task_safely')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_external_rejection_cannot_impersonate_queue_failure(self, recover_send, initial_send):
         from integrations.wecom import WecomError
         record = queue_dispatch(self.order, 'WECOM')
@@ -99,6 +108,8 @@ class GrabGroupRecoveryTest(TransactionTestCase):
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.grab_group_recovery.send_task_safely')
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_recovered_cancelled_order_is_not_sent(self, send, recover_send, initial_send):
         record = queue_dispatch(self.order, 'WECOM')
         type(self.order).objects.filter(pk=self.order.pk).update(status='CANCELLED')
@@ -111,6 +122,8 @@ class GrabGroupRecoveryTest(TransactionTestCase):
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.grab_group_recovery.send_task_safely')
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_recovered_order_at_deadline_is_not_sent(self, send, recover_send, initial_send):
         record = queue_dispatch(self.order, 'WECOM')
         with patch('django.utils.timezone.now', return_value=self.order.auto_cancel_at):

@@ -1,3 +1,6 @@
+from unittest import skipUnless
+
+from django.db import connection
 from django.test import TestCase, override_settings
 
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -7,7 +10,10 @@ from orders.tests.test_addon_configuration import staff_client
 from wallet.models import RechargeRecord, Transaction
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, REQUIRE_RECHARGE_PROOF=False, ALLOWED_HOSTS=['*'])
+@skipUnless(connection.vendor == 'mysql',
+            '工资确认依赖 MySQL 工资事件屏障（18-盘点工资屏障待联调）；本模块同时作为 barrier_mysql 簇夹具')
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, REQUIRE_RECHARGE_PROOF=False, ALLOWED_HOSTS=['*'],
+                   PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True, PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True)
 class PayrollRechargeEvidenceTest(TestCase):
     def setUp(self):
         self.salary = LateActivityPayrollTest(methodName='test_late_recharge_is_paid_once_at_original_rate_and_keeps_rounding')

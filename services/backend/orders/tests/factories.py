@@ -175,6 +175,11 @@ def make_coupon(
 def make_user_coupon(user, coupon=None, status=UserCoupon.Status.UNUSED, **kwargs):
     """为用户领取一张券。coupon 缺省时自动创建。"""
     coupon = coupon or make_coupon()
+    if 'account' not in kwargs:
+        from club_accounts.services import get_or_create_account_for_legacy_user
+        account = get_or_create_account_for_legacy_user(user)
+        if account is not None:
+            kwargs['account'] = account
     return UserCoupon.objects.create(
         user=user,
         coupon=coupon,

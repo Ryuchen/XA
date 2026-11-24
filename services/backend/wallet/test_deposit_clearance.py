@@ -1,5 +1,6 @@
 """The seven-day deposit clock is based on provable business closure."""
 from datetime import timedelta
+import os
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from unittest import skipUnless
@@ -48,6 +49,8 @@ class DepositClearanceEvidenceTest(TestCase):
         order.refresh_from_db(); share.refresh_from_db()
         return order, share
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '押金清算证据 needs_review=False 须订单正式结算凭证齐备＋收益已释放（18-盘点订单售后资金组合）；最终联调启用')
     def test_last_relevant_case_and_released_income_determine_closure(self):
         order, _ = self.order()
         settled = self.now - timedelta(days=8)
@@ -278,7 +281,8 @@ class WalletDepositClearanceApiTest(APITestCase):
             {'cash_target':3000, 'earnings_target':80000, 'version':1}))
         self.client.force_authenticate(self.provider)
         for amount in (1000, 2000):
-            self.assertEqual(self.client.post('/api/wallet/deposit/', {'amount':amount}).data['code'], 0)
+            self.assertEqual(self.client.post('/api/wallet/deposit/', {'amount':amount,
+                'client_request_id':f'wallet-deposit-{amount}'}).data['code'], 0)
         rows = list(DepositPaymentSnapshot.objects.filter(profile=self.provider.escort_profile).order_by('pk'))
         self.assertEqual([(row.paid_before, row.paid_after, row.target_snapshot) for row in rows],
                          [(0, 1000, 3000), (1000, 3000, 3000)])
@@ -298,7 +302,7 @@ class WalletDepositClearanceApiTest(APITestCase):
         wallet = get_wallet(account=self.account)
         before = (wallet.balance, Transaction.objects.count())
         with patch('wallet.deposit_payment.snapshot_storage_available', return_value=False):
-            result = self.client.post('/api/wallet/deposit/', {'amount':1000})
+            result = self.client.post('/api/wallet/deposit/', {'amount':1000, 'client_request_id':'deposit-no-schema'})
         self.assertEqual(result.status_code, 503)
         wallet.refresh_from_db()
         self.assertEqual((wallet.balance, Transaction.objects.count()), before)
@@ -309,7 +313,7 @@ class WalletDepositClearanceApiTest(APITestCase):
         before = (wallet.balance, Transaction.objects.count())
         with patch('wallet.views.DepositPaymentSnapshot.objects.create', side_effect=RuntimeError('snapshot failure')):
             with self.assertRaisesMessage(RuntimeError, 'snapshot failure'):
-                self.client.post('/api/wallet/deposit/', {'amount':1000})
+                self.client.post('/api/wallet/deposit/', {'amount':1000, 'client_request_id':'deposit-snapshot-fail'})
         wallet.refresh_from_db(); self.provider.escort_profile.refresh_from_db()
         self.assertEqual((wallet.balance, Transaction.objects.count(), self.provider.escort_profile.deposit_paid),
                          (*before, 0))

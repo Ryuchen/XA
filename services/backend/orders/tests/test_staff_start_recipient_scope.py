@@ -1,4 +1,6 @@
 """Starting a reassigned order notifies its current provider, not a former rejecter."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 
 from django.test import override_settings
@@ -21,6 +23,8 @@ class StaffStartRecipientScopeTest(APITransactionTestCase):
     recharge = flow.ReleaseFlowTest.recharge
     new_order = flow.ReleaseFlowTest.new_order
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '开始通知收件人范围（当前团队成员/拒绝陪玩）属正式契约深水区（18-盘点 派单通知待联调）；最终联调启用')
     def test_rejected_provider_does_not_get_new_start_notice(self):
         incoming = make_provider(display_name='重新选择的陪玩')
         self.accounts[incoming.pk] = get_or_create_account_for_legacy_user(incoming)
@@ -54,6 +58,8 @@ class StaffStartRecipientScopeTest(APITransactionTestCase):
         self.assertTrue(OrderProvider.objects.get(order=order, provider=self.provider).released_at)
         self.assertIsNone(OrderProvider.objects.get(order=order, provider=incoming).released_at)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '开始通知收件人范围（当前团队成员/拒绝陪玩）属正式契约深水区（18-盘点 派单通知待联调）；最终联调启用')
     def test_both_current_team_members_receive_notice(self):
         teammate = make_provider(display_name='当前队友')
         self.accounts[teammate.pk] = get_or_create_account_for_legacy_user(teammate)

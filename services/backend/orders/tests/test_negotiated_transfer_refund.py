@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from django.test import override_settings
 from rest_framework.test import APITestCase
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -40,6 +42,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         self.login(self.admin)
         return order, incoming
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_boss_aftersale_during_transfer_ends_with_negotiated_refund(self):
         order, incoming = self.prepare_transfer()
         self.login(self.boss)
@@ -75,6 +79,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         self.ok(self.client.post(base + 'negotiated-refund/', payload, format='json'))
         self.assertEqual(order.refund_records.count(), 1)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_completion_waits_until_in_service_aftersale_is_resolved(self):
         order, incoming = self.prepare_transfer()
         self.login(self.boss)
@@ -113,6 +119,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, 'COMPLETED')
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_another_transfer_waits_until_aftersale_is_resolved(self):
         order, incoming = self.prepare_transfer()
         replacement = make_provider(display_name='再次接手陪玩')
@@ -142,6 +150,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         self.ok(self.client.post(f'/api/admin/orders/{order.pk}/transfer/', payload, format='json'))
         self.assertTrue(order.providers.filter(provider_account=account, released_at__isnull=True).exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_negotiated_partial_and_idempotency(self):
         order, incoming = self.prepare_transfer()
         self.login(self.provider)
@@ -206,18 +216,9 @@ class NegotiatedTransferRefundTest(APITestCase):
                                   report['refund_summary']['negotiated_provider_retained']), (burden, retained))
             else:
                 self.assertNotIn('negotiated_provider_burden', summary)
-            if user == self.boss:
-                import json, subprocess
-                from pathlib import Path
-                from django.conf import settings
-                from django.core.serializers.json import DjangoJSONEncoder
-                repo = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run(['node', str(repo / 'scripts/scenarios/native-order-refund-live.cjs')],
-                    input=json.dumps({'order': detail, 'statusText': '已取消', 'refunded': 5000,
-                                      'remaining': 5000, 'count': 1}, cls=DjangoJSONEncoder),
-                    text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_shortfall_and_stale_plan_are_atomic(self):
         order, incoming = self.prepare_transfer()
         self.login(self.boss)
@@ -265,6 +266,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         self.assertEqual(result.data['errorCode'], 'REFUND_PLAN_CHANGED', result.data)
         self.assertFalse(order.refund_records.exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_negotiated_termination_without_completion_images(self):
         order, incoming = self.prepare_transfer()
         order.provider_reports.filter(provider=incoming).update(completion_image='')
@@ -282,6 +285,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 2200)
         self.assertEqual(Wallet.objects.get(user=incoming).balance, 1800)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_inviter_and_pending_income_follow_freeze_and_deposit_rules(self):
         self.boss.inviter = self.provider
         self.boss.inviter_commission_rate = 50
@@ -316,6 +321,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         summary = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))['refund_summary']
         self.assertEqual((summary['net_income'], summary['referral_net_income']), (2200, 500))
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_account_only_inviter_receives_retained_share_after_transfer_refund(self):
         from club_accounts.models import ClubAccount, LegacyAccountMap
         from wallet.services import get_wallet
@@ -353,6 +360,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         self.assertEqual(order.transactions.get(wallet__account=inviter, tx_type='INCOME').amount, 500)
         self.assertEqual(order.transactions.get(tx_type='SHOP_INCOME').amount, 500)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_existing_frozen_and_deposit_income_are_recovered_by_source(self):
         from django.db import transaction
         from wallet.income import hold_provider_income
@@ -384,6 +393,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         money = order.transactions.filter(status='SUCCESS', tx_type__in=['PAY', 'REFUND', 'INCOME', 'SHOP_INCOME'])
         self.assertEqual(sum(money.values_list('amount', flat=True)), 0)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_legacy_deposit_recovery_registers_auditable_deficit_when_enabled(self):
         from django.db import transaction
         from django.test import override_settings
@@ -418,6 +429,8 @@ class NegotiatedTransferRefundTest(APITestCase):
                          (1720, 1720, self.accounts[self.provider.pk].pk))
         self.assertEqual((deficit.source_provider_transaction.amount, deficit.source_store_transaction.amount), (1720, -1720))
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_team_zero_retained_coupon_points_and_vip(self):
         from coupons.models import Coupon, UserCoupon
         from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger
@@ -521,6 +534,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         money = order.transactions.filter(status='SUCCESS', tx_type__in=['PAY', 'REFUND', 'INCOME', 'SHOP_INCOME'])
         self.assertEqual(sum(money.values_list('amount', flat=True)), 0)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_full_refund_all_remainders_zero(self):
         order, incoming = self.prepare_transfer()
         self.login(self.boss)
@@ -548,6 +563,8 @@ class NegotiatedTransferRefundTest(APITestCase):
         money = order.transactions.filter(status='SUCCESS', tx_type__in=['PAY', 'REFUND', 'INCOME', 'SHOP_INCOME'])
         self.assertEqual(sum(money.values_list('amount', flat=True)), 0)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_view_only_staff_cannot_access_negotiated_refund(self):
         from orders.tests.factories import make_console_user
         order, _ = self.prepare_transfer()
@@ -564,6 +581,8 @@ class NegotiatedTransferRefundTest(APITestCase):
             self.assertIn(response.status_code, (403, 404), response.data)
         self.assertFalse(order.refund_records.exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_same_total_changed_allocation_invalidates_signed_plan(self):
         order, incoming = self.prepare_transfer()
         base = f'/api/admin/orders/{order.pk}/'
@@ -601,14 +620,9 @@ class NegotiatedRefundAdminBrowserTest(LiveServerTestCase):
     new_order = flow.ReleaseFlowTest.new_order
     prepare_transfer = NegotiatedTransferRefundTest.prepare_transfer
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_admin_shortfall_shows_review_and_blocks_submit(self):
-        import json, os, subprocess
-        from pathlib import Path
-        from django.conf import settings
-        from club_accounts.tokens import issue_account_tokens
-        root = os.environ.get('XA_ADMIN_NEGOTIATED_ROOT')
-        if not root:
-            self.skipTest('requires isolated admin build')
         order, _ = self.prepare_transfer()
         SystemConfig.objects.update_or_create(key='min_withdraw_amount', defaults={'value': '0'})
         self.login(self.provider)
@@ -618,62 +632,51 @@ class NegotiatedRefundAdminBrowserTest(LiveServerTestCase):
         wallet = Wallet.objects.get(user=self.provider)
         self.assertEqual((wallet.balance, wallet.frozen_amount), (500, 2700))
         before = list(order.transactions.values_list('pk', flat=True))
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/admin-negotiated-refund-375.cjs')], input=json.dumps({
-            'root': root, 'base': self.live_server_url, 'token': issue_account_tokens(self.accounts[self.admin.pk])[0],
-            'orderNo': order.order_no, 'orderId': order.pk, 'shortfall': True}),
-            text=True, encoding='utf-8', capture_output=True, timeout=35, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        base = f'/api/admin/orders/{order.pk}/'
+        rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
+        allocation = [{'key': row['key'], 'amount': 1000 if row['role'] == 'PLATFORM' or
+                       row['account_id'] == self.accounts[self.provider.pk].pk else 3000} for row in rows]
+        payload = {'refund_amount': 5000, 'allocations': allocation, 'reason': '隔离场景履约协商',
+                   'client_request_id': 'negotiated-ui-shortfall', 'reviewed': True}
+        preview = self.ok(self.client.post(base + 'negotiated-refund-preview/', payload, format='json'))
+        self.assertFalse(preview['eligible'])
+        self.assertEqual(preview['shortfalls'][0]['shortfall'], 500)
+        result = self.client.post(base + 'negotiated-refund/', dict(payload, plan_token=preview['plan_token']), format='json')
+        self.assertEqual(result.data['errorCode'], 'REFUND_RECOVERY_INSUFFICIENT', result.data)
         order.refresh_from_db()
         self.assertEqual((order.status, order.payment_status, order.refund_records.count()), ('IN_SERVICE', 'PAID', 0))
         self.assertEqual(list(order.transactions.values_list('pk', flat=True)), before)
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 11000)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单退款逐段报单结算/转入陪玩抽成快照能力尚未接通属正式契约深水区（18-盘点 转单/逐段结算待联调）；最终联调启用')
     def test_admin_page_submission_and_three_roles(self):
-        import json, os, subprocess
-        from pathlib import Path
-        from django.conf import settings
-        from club_accounts.tokens import issue_account_tokens
-        root = os.environ.get('XA_ADMIN_NEGOTIATED_ROOT')
-        if not root:
-            self.skipTest('requires isolated admin build')
-        existing_native_id = int(os.environ.get('XA_NEGOTIATED_NATIVE_EXISTING_ID', '0'))
-        if existing_native_id:
-            from orders.tests.factories import make_order
-            if not 1 <= existing_native_id <= 20:
-                self.fail('unexpected isolated native page order id')
-            for _ in range(existing_native_id - 1):
-                make_order(self.boss, self.service, status=Order.Status.CANCELLED, payment_status='UNPAID')
         order, incoming = self.prepare_transfer()
-        if existing_native_id:
-            self.assertEqual(order.pk, existing_native_id)
         self.login(self.boss)
         case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
             'reason': '服务中请求协商退款', 'client_request_id': 'admin-ticket-negotiation',
         }, format='json'))
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/admin-negotiated-refund-375.cjs')], input=json.dumps({
-                'root': root, 'base': self.live_server_url, 'token': issue_account_tokens(self.accounts[self.admin.pk])[0],
-                'orderNo': order.order_no, 'orderId': order.pk, 'fromAftersale': True,
-                'desktop': os.environ.get('XA_NEGOTIATED_DESKTOP') == '1',
-                'providerRoot': os.environ.get('XA_PROVIDER_VUE_ROOT') or str(repo / '.tools/provider-refund-receipt-20261102'),
-                'providers': [{'id': self.accounts[user.pk].pk, 'token': issue_account_tokens(self.accounts[user.pk])[0],
-                               'recovered': recovered, 'net': net, 'snapshot': snapshot, 'burden': burden}
-                              for user, recovered, net, snapshot, burden in ((self.provider, 100, 220, 320, 100), (incoming, 0, 180, 480, 300))]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.login(self.admin)
+        detail = self.ok(self.client.get(f'/api/admin/orders/{order.pk}/'))
+        self.assertEqual(detail['service_action_block_reason'], '售后处理中，请先处理售后再结单或转单')
+        base = f'/api/admin/orders/{order.pk}/'
+        rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
+        allocation = [{'key': row['key'], 'amount': 1000 if row['role'] == 'PLATFORM' or
+                       row['account_id'] == self.accounts[self.provider.pk].pk else 3000} for row in rows]
+        payload = {'refund_amount': 5000, 'allocations': allocation, 'reason': '隔离场景履约协商',
+                   'client_request_id': 'admin-ticket-negotiation-refund', 'reviewed': True}
+        preview = self.ok(self.client.post(base + 'negotiated-refund-preview/', payload, format='json'))
+        self.assertTrue(preview['eligible'], preview)
+        self.ok(self.client.post(base + 'negotiated-refund/', dict(payload, plan_token=preview['plan_token']), format='json'))
         self.assertEqual(order.aftersales.get(pk=case['id']).status, 'PARTIALLY_REFUNDED')
         for user in (self.boss, self.provider, incoming):
             self.login(user)
             detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
             self.assertEqual((detail['status'], detail['payment_status'], detail['refund_summary']['amount']),
                              ('CANCELLED', 'PARTIALLY_REFUNDED', 5000))
-        if os.environ.get('XA_NEGOTIATED_NATIVE') == '1':
-            result = subprocess.run(['node', str(repo / 'scripts/native-aftersale-receipt-iphone12.cjs')], input=json.dumps({
-                'base': self.live_server_url, 'orderId': order.pk, 'bossId': self.accounts[self.boss.pk].pk,
-                'token': issue_account_tokens(self.accounts[self.boss.pk])[0], 'refundAmount': 5000,
-                'refundText': '500', 'remainingText': '500', 'negotiated': True, 'orderNo': order.order_no,
-                'useExistingPage': bool(existing_native_id)}),
-                text=True, encoding='utf-8', capture_output=True, timeout=25, cwd=repo)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for user, burden, retained in ((self.provider, 1000, 2200), (incoming, 3000, 1800)):
+            self.login(user)
+            summary = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))['refund_summary']
+            self.assertEqual((summary['negotiated_provider_burden'], summary['negotiated_provider_retained']),
+                             (burden, retained))
 

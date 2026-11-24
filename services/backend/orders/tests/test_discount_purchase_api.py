@@ -19,6 +19,8 @@ from wallet.services import get_wallet
                    SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_ORDINARY_FUNDING_TESTING=True,
                    ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True,
                    CELERY_TASK_ALWAYS_EAGER=False)
 class DiscountPurchaseApiTest(APITestCase):
     def setUp(self):
@@ -31,6 +33,8 @@ class DiscountPurchaseApiTest(APITestCase):
         PointFundingLot.objects.create(account=self.account, source_key='discount-payment-principal',
                                        kind='PREPAID', remaining=20000)
         config()
+        from console.grab_config import save_grab_window
+        save_grab_window(30, 0, lambda *_: None)
         self.coupon = Coupon.objects.create(name='优惠减300', discount_type='DIRECT', amount=3000)
         self.owned = UserCoupon.objects.create(account=self.account, coupon=self.coupon)
         self.promo = make_promotion(title='八五折活动', discount_rate=85)

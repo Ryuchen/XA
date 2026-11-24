@@ -6,11 +6,13 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.core.management import call_command
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.test import TestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.utils import timezone
 
 from club_accounts.services import get_or_create_account_for_legacy_user
+from engagement.models import PointFundingLot
+from engagement.services import allocate_order_points
 from orders.direct_payment import VerifiedPayment, confirm_verified_payment, prepare_direct_order
 from orders.direct_refund_models import DirectPaymentRefund
 from orders.models import Order
@@ -73,8 +75,9 @@ class DirectTimeoutTests(DirectTimeoutFixture, TestCase):
         self.assertFalse(DirectPaymentRefund.objects.filter(intent=self.intent).exists())
 
     def test_account_cycle_change_does_not_cancel_order(self):
-        self.intent.account.business_cycle += 1
-        self.intent.account.save(update_fields=['business_cycle'])
+        account = self.intent.account
+        type(account).objects.filter(pk=account.pk).update(business_cycle=account.business_cycle + 1)
+        account.refresh_from_db()
         with self.assertLogs('orders.timeout', level='ERROR') as logs:
             self.assertIsNone(reserve_expired_direct_refund(self.intent.order_id))
         self.assertIn('账号周期已变化', '\n'.join(logs.output))
@@ -103,6 +106,10 @@ class DirectTimeoutTests(DirectTimeoutFixture, TestCase):
         legacy_wallet = make_wallet(legacy_user, balance=10000)
         legacy = make_order(legacy_user, customer_account=legacy_account, payment_status='PAID',
                             auto_cancel_at=timezone.now()-timedelta(minutes=1))
+        PointFundingLot.objects.create(account=legacy_account, source_key=f'direct-timeout-legacy:{legacy.pk}',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=legacy.amount)
+        with transaction.atomic():
+            allocate_order_points(legacy, legacy_wallet, legacy_wallet.balance)
         # Force the failing direct order to be encountered before the legacy
         # order under Order's newest-first default ordering.
         Order.objects.filter(pk=self.intent.order_id).update(created_at=timezone.now()+timedelta(seconds=1))
@@ -124,6 +131,10 @@ class DirectTimeoutTests(DirectTimeoutFixture, TestCase):
         legacy_wallet = make_wallet(legacy_user, balance=10000)
         legacy = make_order(legacy_user, customer_account=legacy_account, payment_status='PAID',
                             auto_cancel_at=timezone.now()-timedelta(minutes=1))
+        PointFundingLot.objects.create(account=legacy_account, source_key=f'direct-timeout-legacy:{legacy.pk}',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=legacy.amount)
+        with transaction.atomic():
+            allocate_order_points(legacy, legacy_wallet, legacy_wallet.balance)
         Order.objects.filter(pk=self.intent.order_id).update(created_at=timezone.now()+timedelta(seconds=1))
         with self.assertLogs('orders.management.commands.check_order_timeout', level='ERROR') as logs, \
              patch('orders.management.commands.check_order_timeout.notify_order_update'):

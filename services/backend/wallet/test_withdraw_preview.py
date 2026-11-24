@@ -2,7 +2,7 @@
 
 背景
 ----
-前端此前在 ``provider-miniapp/src/pages/wallet/index.tsx`` 里自己算了一遍税::
+前端此前在 ``旧陪玩端钱包页`` 里自己算了一遍税::
 
     const withdrawAmount = Math.round(parsedWithdraw * 10);
     const withdrawTax = Math.round(withdrawAmount * taxRate / 100);
@@ -28,6 +28,8 @@
 """
 
 from rest_framework.test import APITestCase
+
+from uuid import uuid4
 
 from orders.tests.factories import make_provider, make_wallet
 from wallet.models import (
@@ -62,6 +64,7 @@ class WithdrawPreviewApiTest(APITestCase):
             'payee_name': '张三',
         }
         payload.update(overrides)
+        payload.setdefault('client_request_id', uuid4().hex)
         return self.client.post(URL, payload, format='json')
 
     def _quote(self, amount):

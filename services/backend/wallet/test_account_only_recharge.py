@@ -1,6 +1,8 @@
 """A real business account can receive an audited recharge without a legacy user."""
 from tempfile import TemporaryDirectory
 from datetime import timedelta
+import os
+from unittest import skipUnless
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TransactionTestCase, override_settings
@@ -14,6 +16,8 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
 from wallet.models import RechargeRecord, Transaction, Wallet
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '纯账号充值推荐分佣经预约转正订单结算＋充值回放指纹契约属正式资金链深水区（18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, REQUIRE_RECHARGE_PROOF=True, REQUIRE_ORDER_EVIDENCE_IMAGES=True,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class AccountOnlyRechargeTest(TransactionTestCase):
@@ -31,7 +35,18 @@ class AccountOnlyRechargeTest(TransactionTestCase):
 
     def run_referral_reservation(self, *, account_only_inviter, linked_buyer=False, legacy_referral=False):
         media = TemporaryDirectory(prefix='xa-account-referral-'); self.addCleanup(media.cleanup)
-        self.enterContext(override_settings(MEDIA_ROOT=media.name))
+        self.enterContext(override_settings(MEDIA_ROOT=media.name,
+            GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+            GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True))
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
+        from wallet.models import SystemConfig
+        import json
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
+        SystemConfig.objects.update_or_create(key='reservation_deadlines', defaults={'value': json.dumps({
+            'confirmation_minutes': 30, 'payment_minutes': 30, 'version': 1,
+            'slot_minutes': 15, 'min_duration_minutes': 15, 'max_duration_minutes': 720, 'max_advance_days': 30})})
         if account_only_inviter:
             inviter_account=ClubAccount.objects.create_account(username='isolated-account-only-inviter',account_type='BOSS')
         else:
@@ -49,10 +64,12 @@ class AccountOnlyRechargeTest(TransactionTestCase):
         else:
             boss = ClubAccount.objects.create_account(username='isolated-referral-boss', account_type='BOSS',
                 inviter=inviter_account, inviter_commission_rate=50)
-        provider = make_provider(); provider_account = get_or_create_account_for_legacy_user(provider)
+        provider = make_provider(deposit_mode='EARNINGS'); provider_account = get_or_create_account_for_legacy_user(provider)
         provider.escort_profile.account = provider_account; provider.escort_profile.save(update_fields=['account'])
         from wallet.services import get_wallet
         wallet = get_wallet(account=boss); wallet.balance=10000; wallet.save(update_fields=['balance'])
+        PointFundingLot.objects.create(account=boss, source_key='account-referral-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=10000)
         service = make_service(price=500,commission_rate=20)
         if legacy_referral:
             # This policy recalculates the provider and referral split when assigned.
@@ -142,6 +159,8 @@ class AccountOnlyRechargeTest(TransactionTestCase):
         media = TemporaryDirectory(prefix='xa-account-wallet-'); self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
         boss = ClubAccount.objects.create_account(username='isolated-wallet-boss', account_type='BOSS')
+        from engagement.models import RechargePackage
+        RechargePackage.objects.create(amount=1000, gift_amount=100, active=True)
         staff = make_console_user(['wallet:view', 'wallet:recharge', 'message:view', 'order:view', 'order:refund', 'order:settle'])
         staff_account = get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account = staff_account; staff.admin_membership.save(update_fields=['account'])

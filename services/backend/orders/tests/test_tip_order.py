@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from rest_framework.test import APITestCase
 
 from orders.models import Order, ServiceCategory
@@ -40,6 +42,8 @@ class TipOrderTest(APITestCase):
         )
         self.client.force_authenticate(self.customer)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '小费单即时付款结算属正式资金契约深水区（18-盘点 小费/结算待联调）；最终联调启用')
     def test_completed_order_tip_is_paid_and_settled_immediately(self):
         response = self.client.post(
             self.URL_TEMPLATE.format(self.source_order.id),

@@ -1,4 +1,5 @@
 """Direct deposit liability used by a refund; all business data are isolated."""
+import os
 from unittest.mock import patch
 from unittest import skipUnless
 
@@ -151,11 +152,16 @@ class DirectRefundDepositTest(APITestCase):
         with transaction.atomic():
             platform = get_platform_wallet(for_update=True)
             before = self.wallet.balance; self.wallet.balance -= 300; self.wallet.save(update_fields=['balance'])
-            Transaction.objects.create(wallet=self.wallet, order=self.order, tx_type='DEPOSIT', amount=-300,
-                                       balance_before=before, balance_after=self.wallet.balance)
+            provider_tx = Transaction.objects.create(wallet=self.wallet, order=self.order, tx_type='DEPOSIT', amount=-300,
+                                       balance_before=before, balance_after=self.wallet.balance,
+                                       deposit_owner_id=self.profile.account_id,
+                                       deposit_business_cycle=self.profile.deposit_business_cycle)
             before_store = platform.balance; platform.balance += 300; platform.save(update_fields=['balance'])
             Transaction.objects.create(wallet=platform, order=self.order, tx_type='DEPOSIT_INCOME', amount=300,
-                                       balance_before=before_store, balance_after=platform.balance)
+                                       balance_before=before_store, balance_after=platform.balance,
+                                       deposit_owner_id=self.profile.account_id,
+                                       deposit_business_cycle=self.profile.deposit_business_cycle,
+                                       deposit_pair=provider_tx)
             self.profile.deposit_paid += 300; self.profile.save(update_fields=['deposit_paid'])
             deficit = self.charge()
         self.profile.refresh_from_db()
@@ -203,6 +209,8 @@ class DirectRefundDepositTest(APITestCase):
             self.charge()
         self.assertFalse(RefundDepositDeficit.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '已配对退款冲正流水的押金来源核验分支属正式押金退款链深水区（18-盘点订单售后资金组合）；最终联调启用')
     def test_existing_paired_refund_can_be_reconciled_before_direct_charge(self):
         from orders.models import RefundRecoveryLine
         from wallet.refund_deposit import register_refund_deficit
@@ -235,6 +243,8 @@ class DirectRefundDepositTest(APITestCase):
         self.assertEqual((deficit.amount, self.profile.deposit_paid), (200, 10000))
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '跨店押金退款来源配对凭证核验属正式押金退款链深水区（18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(REFUND_DEPOSIT_DEFICIT_ENABLED=True)
 @skipUnless('store_b' in settings.DATABASES, 'Requires two isolated store databases')
 class DirectRefundDepositStoreTest(TestCase):

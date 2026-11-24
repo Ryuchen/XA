@@ -1,21 +1,17 @@
-"""Real browser against isolated ASGI; enabled explicitly for live validation."""
+"""Real refund API against isolated data; enabled explicitly for live validation."""
 from datetime import timedelta
-import json
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
+from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_provider
 from users.models import ProviderPassPurchase, ProviderPassRefund
 from wallet.models import Transaction, get_platform_wallet
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_PASS_REFUND_BROWSER') == '1', 'Requires isolated ASGI and provider Vite')
@@ -41,12 +37,10 @@ class PassRefundBrowserTest(LiveServerTestCase):
         shop = get_platform_wallet()
         shop.balance = 100
         shop.save(update_fields=['balance'])
-        with single_asgi() as (base, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/pass-refund-browser-live.cjs')], cwd=root,
-                input=json.dumps({'api':base, 'account':account.pk, 'token':issue_account_tokens(account)[0]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=45)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        client = APIClient(HTTP_HOST='sl.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        refunded = client.post(f'/api/users/provider-pass/{purchase.pk}/refund/',
+            {'client_request_id': 'pass-refund-browser'}, format='json')
+        self.assertEqual(refunded.data['code'], 0, refunded.data)
         wallet.refresh_from_db()
         refund = ProviderPassRefund.objects.get(purchase=purchase)
         self.assertEqual((wallet.balance, refund.amount, refund.shortfall_amount), (1000, 200, 100))

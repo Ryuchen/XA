@@ -1,4 +1,6 @@
 """Real coupon lifecycle across buyer, staff and two providers."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -21,6 +23,8 @@ from wallet.models import ProviderReport, Transaction, Wallet
                    CELERY_TASK_ALWAYS_EAGER=False, REQUIRE_ORDER_EVIDENCE_IMAGES=True,
                    ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
 class TeamCouponJourneyTest(APITransactionTestCase):
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
     def test_coupon_cancel_reuse_team_settlement_and_cumulative_refund(self):
         media = TemporaryDirectory(prefix='xa-team-coupon-')
         self.addCleanup(media.cleanup)

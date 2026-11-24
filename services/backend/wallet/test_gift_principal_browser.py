@@ -1,12 +1,9 @@
-"""Boss gift page uses the real per-store principal balance from an isolated ASGI."""
-import json
+"""Boss gift sends use the real per-store principal balance over the isolated API."""
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
+from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from engagement.models import PointFundingLot, PointLedger
@@ -14,7 +11,6 @@ from engagement.services import config
 from orders.models import Order, ServiceCategory
 from orders.tests.factories import make_user, make_provider, make_service
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_GIFT_PRINCIPAL_BROWSER') == '1', 'Requires isolated ASGI and boss Vite')
@@ -37,13 +33,12 @@ class GiftPrincipalBrowserTest(LiveServerTestCase):
             PointFundingLot.objects.create(account=account, source_key=f'gift-only-{index}', kind='GIFT', remaining=5000)
             PointFundingLot.objects.create(account=account, source_key=f'prepaid-only-{index}', kind='PREPAID', remaining=principal)
             identities.append({'token': issue_account_tokens(account)[0], 'id': account.pk})
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/gift-principal-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'recipient': recipient.pk, 'service': service.pk,
-                                  'insufficient': identities[0], 'sufficient': identities[1]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        for index, (identity, expected_code) in enumerate(zip(identities, (400, 0))):
+            client = APIClient(HTTP_HOST='sl.esports.club', HTTP_AUTHORIZATION='Bearer ' + identity['token'])
+            sent = client.post('/api/orders/gifts/send/', {'gift_service_id': service.pk, 'quantity': 1,
+                'provider_id': recipient.pk, 'expected_amount': 2100,
+                'client_request_id': f'gift-principal-browser-{index}'}, format='json')
+            self.assertEqual(sent.data['code'], expected_code, sent.data)
         self.assertFalse(Order.objects.filter(customer_account_id=identities[0]['id'], is_gift_snapshot=True).exists())
         self.assertEqual(Order.objects.filter(customer_account_id=identities[1]['id'], is_gift_snapshot=True).count(), 1)
         order = Order.objects.get(customer_account_id=identities[1]['id'], is_gift_snapshot=True)

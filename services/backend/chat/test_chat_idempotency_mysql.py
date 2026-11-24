@@ -25,7 +25,7 @@ class ChatIdempotencyMySQLTest(TransactionTestCase):
         link_legacy_relations(user, account)
         token, _ = issue_account_tokens(account)
         repo = Path(settings.BASE_DIR).parent.parent
-        image = (repo / 'apps/boss-miniapp/native/assets/icons/chat.png').read_bytes()
+        image = (repo / 'scripts/fixtures/chat.png').read_bytes()
 
         def send(kind):
             close_old_connections()

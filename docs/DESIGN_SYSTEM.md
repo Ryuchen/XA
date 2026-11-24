@@ -2,7 +2,7 @@
 
 更新：2026-11-11。适用于管理后台、陪玩端、老板端 Web/H5，以及新增页面、组件和设计评审。根入口为 [DESIGN.md](../DESIGN.md)，具体实现尺寸见 [前端基线](../fronted/DESIGN.md)。
 
-本标准整合用户已确认的设计与业务约定，并接入 [VoltAgent awesome-design-md 设计参考库](design/REFERENCE-LIBRARY.md)。文档描述规范要求；实施和验证状态以对应交付记录为准。
+本标准整合用户已确认的设计与业务约定，并接入 [VoltAgent awesome-design-md 设计参考库](history/design-20261117/REFERENCE-LIBRARY.md)。文档描述规范要求；实施和验证状态以对应交付记录为准。
 
 ## 1. 决策顺序与适用边界
 
@@ -10,7 +10,7 @@
 2. 在上述约束内执行本标准、前端基线及已确认原型。规则冲突须记录具体来源与最终取舍。
 3. 外部设计参考用于解决已识别的界面问题，选取具体模式后转成项目规则；版本与取舍记录在参考库。外部品牌分析不替代本项目规范。
 
-当前正式前端为 `fronted/` 下的 React + TypeScript + Tailwind CSS 4 + shadcn 三端网页。旧原生小程序、Vue、Element Plus、旧色卡及尺寸说明归档至 [2026-10-13 历史规范](history/DESIGN_SYSTEM-20261013.md)，仅供追溯。
+当前正式前端为 `fronted/` 下的 React + TypeScript + Tailwind CSS 4 + shadcn 三端网页。旧 Vue、Element Plus、旧色卡及尺寸说明归档至 [2026-10-13 历史规范](history/DESIGN_SYSTEM-20261013.md)，仅供追溯。（微信小程序相关内容已按用户 2026-11-17 决定删除）
 
 ## 2. 任务、角色与模块
 
@@ -100,7 +100,7 @@
 
 ## 8. SaaS 页面交互的十二项原则
 
-采用用户根据《设计师从顶级SaaS产品中借鉴的12种 UI 模式》提供的十二项要点。下表是本项目的实施口径，适用于三端设计和评审；具体页面按角色任务选用。[参考来源与取舍](design/REFERENCE-LIBRARY.md)
+采用用户根据《设计师从顶级SaaS产品中借鉴的12种 UI 模式》提供的十二项要点。下表是本项目的实施口径，适用于三端设计和评审；具体页面按角色任务选用。[参考来源与取舍](history/design-20261117/REFERENCE-LIBRARY.md)
 
 | 原则 | 页面验收时检查什么 |
 | --- | --- |
