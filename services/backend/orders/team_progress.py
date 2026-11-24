@@ -41,7 +41,8 @@ def prepare_team_progress(orders, *, for_display=False):
             for order in chunk:
                 if order.status != Order.Status.IN_SERVICE or order.is_gift_snapshot or order.source_order_id:
                     continue
-                if order.payment_status == Order.PaymentStatus.PAID and len(assignments[order.pk]) == 2:
+                if (order.payment_status == Order.PaymentStatus.PAID and len(assignments[order.pk]) == 2
+                        and order.room_required_snapshot is not True):
                     paid_orders.add(order.pk)
                 if order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED and len(assignments[order.pk]) == 1:
                     refunded_orders.add(order.pk)

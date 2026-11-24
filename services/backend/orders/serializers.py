@@ -892,7 +892,8 @@ class OrderSerializer(EntityNumberModelSerializer):
 
     def _formal_paid_points_transfer(self, obj):
         from .team_progress import formal_transfer_display_enabled
-        if not formal_transfer_display_enabled() or obj.source_order_id or obj.is_gift_snapshot:
+        if (not formal_transfer_display_enabled() or obj.source_order_id or obj.is_gift_snapshot
+                or obj.room_required_snapshot is True):
             return False
         if not hasattr(obj, '_provider_has_points_transfer'):
             from .segment_financial_capture import covered_transfers
@@ -910,13 +911,11 @@ class OrderSerializer(EntityNumberModelSerializer):
         if len(segments) != 1 or segments[0].attribution.status != 'ACTIVE' or not segments[0].started_at:
             return False
         if obj.escort_mode == Order.EscortMode.DOUBLE and obj.requires_boss_selection:
-            if obj.room_required_snapshot is True and not getattr(settings, 'ROOM_COMPLETION_REVIEW_ENABLED', False):
-                return False
             from .team_progress import team_progress
             progress = team_progress(obj, for_display=True)
             return bool(progress and any(member['id'] == request.account.pk for member in progress['members']))
         from .ownership import owns_order_party
-        return obj.room_required_snapshot is not True and owns_order_party(obj, request, 'provider')
+        return owns_order_party(obj, request, 'provider')
 
     def get_report_entry(self, obj):
         account = getattr(self.context.get('request'), 'account', None)
