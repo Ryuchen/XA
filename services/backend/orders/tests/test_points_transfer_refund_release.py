@@ -80,11 +80,21 @@ class PointsTransferRefundReleaseTests(SimpleTestCase):
             self.assertTrue(segment_reports.supports_detail(order))
             scoped.assert_called_once_with(order.pk, phase='report', read_only=True)
             supports.assert_called_once_with(locked)
+            self.assertEqual(segment_reports.detail_support(order), (True, True))
 
             scoped.side_effect = ValidationError('退款凭证待核对')
             supports.reset_mock()
-            self.assertFalse(segment_reports.supports_detail(order))
+            self.assertEqual(segment_reports.detail_support(order), (False, False))
             supports.assert_not_called()
+
+            order.payment_status = Order.PaymentStatus.PAID
+            scoped.reset_mock()
+            self.assertEqual(segment_reports.detail_support(order), (True, False))
+            scoped.assert_not_called()
+            self.assertEqual(segment_reports.detail_support(order, check_paid_transfer=True), (True, False))
+            scoped.assert_called_once_with(order.pk, phase='report', read_only=True)
+            scoped.side_effect = None
+            self.assertEqual(segment_reports.detail_support(order, check_paid_transfer=True), (True, True))
 
     def test_report_support_reuses_verified_refund_range(self):
         from orders import segment_reports

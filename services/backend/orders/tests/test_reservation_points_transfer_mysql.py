@@ -1402,6 +1402,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 'affected_provider_account_ids': [account.pk], 'affected_segment_ids': [segment]}, format='json')
             self.assertEqual(reopened.status_code, 400, reopened.data)
         self.assertEqual(order.refund_records.count(), 1)
+        self.assert_released_evidence_available(teammate, path, teammate_segment.pk)
         self.ok(teammate.post(path + 'participation-evidence/', {'segment_id': teammate_segment.pk,
             'completion_image': release_fixture.screenshot(), 'client_request_id': 'main-refund-released-segment'},
             format='multipart'))
@@ -1479,6 +1480,15 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 other = self.ok(client.get(detail_path))
                 self.assertNotIn('COMPLETE', other['allowed_actions'])
                 self.assertTrue(other['my_assignment_released'])
+
+    def assert_released_evidence_available(self, provider, detail_path, segment_id):
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(provider.get(detail_path))
+        segments = {row['id']: row for row in detail['my_participation_segments']}
+        self.assertTrue(segments[segment_id]['segment_report_available'])
+        self.assertTrue(segments[segment_id]['can_upload_completion'])
+        self.assertFalse(segments[segment_id]['completion_image_url'])
+        self.assertFalse(any(row['can_upload_completion'] for row in segments.values() if not row['released_at']))
 
     def fund_gift_addon_gap(self, funding_url, required):
         funding = self.ok(self.finance_client.get(funding_url))
@@ -2451,6 +2461,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             return original.post(path + 'participation-evidence/', {'segment_id': segment_id,
                 'completion_image': release_fixture.screenshot(), 'client_request_id': evidence_key}, format='multipart')
 
+        self.assert_released_evidence_available(original, path, change.previous_segment_id)
         self.ok(submit_evidence(change.previous_segment_id))
         original_segment = change.previous_segment
         completion_image = original_segment.completion_image.name

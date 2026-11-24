@@ -124,21 +124,32 @@ def supports(order):
 
 def supports_detail(order):
     """Check reporting on a single authorized order detail."""
+    supported, _ = detail_support(order)
+    return supported
+
+
+def detail_support(order, *, check_paid_transfer=False):
+    """Return report support and eligibility to upload released points segments."""
     from rest_framework.exceptions import ValidationError
     from .models import OrderOriginalShareTransfer
     from .points_business_access import formal_service_read_candidate
     from .points_transfer_refund_access import after_transfer, permits
 
-    if (order.payment_status not in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
-            or not enabled() or permits(order, phase='report')
+    if permits(order, phase='report'):
+        supported = supports(order)
+        return supported, supported
+    refunded = order.payment_status in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
+    if (not (refunded or (check_paid_transfer and order.payment_status == Order.PaymentStatus.PAID))
+            or not enabled()
             or not formal_service_read_candidate(order, phase='report')
             or not OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
-        return supports(order)
+        return supports(order), False
     try:
         with transaction.atomic(), after_transfer(order.pk, phase='report', read_only=True) as locked:
-            return supports(locked)
+            supported = supports(locked)
+            return supported, supported
     except ValidationError:
-        return False
+        return (False if refunded else supports(order)), False
 
 
 def _entry_enabled(order_id):

@@ -604,22 +604,28 @@ class OrderSerializer(EntityNumberModelSerializer):
         from common.private_media import private_media_url
         request = self.context.get('request')
         rows = self._my_participation(obj)
+        if not rows:
+            return []
         can_upload_completion = False
         account = getattr(request, 'account', None)
-        if account and any(row.started_at and row.released_at for row in rows):
+        released_to_report = any(row.started_at and row.released_at and row.attribution.status == 'ACTIVE' for row in rows)
+        if account and released_to_report:
             from wallet.models import ProviderReport
             from .services import report_edit_error
             report = ProviderReport.objects.filter(order=obj, provider_account=account).first()
             can_upload_completion = bool(report and not report_edit_error(report))
         from . import segment_reports
-        supports = segment_reports.supports_detail if self.context.get('verify_segment_report_detail') else segment_reports.supports
-        segment_reporting = bool(rows and supports(obj))
-        if segment_reporting:
+        if self.context.get('verify_segment_report_detail'):
+            segment_reporting, transfer_upload = segment_reports.detail_support(
+                obj, check_paid_transfer=released_to_report and not can_upload_completion)
+            can_upload_completion = can_upload_completion or transfer_upload
+        else:
+            segment_reporting = segment_reports.supports(obj)
+        if segment_reporting and not can_upload_completion:
             from .points_transfer_capture import enabled as points_transfer_enabled
             from .points_service_payment import needs_integrated_processing
             if points_transfer_enabled() and needs_integrated_processing(obj):
-                # The isolated transfer path records completion per segment;
-                # an unrelated legacy report must not hide that valid action.
+                # A transfer scope verifies completion per segment without a legacy report.
                 can_upload_completion = True
         reports = {row.pk: segment_reports.report_data(row, request) for row in rows} if segment_reporting else {}
         from .participation_entry import negotiated_current_completion_allowed
