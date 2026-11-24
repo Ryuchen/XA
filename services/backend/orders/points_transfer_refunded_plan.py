@@ -36,18 +36,12 @@ def _build_refunded_plan(order, *, now=None, allow_in_service=False):
             or (order.status == Order.Status.COMPLETED and not order.completed_at)
             or order.service_aftersale_hours is None or order.service_freeze_hours is None):
         raise SettlementError('转单退款后的结算条件尚未满足')
-    from .points_transfer_refund_continuation import verify_locked
     from .points_transfer_refund_evidence import reconstruct_funding_locked
     from .points_transfer_refunded_funding import plan_refunded_transfer
     try:
-        posting = verify_locked(order)
-        funding = plan_refunded_transfer(order.pk, allow_finalized=True)
-        from .models import PointsPostRefundTransferRevision
-        version = PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first()
+        funding, posting, version, later = plan_refunded_transfer(order.pk, allow_finalized=True, include_basis=True)
         if version:
-            from .points_post_refund_transfer import verify_locked as verify_version
             from .points_transfer_refund_evidence import _reconstruct_from_verified_facts
-            verify_version(version)
             facts = version.snapshot['facts']
             history = _reconstruct_from_verified_facts(order.pk, facts,
                 refund_id=posting.points_refund.refund_id, through_transfer_id=version.transfer_id)
@@ -60,30 +54,10 @@ def _build_refunded_plan(order, *, now=None, allow_in_service=False):
     plan_funding = funding
     addon_history = (version.snapshot.get('addon_history') if version else
                      getattr(getattr(posting, 'funding_release_evidence', None), 'addon_funding_snapshot', None))
-    if version:
-        from .points_transfer_addon_events import later_runs
-        try:
-            later = [row for row in later_runs(order, posting) if row.created_at > version.created_at]
-        except ValidationError as exc:
-            raise SettlementError('转单后加购资金版本待核对') from exc
-        if later:
-            snapshot = later[-1].refunded_main_snapshot
-            if (not isinstance(snapshot, dict) or snapshot.get('transfer_revision_id') != version.pk
-                    or not isinstance(snapshot.get('addon_history'), list)):
-                raise SettlementError('转单后加购资金版本待核对')
-            addon_history = snapshot['addon_history']
-    else:
-        from .points_transfer_addon_events import later_runs
-        try:
-            later = later_runs(order, posting)
-        except ValidationError as exc:
-            raise SettlementError('主单退款后的加购资金版本待核对') from exc
-        if later:
-            snapshot = later[-1].refunded_main_snapshot
-            if (not isinstance(snapshot, dict) or snapshot.get('transfer_origin_posting_id') != posting.pk
-                    or not isinstance(snapshot.get('addon_history'), list)):
-                raise SettlementError('主单退款后的加购来源待核对')
-            addon_history = snapshot['addon_history']
+    if later:
+        addon_history = later[-1].refunded_main_snapshot.get('addon_history')
+        if not isinstance(addon_history, list):
+            raise SettlementError('退款后的加购资金版本缺少加购明细')
     if addon_history:
         from dataclasses import replace
         addon_income = sum(item['provider_units'] for item in addon_history)

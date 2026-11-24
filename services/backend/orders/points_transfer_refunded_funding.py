@@ -7,17 +7,17 @@ from .models import Order
 from .points_funding_plan import PointsFundingPlanError
 
 
-def plan_refunded_transfer(order_id, *, allow_finalized=False):
-    """Return actual post-refund funding needs; this neither allocates nor pays."""
+def plan_refunded_transfer(order_id, *, allow_finalized=False, include_basis=False):
+    """Return verified funding and optionally its posting, transfer version and later events."""
     from .points_transfer_refund_access import permits, verification_scope
     order = Order.objects.filter(pk=order_id).first()
     if order and any(permits(order, phase=phase) for phase in ('report', 'settlement')):
         with verification_scope(order):
-            return _plan_refunded_transfer(order_id, allow_finalized=allow_finalized)
-    return _plan_refunded_transfer(order_id, allow_finalized=allow_finalized)
+            return _plan_refunded_transfer(order_id, allow_finalized=allow_finalized, include_basis=include_basis)
+    return _plan_refunded_transfer(order_id, allow_finalized=allow_finalized, include_basis=include_basis)
 
 
-def _plan_refunded_transfer(order_id, *, allow_finalized=False):
+def _plan_refunded_transfer(order_id, *, allow_finalized=False, include_basis=False):
     from .points_transfer_refund_access import permits, require_refund_or_isolated
     try:
         require_refund_or_isolated()
@@ -39,24 +39,26 @@ def _plan_refunded_transfer(order_id, *, allow_finalized=False):
                 order=order, finalized_at=order.settled_at).exists():
             raise PointsFundingPlanError('转单退款后的结算凭证待核对')
     from .points_transfer_refund_continuation import verify_locked
+    from .points_transfer_addon_events import later_runs
+    from .points_negotiation_preview import RefundedFunding
     try:
         from .models import PointsPostRefundTransferRevision
         versions = list(PointsPostRefundTransferRevision.objects.filter(order=order).order_by('pk'))
         latest = versions[-1] if versions else None
         if latest:
+            posting = verify_locked(order) if include_basis else None
             from .points_post_refund_transfer import verify_locked as verify_version, unresolved_pending_locked
-            from .points_negotiation_preview import RefundedFunding
             for version in versions:
                 verify_version(version)
                 pending = unresolved_pending_locked(version)
                 from .points_transfer_addon_liability import first_refund_pending_allowed
                 if pending and not all(first_refund_pending_allowed(order, item[0]) for item in pending):
                     raise ValidationError('转单后加购尚待三方确认接替')
-            from .models import PointsNegotiationPosting
-            posting = PointsNegotiationPosting.objects.filter(points_refund__redemption__order=order).first()
             if not posting:
-                raise ValidationError('转单退款凭证缺失')
-            from .points_transfer_addon_events import later_runs
+                from .models import PointsNegotiationPosting
+                posting = PointsNegotiationPosting.objects.filter(points_refund__redemption__order=order).first()
+                if not posting:
+                    raise ValidationError('转单退款凭证缺失')
             later = later_runs(order, posting)
             for event in later:
                 when = (event.payment.buyer_transaction.created_at if event.payment_id else
@@ -87,23 +89,21 @@ def _plan_refunded_transfer(order_id, *, allow_finalized=False):
                             and row.refunded_main_snapshot.get('posting_id') == posting.pk))
                     for row in before):
                 raise ValidationError('转单前加购资金版本待核对')
-            if after:
-                if any(not isinstance(row.refunded_main_snapshot, dict)
-                        or row.refunded_main_snapshot.get('transfer_revision_id') != latest.pk for row in after):
-                    raise ValidationError('转单后的加购资金版本待核对')
-                return RefundedFunding(**after[-1].refunded_main_snapshot['funding'])
-            return RefundedFunding(**latest.snapshot['funding'])
-        posting, _, initial = verify_locked(order, include_release=True)
-        from .points_transfer_addon_events import later_runs
-        later = later_runs(order, posting)
-        if later:
-            from .points_negotiation_preview import RefundedFunding
+            if any(not isinstance(row.refunded_main_snapshot, dict)
+                   or row.refunded_main_snapshot.get('transfer_revision_id') != latest.pk for row in after):
+                raise ValidationError('转单后的加购资金版本待核对')
+            snapshot = after[-1].refunded_main_snapshot if after else latest.snapshot
+            funding = RefundedFunding(**snapshot['funding'])
+            later = after
+        else:
+            posting, _, initial = verify_locked(order, include_release=True)
+            later = later_runs(order, posting)
             if any(not isinstance(row.refunded_main_snapshot, dict)
                    or row.refunded_main_snapshot.get('transfer_origin_posting_id') != posting.pk
                    or row.refunded_main_snapshot.get('transfer_revision_id')
                    or row.created_at <= posting.created_at for row in later):
                 raise ValidationError('主单退款后的加购资金来源待核对')
-            return RefundedFunding(**later[-1].refunded_main_snapshot['funding'])
-        return initial
+            funding = RefundedFunding(**later[-1].refunded_main_snapshot['funding']) if later else initial
+        return (funding, posting, latest, later) if include_basis else funding
     except ValidationError as exc:
         raise PointsFundingPlanError('转单退款后的协商或补资凭证待核对') from exc

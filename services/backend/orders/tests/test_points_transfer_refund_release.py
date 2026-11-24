@@ -29,13 +29,38 @@ class PointsTransferRefundReleaseTests(SimpleTestCase):
               patch('orders.models.PointsPostRefundTransferRevision.objects.filter') as versions,
               patch('orders.points_transfer_refund_continuation.verify_locked') as closure,
               patch.object(OrderPointsFundingReleaseEvidence.objects, 'filter') as releases,
-              patch('orders.points_transfer_addon_events.later_runs', return_value=[])):
+              patch('orders.points_transfer_addon_events.later_runs', return_value=[]) as later_runs):
             versions.return_value.order_by.return_value = []
             closure.side_effect = lambda _order, *, include_release=False: (
                 (posting, object(), calculation) if include_release else posting)
             releases.side_effect = AssertionError('结案已经核对过首退到账释放')
             self.assertIs(refunded_funding._plan_refunded_transfer(order.pk), calculation)
             closure.assert_called_once_with(order, include_release=True)
+            closure.reset_mock()
+            self.assertEqual(refunded_funding._plan_refunded_transfer(order.pk, include_basis=True),
+                             (calculation, posting, None, []))
+            closure.assert_called_once_with(order, include_release=True)
+
+            # Older postings can have list participants if the refund preceded the first transfer.
+            posting.participants = []
+            expected = funding_after_refund(principal_units=280, gift_units=0, compensation_units=0,
+                returned_prepaid_units=120, returned_gift_units=0, returned_compensation_units=0,
+                provider_income_units=160, pending_deduction_units=0, provider_external_units=0,
+                inviter_rate=0, allocated_units=0)
+            version = SimpleNamespace(pk=9, created_at=2)
+            event = SimpleNamespace(payment_id=1, payment=SimpleNamespace(buyer_transaction=SimpleNamespace(created_at=3)),
+                created_at=4, refunded_main_snapshot={'transfer_revision_id': version.pk, 'funding': asdict(expected)})
+            versions.return_value.order_by.return_value = [version]
+            later_runs.return_value = [event]
+            later_runs.reset_mock()
+            closure.reset_mock()
+            with (patch('orders.points_post_refund_transfer.verify_locked') as verify_version,
+                  patch('orders.points_post_refund_transfer.unresolved_pending_locked', return_value=[])):
+                self.assertEqual(refunded_funding._plan_refunded_transfer(order.pk, include_basis=True),
+                                 (expected, posting, version, [event]))
+            closure.assert_called_once_with(order)
+            verify_version.assert_called_once_with(version)
+            later_runs.assert_called_once_with(order, posting)
 
     def test_refunded_points_report_detail_uses_read_only_scope(self):
         from contextlib import nullcontext
