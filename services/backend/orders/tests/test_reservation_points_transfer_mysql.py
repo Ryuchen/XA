@@ -2476,6 +2476,31 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} room={self.room_id} order={self.order_id} addon={payment.pk} '
               f'segment={change.next_segment_id} wallet_tx={payment.buyer_transaction_id} addon_income_pending=700', flush=True)
 
+        first_report = self.approve_report(self.original, change.previous_segment_id)
+        with patch('django.utils.timezone.now', return_value=first_report.submitted_at + timedelta(minutes=15)):
+            second_report = self.approve_report(self.replacement, change.next_segment_id)
+        order = Order.objects.get(pk=self.order_id)
+        freeze = timedelta(hours=order.service_freeze_hours)
+        income = order.transactions.filter(tx_type=Transaction.TxType.INCOME)
+        with patch('django.utils.timezone.now', return_value=first_report.submitted_at + freeze):
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        self.assertEqual(list(income.values_list('wallet__account_id', 'amount')), [(self.original.pk, 3200)])
+        self.assertFalse(payment.segment_settlements.exists())
+        with patch('django.utils.timezone.now', return_value=second_report.submitted_at + freeze):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        order.refresh_from_db()
+        addon_income = payment.segment_settlements.select_related('income_transaction').get()
+        self.assertEqual((addon_income.segment_id, addon_income.amount, addon_income.income_transaction.wallet.account_id),
+                         (change.next_segment_id, 700, self.replacement.pk))
+        self.assertCountEqual(income.values_list('wallet__account_id', 'amount'),
+                              [(self.original.pk, 3200), (self.replacement.pk, 4200), (self.replacement.pk, 700)])
+        self.assertEqual((order.settlement_store_funding, order.settlement_addon_contribution), (1100, 300))
+        self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 6000)
+        self.assertEqual((payment.consumption.paid_units, payment.consumption.refunded_units), (1000, 0))
+        print(f'{self.store.slug} room={self.room_id} order={order.pk}: addon_income_tx={addon_income.income_transaction_id} '
+              f'provider_income=3200+4200+700 funding={order.settlement_store_funding}', flush=True)
+
     def transfer_and_enter_room(self):
         share = (2000, 3000) if self.teammate else (4000, 6000)
         self.ok(self.transfer(self.api(self.staff), share=share))
