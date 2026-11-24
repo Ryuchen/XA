@@ -175,14 +175,14 @@ def _points_handover_scope(method):
                     replay = handover_id and OrderAddonHandover.objects.filter(pk=handover_id, payment_id=payment_id,
                         payment__intent__order=order, kind='STANDARD', status='ACCEPTED',
                         decisions__account=request.account, decisions__accepted=True).exists()
-                    if creation and order.status == Order.Status.COMPLETED and isinstance(request.data, Mapping):
+                    if creation and isinstance(request.data, Mapping):
                         request_id = request.data.get('request_id')
                         if isinstance(request_id, str):
-                            if 'order:dispatch' not in get_account_permissions(request.account):
-                                return Response({'code': 403, 'msg': '无权安排加购负责人'}, status=403)
                             replay = OrderAddonHandover.objects.filter(payment_id=payment_id,
                                 payment__intent__order=order, request_id=request_id.strip(),
                                 kind='STANDARD', status='ACCEPTED').exists()
+                            if replay and 'order:dispatch' not in get_account_permissions(request.account):
+                                return Response({'code': 403, 'msg': '无权安排加购负责人'}, status=403)
                     if replay:
                         request._points_transferred_handover_replay = True
                         scope = after_transfer(order.pk, phase='report', pending_payment_id=payment_id, read_only=True)

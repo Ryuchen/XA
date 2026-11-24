@@ -2783,6 +2783,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((handover.funding_release_run.required_amount, handover.funding_release_run.released_amount),
                          (1140, 60))
         order = Order.objects.get(pk=self.order_id)
+        self.assertEqual(self.ok(staff.post(handover_url, payload, format='json'))['id'], handover.pk)
         self.assertEqual(self.ok(boss.post(confirm, key, format='json'))['confirmation']['status'], 'CONFIRMED')
         order.refresh_from_db()
         self.assertEqual((order.status, order.room.pk, order.settled_at), (Order.Status.COMPLETED, self.room_id, None))
