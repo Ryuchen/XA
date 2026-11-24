@@ -105,7 +105,7 @@ export function RoomCompletionPanel({ orderId, status, onSaved }: {
     {snapshot?.room.role === "FORMER_PROVIDER" && <p className="text-xs text-muted-foreground">你已转出本单，房间结单由当前陪玩处理。</p>}
     {snapshot?.room.has_open_objection && <Notice>房间异议尚未处理，请联系订单客服。</Notice>}
     {snapshot?.requests && <>
-      {snapshot.requests.list.length === 0 && <p className="text-xs text-muted-foreground">暂无结单申请。</p>}
+      {!load.loading && !load.error && snapshot.requests.list.length === 0 && <p className="text-xs text-muted-foreground">暂无结单申请。</p>}
       {snapshot.requests.list.map(row => <article key={row.id} className="space-y-2 rounded-[8px] border p-3 text-xs">
         <p className="font-medium">申请 {row.id} · {requestStatus[row.status] || row.status}</p>
         <p className="whitespace-pre-wrap break-words">{row.description}</p>
