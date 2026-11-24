@@ -870,6 +870,10 @@ class OrderSerializer(EntityNumberModelSerializer):
     def _points_fulfillment_available(self, obj, request):
         if not self._has_points_evidence(obj):
             return True
+        if obj.room_required_snapshot is True and obj.payment_status == Order.PaymentStatus.PAID:
+            from .team_progress import formal_transfer_display_enabled
+            if formal_transfer_display_enabled():
+                return self._paid_points_room_fulfillment_available(obj, request)
         if (obj.status == Order.Status.IN_SERVICE and obj.payment_status == Order.PaymentStatus.PAID
                 and self._formal_paid_points_transfer(obj)):
             return self._paid_transfer_completion_available(obj, request)
@@ -901,14 +905,38 @@ class OrderSerializer(EntityNumberModelSerializer):
                 previous_segment__attribution__financial_coverage__source='WALLET_POINTS').exists()
         return obj._provider_has_points_transfer
 
-    def _paid_transfer_completion_available(self, obj, request):
+    def _current_points_participation(self, obj, request):
         assignment = self._requester_assignment(obj)
         user = request.legacy_user
         if (not user or not assignment or assignment.released_at or assignment.provider_id != user.pk
                 or assignment.provider_account_id != request.account.pk):
-            return False
+            return None
         segments = [row for row in self._my_participation(obj) if row.released_at is None]
-        if len(segments) != 1 or segments[0].attribution.status != 'ACTIVE' or not segments[0].started_at:
+        if len(segments) == 1 and segments[0].attribution.status == 'ACTIVE':
+            return segments[0]
+        return None
+
+    def _paid_points_room_fulfillment_available(self, obj, request):
+        from .points_service_payment import MARKER
+        if not isinstance(obj.funding_terms, dict) or MARKER not in obj.funding_terms:
+            return False
+        segment = self._current_points_participation(obj, request)
+        if not segment:
+            return False
+        if obj.status == Order.Status.GRABBED:
+            return segment.started_at is None
+        if not settings.ROOM_COMPLETION_REVIEW_ENABLED or segment.started_at is None:
+            return False
+        if obj.escort_mode == Order.EscortMode.DOUBLE and obj.requires_boss_selection:
+            from .team_progress import team_progress
+            progress = team_progress(obj, for_display=True)
+            return bool(progress and any(member['id'] == request.account.pk and not member['submitted']
+                                         for member in progress['members']))
+        return not segment.completion_image
+
+    def _paid_transfer_completion_available(self, obj, request):
+        segment = self._current_points_participation(obj, request)
+        if not segment or segment.started_at is None:
             return False
         if obj.escort_mode == Order.EscortMode.DOUBLE and obj.requires_boss_selection:
             from .team_progress import team_progress
