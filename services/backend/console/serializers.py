@@ -517,7 +517,7 @@ class AdminOrderSerializer(EntityNumberModelSerializer):
         if not row:
             return None
         from common.private_media import private_media_url
-        from orders.segment_reports import supports as segment_reports_support, report_data as segment_report_data
+        from orders.segment_reports import supports_detail as segment_reports_support, report_data as segment_report_data
         request = self.context.get('request')
         from console.permissions import get_account_permissions, is_console_account
         account = getattr(request, 'account', None)

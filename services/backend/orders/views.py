@@ -555,7 +555,7 @@ class OrderDetailView(APIView):
             'customer', 'customer__boss_type', 'provider', 'service', 'source_order',
             'service__service_category', 'support_contact',
         ).prefetch_related('evaluations').filter(pk=order_id).first()
-        context = {'request': request, 'validate_application_readiness': True}
+        context = {'request': request, 'validate_application_readiness': True, 'verify_segment_report_detail': True}
         if order is None and account.account_type == ClubAccount.AccountType.PROVIDER:
             # Deep links must show exactly the same public facts as the pool;
             # never turn knowledge of an ID into access to an invisible order.

@@ -1306,13 +1306,7 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
                     yield order
                     return
                 from .points_transfer_refund_continuation import verify_locked
-                from .points_transfer_refund_release import verify_release_locked
-                from .models import OrderPointsFundingReleaseEvidence
-                posting = verify_locked(order)
-                evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
-                if not evidence:
-                    raise ValidationError('积分转单退款释放凭证缺失')
-                verify_release_locked(evidence)
+                verify_locked(order, include_release=True)
         yield order
 
 

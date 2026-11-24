@@ -611,8 +611,9 @@ class OrderSerializer(EntityNumberModelSerializer):
             from .services import report_edit_error
             report = ProviderReport.objects.filter(order=obj, provider_account=account).first()
             can_upload_completion = bool(report and not report_edit_error(report))
-        from .segment_reports import supports as segment_reports_support, report_data as segment_report_data
-        segment_reporting = bool(rows and segment_reports_support(obj))
+        from . import segment_reports
+        supports = segment_reports.supports_detail if self.context.get('verify_segment_report_detail') else segment_reports.supports
+        segment_reporting = bool(rows and supports(obj))
         if segment_reporting:
             from .points_transfer_capture import enabled as points_transfer_enabled
             from .points_service_payment import needs_integrated_processing
@@ -620,20 +621,20 @@ class OrderSerializer(EntityNumberModelSerializer):
                 # The isolated transfer path records completion per segment;
                 # an unrelated legacy report must not hide that valid action.
                 can_upload_completion = True
-        segment_reports = {row.pk: segment_report_data(row, request) for row in rows} if segment_reporting else {}
+        reports = {row.pk: segment_reports.report_data(row, request) for row in rows} if segment_reporting else {}
         from .participation_entry import negotiated_current_completion_allowed
         negotiated_current = {row.pk for row in rows if not row.released_at and negotiated_current_completion_allowed(obj, row)}
         return [{'id': row.pk, 'accepted_at': row.accepted_at, 'started_at': row.started_at,
                  'released_at': row.released_at, 'is_service_transfer': row.is_service_transfer,
                  'entry_image_url': private_media_url(request, row.entry_image) if row.entry_image else '',
                  'completion_image_url': private_media_url(request, row.completion_image) if row.completion_image else '',
-                 'can_upload_completion': bool((segment_reports[row.pk]['status'] in ('DRAFT','REJECTED')
-                                               if segment_reports.get(row.pk) else (can_upload_completion or row.pk in negotiated_current))
+                 'can_upload_completion': bool((reports[row.pk]['status'] in ('DRAFT','REJECTED')
+                                               if reports.get(row.pk) else (can_upload_completion or row.pk in negotiated_current))
                                                and row.started_at and (row.released_at or row.pk in negotiated_current)
                                                and row.attribution.status == 'ACTIVE'),
                  'segment_report_available': bool(segment_reporting and row.started_at and row.attribution.status == 'ACTIVE'
                                                   and (not row.released_at or row.original_share > 0)),
-                 'segment_report': segment_reports.get(row.pk)}
+                 'segment_report': reports.get(row.pk)}
                 for row in rows]
 
     def get_quantity_unit(self, obj):

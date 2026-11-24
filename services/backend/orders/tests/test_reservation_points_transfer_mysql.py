@@ -1407,10 +1407,16 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             format='multipart'))
         self.ok(original.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'main-refund-unaffected-seat-complete'}, format='multipart'))
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(original.get(path))
+        self.assertCountEqual(
+            [(row['id'], row['segment_report_available']) for row in detail['my_participation_segments']],
+            [(transfer_out.previous_segment_id, True), (transfer_back.next_segment_id, True)])
         reporting = [(self.original, transfer_out.previous_segment_id),
                      (self.replacement, transfer_back.previous_segment_id),
                      (self.original, transfer_back.next_segment_id), (self.teammate, teammate_segment.pk)]
-        reports = [self.approve_report(account, segment) for account, segment in reporting]
+        reports = [self.approve_report(account, segment, verify_detail=index == 0)
+                   for index, (account, segment) in enumerate(reporting)]
         due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
         with patch('django.utils.timezone.now', return_value=due):
             funding = self.ok(self.finance_client.get(funding_url))
@@ -2347,7 +2353,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_funded_points_reservation_pays_each_provider_at_their_own_deadline(self):
         self.run_in_stores(self.exercise_settlement_after_transfer)
 
-    def approve_report(self, account, segment_id):
+    def approve_report(self, account, segment_id, *, verify_detail=False):
         report_url = f'/api/orders/orders/{self.order_id}/segment-report/'
         provider = self.api(account)
         staff = self.api(self.staff)
@@ -2358,9 +2364,19 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         ):
             self.ok(provider.post(report_url, {'segment_id': segment_id, 'action': action,
                 'client_request_id': str(uuid4()), **payload}, format=request_format))
+        if verify_detail:
+            with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+                detail = self.ok(staff.get(f'/api/admin/orders/{self.order_id}/'))
+            segment = next(row for row in detail['original_attribution']['segments'] if row['id'] == segment_id)
+            self.assertEqual(segment['segment_report']['status'], 'PENDING')
         self.ok(staff.post(f'/api/admin/orders/{self.order_id}/segments/{segment_id}/report-review/',
             {'action': 'approve', 'version': 1}, format='json'))
         return OrderSegmentReportSubmission.objects.get(report__segment_id=segment_id, version=1)
+
+    def reject_detail_writes(self, execute, sql, params, many, context):
+        verb = sql.lstrip().split(maxsplit=1)[0].upper()
+        self.assertNotIn(verb, ('INSERT', 'UPDATE', 'DELETE', 'REPLACE'), '详情读取不得写入本店记录')
+        return execute(sql, params, many, context)
 
     def assert_preview(self, order, change, first_due, second_due):
         detail_url = f'/api/admin/orders/{order.pk}/'
@@ -2368,18 +2384,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(self.api(self.original).get(url).status_code, 403)
         alias = self.store.database_alias
 
-        def reject_writes(execute, sql, params, many, context):
-            verb = sql.lstrip().split(maxsplit=1)[0].upper()
-            self.assertNotIn(verb, ('INSERT', 'UPDATE', 'DELETE', 'REPLACE'), '预览禁止写入本店记录')
-            return execute(sql, params, many, context)
-
         with patch('django.utils.timezone.now', return_value=first_due - timedelta(seconds=1)):
             staff = self.api(self.staff)
-            with connections[alias].execute_wrapper(reject_writes):
+            with connections[alias].execute_wrapper(self.reject_detail_writes):
                 preview = self.ok(staff.get(url))
             with override_settings(ORDINARY_SERVICE_FUNDING_ENABLED=True, ORDINARY_TRANSFER_REFUND_MYSQL_ENABLED=True,
                                    NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True):
-                with connections[alias].execute_wrapper(reject_writes):
+                with connections[alias].execute_wrapper(self.reject_detail_writes):
                     self.assertEqual(preview, self.ok(staff.get(url)))
                 detail = self.ok(staff.get(detail_url))
                 segments = detail['original_attribution']['segments']
@@ -2399,7 +2410,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
         with transaction.atomic(using=alias):
             OrderFinancialLock.objects.filter(pk=1).update(id=2)
-            with connections[alias].execute_wrapper(reject_writes):
+            with connections[alias].execute_wrapper(self.reject_detail_writes):
                 unavailable = self.api(self.staff).get(url)
             self.assertEqual(unavailable.status_code, 409, unavailable.data)
             self.assertIn('订单资金互斥记录缺失', unavailable.data['msg'])

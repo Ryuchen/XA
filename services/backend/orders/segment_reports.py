@@ -91,35 +91,27 @@ def supports(order):
         except (ValidationError, Order.DoesNotExist):
             return False
     from .points_transfer_refund_access import permits as transfer_permits
+    verified_transfer = transfer_permits(order, phase='report')
     if (enabled() and order.payment_status in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
-            and (transfer_permits(order, phase='report')
-                 or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_REPORT_TESTING', False))):
+            and (verified_transfer or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_REPORT_TESTING', False))):
+        if verified_transfer:
+            # after_transfer already verified the closure under this order's locks.
+            return 1 <= order.refund_records.count() <= 2
         from rest_framework.exceptions import ValidationError
         from .points_transfer_refund_continuation import verify_locked
         try:
             with transaction.atomic():
                 locked = Order.objects.select_for_update().get(pk=order.pk)
                 if locked.refund_records.count() == 2:
-                    if transfer_permits(locked, phase='report'):
-                        from .models import PointsNegotiationPosting
-                        from .points_transfer_refund_access import verification_scope
-                        from .points_transfer_followup_termination import verify_closed_or_settled_locked
-                        posting = PointsNegotiationPosting.objects.filter(
-                            points_refund__redemption__order=locked).order_by('points_refund__refund_id').last()
-                        if not posting:
-                            return False
-                        with verification_scope(locked):
-                            verify_closed_or_settled_locked(posting)
-                    else:
-                        if not getattr(settings, 'SERVICE_POINTS_TRANSFER_FOLLOWUP_SETTLEMENT_TESTING', False):
-                            return False
-                        from .models import OrderPointsTransferFollowupFundingRevision
-                        from .points_transfer_followup_revision import _verify_followup_revision_facts_locked
-                        revision = OrderPointsTransferFollowupFundingRevision.objects.filter(
-                            posting__points_refund__redemption__order=locked).first()
-                        if not revision:
-                            return False
-                        _verify_followup_revision_facts_locked(revision)
+                    if not getattr(settings, 'SERVICE_POINTS_TRANSFER_FOLLOWUP_SETTLEMENT_TESTING', False):
+                        return False
+                    from .models import OrderPointsTransferFollowupFundingRevision
+                    from .points_transfer_followup_revision import _verify_followup_revision_facts_locked
+                    revision = OrderPointsTransferFollowupFundingRevision.objects.filter(
+                        posting__points_refund__redemption__order=locked).first()
+                    if not revision:
+                        return False
+                    _verify_followup_revision_facts_locked(revision)
                 else:
                     verify_locked(locked)
             return True
@@ -128,6 +120,25 @@ def supports(order):
     from .principal_segments import enabled_for_order
     return bool((enabled() or enabled_for_order(order)) and order.status in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
                 and order.payment_status == Order.PaymentStatus.PAID and transfer_income_pending(order))
+
+
+def supports_detail(order):
+    """Check reporting on a single authorized order detail."""
+    from rest_framework.exceptions import ValidationError
+    from .models import OrderOriginalShareTransfer
+    from .points_business_access import formal_service_read_candidate
+    from .points_transfer_refund_access import after_transfer, permits
+
+    if (order.payment_status not in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
+            or not enabled() or permits(order, phase='report')
+            or not formal_service_read_candidate(order, phase='report')
+            or not OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+        return supports(order)
+    try:
+        with transaction.atomic(), after_transfer(order.pk, phase='report', read_only=True) as locked:
+            return supports(locked)
+    except ValidationError:
+        return False
 
 
 def _entry_enabled(order_id):
