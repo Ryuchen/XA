@@ -39,7 +39,8 @@ class OrderRoomTests(APITestCase):
         def assign_locked(row):
             row.provider, row.provider_account = accounts[0][0], accounts[0][1]
             for user, account in accounts:
-                OrderProvider.objects.create(order=row, provider=user, provider_account=account)
+                OrderProvider.objects.create(order=row, provider=user, provider_account=account,
+                                             provider_business_cycle=account.business_cycle)
         return transition(order.pk, Order.Status.GRABBED, side_effect=assign_locked,
                           update_fields=['provider', 'provider_account'])
 
@@ -57,8 +58,8 @@ class OrderRoomTests(APITestCase):
         self.assertEqual(OrderRoom.objects.filter(order=order).count(), 1)
 
     def test_two_providers_must_be_assigned_together(self):
-        self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
         order = self.order(escort_mode='DOUBLE')
         with self.assertRaises(IllegalTransitionError):
             self.assign(order, [(self.provider, self.provider_account)])

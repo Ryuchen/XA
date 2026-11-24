@@ -18,6 +18,7 @@ from orders.settlement import SettlementError
 from orders.tests.test_room_completion_review import RoomCompletionReviewTests
 from orders.tests.test_order_rooms import OrderRoomTests
 from orders.tests.test_release_flow import ReleaseFlowTest, screenshot
+from site_messages.models import RoomConfirmationNotice
 from wallet.models import ProviderReport, Transaction
 
 
@@ -83,30 +84,44 @@ class RoomBossConfirmationTests(APITestCase):
         self.assertFalse(OrderStatusLog.objects.filter(order=self.order, to_status='COMPLETED').exists())
         self.assertFalse(Transaction.objects.filter(order=self.order).exists())
 
-    def test_notification_failure_rolls_back_confirmation_and_order(self):
-        with patch('site_messages.models.Message.objects.bulk_create', side_effect=RuntimeError('notify failed')):
+    def test_notification_intent_failure_rolls_back_confirmation_and_order(self):
+        # SQLite verifies the confirmation transaction here. The production
+        # lifecycle lock used to enable this branch is covered on MySQL.
+        with patch('site_messages.room_confirmation_notice.enabled', return_value=True):
+            self.assert_notification_intent_failure_rolls_back()
+
+    def assert_notification_intent_failure_rolls_back(self):
+        with patch.object(RoomConfirmationNotice.objects, 'get_or_create', side_effect=RuntimeError('notify failed')):
             with self.assertRaises(RuntimeError):
                 self.boss_client.post(self.path, self.payload, format='json')
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, 'IN_SERVICE')
         self.assertEqual(OrderRoomConfirmation.objects.get(request_id=self.request_id).status, 'RUNNING')
         self.assertFalse(ProviderReport.objects.filter(order=self.order).exists())
+        self.assertFalse(RoomConfirmationNotice.objects.filter(confirmation__request_id=self.request_id).exists())
+        result = self.boss_client.post(self.path, self.payload, format='json')
+        self.assertEqual(result.status_code, 200, result.data)
+        self.assertCountEqual(RoomConfirmationNotice.objects.filter(confirmation__request_id=self.request_id)
+                              .values_list('account_id', flat=True), [self.boss_account.pk, self.provider_account.pk])
 
     def test_boss_confirms_double_only_after_both_completion_screenshots(self):
-        self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
         order = OrderRoomTests.order(self, escort_mode='DOUBLE', requires_boss_selection=True)
         OrderRoomTests.assign(self, order, [(self.provider, self.provider_account), (self.other, self.other_account)])
         from orders.state_machine import transition
         transition(order.pk, Order.Status.IN_SERVICE)
         request_path = f'/api/orders/orders/{order.pk}/room/completion-requests/'
+        payload = {'description': '已完成', 'client_request_id': 'team-request'}
         with TemporaryDirectory(prefix='xa-room-boss-team-') as media, override_settings(MEDIA_ROOT=media):
-            for client in (self.provider_client, self.other_client):
-                result = client.post(f'/api/orders/orders/{order.pk}/complete/',
-                                     {'completion_image': screenshot()}, format='multipart')
-                self.assertEqual(result.data['code'], 0, result.data)
-            result = self.provider_client.post(request_path,
-                {'description': '已完成', 'client_request_id': 'team-request'}, format='json')
+            complete_path = f'/api/orders/orders/{order.pk}/complete/'
+            result = self.provider_client.post(complete_path, {'completion_image': screenshot()}, format='multipart')
+            self.assertEqual(result.data['code'], 0, result.data)
+            result = self.provider_client.post(request_path, payload, format='json')
+            self.assertEqual(result.status_code, 409, result.data)
+            result = self.other_client.post(complete_path, {'completion_image': screenshot()}, format='multipart')
+            self.assertEqual(result.data['code'], 0, result.data)
+            result = self.provider_client.post(request_path, payload, format='json')
             self.assertEqual(result.status_code, 200, result.data)
             pk = result.data['data']['id']
             result = self.staff.post(f'/api/admin/room-completion-requests/{pk}/review/',
