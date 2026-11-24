@@ -2777,17 +2777,34 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         decision = f'{path}addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
         for actor in (boss, former):
             self.assertEqual(self.ok(actor.post(decision, {'accepted': True}, format='json'))['status'], 'PENDING')
-        attempts = Queue()
+        accepted, resume = Event(), Event()
+        handover_table = OrderAddonHandover._meta.db_table
+
+        def hold_acceptance(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if sql.startswith(f'UPDATE `{handover_table}`') and 'ACCEPTED' in (params or ()):
+                accepted.set()
+                self.assertTrue(resume.wait(8))
+            return result
+
         table = Order._meta.db_table
-        observer = self.observe_lock_attempt(attempts, table, 'for update', account_id=self.order_id)
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            with transaction.atomic(using=self.store.database_alias):
-                signed = self.ok(replacement.post(decision, {'accepted': True}, format='json'))
-                self.assertEqual(signed['status'], 'ACCEPTED')
+        boss_attempts, retry_attempts = Queue(), Queue()
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            signing = pool.submit(self.independent_request,
+                lambda: replacement.post(decision, {'accepted': True}, format='json'), hold_acceptance)
+            try:
+                self.assertTrue(accepted.wait(8), '未观察到最后一人写入接替确认')
+                confirming = pool.submit(self.independent_request, lambda: boss.post(confirm, key, format='json'),
+                    self.observe_lock_attempt(boss_attempts, table, 'for update', account_id=self.order_id))
+                self.wait_for_lock(confirming, boss_attempts, table=table)
                 competing = pool.submit(self.independent_request,
-                    lambda: staff.post(handover_url, payload, format='json'), observer)
-                waited = self.wait_for_lock(competing, attempts, table=table)
-                self.assertEqual(self.ok(boss.post(confirm, key, format='json'))['confirmation']['status'], 'CONFIRMED')
+                    lambda: staff.post(handover_url, payload, format='json'),
+                    self.observe_lock_attempt(retry_attempts, table, 'for update', account_id=self.order_id))
+                waited = self.wait_for_lock(competing, retry_attempts, table=table)
+            finally:
+                resume.set()
+            self.assertEqual(self.ok(signing.result(timeout=10))['status'], 'ACCEPTED')
+            self.assertEqual(self.ok(confirming.result(timeout=10))['confirmation']['status'], 'CONFIRMED')
             replay = self.ok(competing.result(timeout=10))
         self.assertEqual((replay['id'], replay['status']), (proposal['id'], 'ACCEPTED'))
         handover = OrderAddonHandover.objects.get(pk=proposal['id'])
