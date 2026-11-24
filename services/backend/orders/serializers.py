@@ -716,7 +716,8 @@ class OrderSerializer(EntityNumberModelSerializer):
             legacy_user = getattr(request, 'legacy_user', None)
             if legacy_user:
                 owner |= Q(provider_account__isnull=True, provider=legacy_user)
-            assignment = obj.providers.filter(owner).only('released_at', 'settled_at', 'settlement_base', 'provider_income').first()
+            assignment = obj.providers.filter(owner).only('provider_id', 'provider_account_id',
+                'released_at', 'settled_at', 'settlement_base', 'provider_income').first()
         return assignment
 
     def get_my_assignment_released(self, obj):
@@ -1006,10 +1007,19 @@ class OrderSerializer(EntityNumberModelSerializer):
                 from .team_fulfillment import team_evidence_submitted
                 if obj.escort_mode != 'DOUBLE' or not team_evidence_submitted(obj,account,'entry_image'):
                     actions.append('START')
-            if participant and obj.status == Order.Status.IN_SERVICE and self._points_fulfillment_available(obj, request):
-                from .team_fulfillment import team_evidence_submitted
+            if participant and obj.status == Order.Status.IN_SERVICE:
                 pending = [segment for segment in self._my_participation(obj) if segment.attribution.status == 'ACTIVE'
                            and segment.is_service_transfer and not segment.released_at and not segment.started_at]
+                if points and obj.payment_status == Order.PaymentStatus.PAID and len(pending) == 1 and user:
+                    assignment = self._requester_assignment(obj)
+                    if (assignment and not assignment.released_at and assignment.provider_account_id == account.pk
+                            and assignment.provider_id == user.pk):
+                        # The transfer has recorded the incoming seat. Its entry
+                        # action does not use the legacy report snapshot.
+                        return ['START_PARTICIPATION']
+                if not self._points_fulfillment_available(obj, request):
+                    return actions
+                from .team_fulfillment import team_evidence_submitted
                 pending_work = self.get_my_pending_work_stint(obj)
                 if len(pending) == 1 or pending_work:
                     actions.append('START_PARTICIPATION')

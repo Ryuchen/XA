@@ -2474,7 +2474,22 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((receipt.scope, receipt.response),
                          ('order.segment-completion-evidence', {'order_id': self.order_id, 'action': 'evidence'}))
         replacement = self.api(self.replacement)
+        listing = '/api/orders/orders/?status=in_progress&role=provider&page=1&page_size=20'
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(replacement.get(path))
+            listed = next(row for row in self.ok(replacement.get(listing))['list'] if row['id'] == self.order_id)
+            for row in (detail, listed):
+                self.assertIn('START_PARTICIPATION', row['allowed_actions'])
+                self.assertNotIn('COMPLETE', row['allowed_actions'])
+            prior = self.ok(original.get(path))
+            self.assertNotIn('START_PARTICIPATION', prior['allowed_actions'])
         self.join_replacement(replacement, change)
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            joined = self.ok(replacement.get(path))
+        segment = next(row for row in joined['my_participation_segments'] if row['id'] == change.next_segment_id)
+        self.assertTrue(segment['started_at'])
+        self.assertTrue(segment['entry_image_url'])
+        self.assertNotIn('START_PARTICIPATION', joined['allowed_actions'])
         self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'points-transfer-complete'}, format='multipart'))
         original_report = self.approve_report(self.original, change.previous_segment_id)
