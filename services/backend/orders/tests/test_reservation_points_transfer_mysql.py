@@ -2540,6 +2540,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             'affected_segment_ids': [segment.pk]}, format='json'))
         self.assertIsNone(AfterSale.objects.get(pk=case['id']).addon_payment_id)
         admin = f'/api/admin/aftersales/{case["id"]}/'
+        if self.teammate:
+            whole = staff.get(admin + 'negotiation-preview/', {'refund_units': self.receipt.deal_units})
+            self.assertEqual((whole.status_code, whole.data['msg']), (400, '另一席仍在履约，本次须为主单部分退款'))
         preview = self.ok(staff.get(admin + 'negotiation-preview/', {'refund_units': 1000}))
         self.assertTrue(preview['agreement_available'], preview)
         self.assertTrue(preview['execution_available'], preview)
