@@ -2272,6 +2272,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((deduction['deducted_fen'], following['totals']['total_fen']), (50, 950))
         adjustment = PayrollRefundPerformanceAdjustment.objects.get(addon_refund=refund, account=salary.worker)
         self.assertEqual((adjustment.before_fen, adjustment.after_fen, adjustment.amount_fen), (700, 650, 50))
+        self.assertEqual(adjustment.original_run_id, closed['run_id'])
         self.assertEqual(list(adjustment.applications.values_list('run_id', 'amount_fen')), [(following['run_id'], 50)])
         self.assertEqual(payment.refund_records.count(), 1)
         print(f'{self.store.slug} order={self.order_id} addon={payment.pk} refund={refund.pk} '
@@ -2281,7 +2282,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def consultation_during_payroll(self, payroll_preview, staff, path, payload, message, *, while_waiting=None):
         payroll, preview = payroll_preview
         payroll_url = '/api/admin/payroll/confirm/'
-        confirm_payload = {'month': payroll.original_text, 'fingerprint': preview['fingerprint']}
+        confirm_payload = {'month': preview['month'], 'fingerprint': preview['fingerprint']}
         held, resume = Event(), Event()
         attempts = Queue()
         table = PayrollEventBarrier._meta.db_table
