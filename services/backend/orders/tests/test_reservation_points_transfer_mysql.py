@@ -317,8 +317,6 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
         self.run_in_stores(self.exercise_paid_addon_consultation)
 
-    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
-                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)
     def test_consultation_addon_refund_waits_for_payroll_and_adjusts_next_period(self):
         self.run_in_stores(self.exercise_addon_refund_after_payroll)
 
@@ -2215,6 +2213,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertTrue(preview['can_confirm'], preview['warnings'])
         return payroll, preview
 
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
+                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)
     def exercise_addon_refund_after_payroll(self):
         from console.payroll_models import PayrollRefundPerformanceAdjustment
 
