@@ -13,7 +13,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.conf import settings
-from django.db import connection, connections, transaction
+from django.db import DatabaseError, connection, connections, transaction
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -81,6 +81,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     room_service = False
     room_confirmation_minutes = 30
     room_addon_purchase = False
+    opening_points_hundredths = 15000
 
     def prepare(self):
         reservation_fixture.AssignedOrderReservationGuardTest.setUp(self)
@@ -126,7 +127,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 self.teammate.escort_profile.service_items.add(self.service)
         self.ok(self.recharge())
         self.points, _ = MemberProfile.objects.update_or_create(
-            account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon else 15000})
+            account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon
+                                          else self.opening_points_hundredths})
         save_points_terms(group_point_hundredths=10000, group_coin_units=4000,
                           max_ratio_basis_points=5000, version=0, audit=lambda *_: None)
 
@@ -316,6 +318,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
         self.run_in_stores(self.exercise_paid_addon_consultation)
+
+    def test_paid_addon_consultation_and_other_order_funding_share_one_receipt(self):
+        self.opening_points_hundredths = 20000
+        self.run_in_stores(self.exercise_shared_funding_and_addon_consultation)
 
     def test_consultation_addon_refund_waits_for_payroll_and_adjusts_next_period(self):
         self.run_in_stores(self.exercise_addon_refund_after_payroll)
@@ -843,6 +849,84 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         membership.account = account
         membership.save(update_fields=['account'])
         return self.api(account), membership, message
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+                       AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True)
+    def exercise_shared_funding_and_addon_consultation(self):
+        self.transfer_and_join()
+        payment = self.pay_consultation_addon(self.replacement)
+        order_path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(self.api(self.replacement).post(order_path + 'complete/', {
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'shared-funding-completed'},
+            format='multipart'))
+        second_service = make_service(price=10000, commission_override=True, commission_rate=20)
+        _, second_order_id = self.book_points_reservation([self.original], self.start + timedelta(hours=3),
+            'shared-receipt-other-reservation', service=second_service)
+        allocation = self.ok(self.finance_client.post(self.funding_url, {
+            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 400}, format='json'))
+        self.assertEqual(allocation['order_id'], second_order_id)
+        staff, _, message = self.order_consultation()
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        payload = {**self.consultation_payload(message), 'addon_payment_id': payment.pk,
+                   'affected_segment_ids': [payment.intent.segment_id]}
+        path = '/api/admin/aftersales/open-negotiation/'
+        finance_url = f'/api/admin/platform/points-funding/{self.store.slug}/orders/{second_order_id}'
+        events = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
+        before = [('ORDER', 2000), ('RELEASE', 600), ('RELEASE', 300), ('ORDER', 400)]
+        self.assertEqual(list(events.values_list('kind', 'amount')), before)
+        buyer_balance = Wallet.objects.get(account=self.buyer).balance
+
+        held, resume = Event(), Event()
+        receipt_table = PassRefundRepaymentReceipt._meta.db_table
+
+        def pause_receipt(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if (not held.is_set() and f'`{receipt_table}`' in sql.lower() and 'for update' in sql.lower()
+                    and self.funding_receipt.pk in (params or ())):
+                held.set()
+                self.assertTrue(resume.wait(8), '财务查询未续办原到账核对')
+            return result
+
+        waits = []
+        case_id = None
+        for attempt in range(2):
+            held.clear()
+            resume.clear()
+            money_table = OrderFinancialLock._meta.db_table
+            attempts = Queue()
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                finance = pool.submit(self.independent_request, lambda: self.finance_client.get(finance_url), pause_receipt)
+                try:
+                    self.assertTrue(held.wait(4), '财务未锁定共用到账')
+                    opening = pool.submit(self.independent_request, lambda: staff.post(path, payload, format='json'),
+                        self.observe_lock_attempt(attempts, money_table, 'for update', account_id=1))
+                    waits.append(self.wait_for_lock(opening, attempts, table=money_table))
+                    with self.assertRaises(DatabaseError) as occupied:
+                        with transaction.atomic(using=self.store.database_alias):
+                            Order.objects.select_for_update(nowait=True).get(pk=self.order_id)
+                    self.assertEqual(occupied.exception.args[0], 3572)
+                    with transaction.atomic(using=self.store.database_alias):
+                        ClubAccount.objects.select_for_update(nowait=True).get(pk=self.buyer.pk)
+                        ChatSession.objects.select_for_update(nowait=True).get(pk=message.session_id)
+                        ChatMessage.objects.select_for_update(nowait=True).get(pk=message.pk)
+                finally:
+                    resume.set()
+                funding = self.ok(finance.result(timeout=15))
+                opened = self.ok(opening.result(timeout=15))
+            self.assertEqual((funding['order_id'], funding['required_units'], funding['allocated_units'],
+                              funding['remaining_units']), (second_order_id, 2000, 400, 1600))
+            if attempt == 0:
+                case_id = opened['id']
+            self.assertEqual((opened['id'], opened['addon_payment']), (case_id, payment.pk))
+        case = AfterSale.objects.get(order_id=self.order_id)
+        self.assertEqual((len(case.history), case.history[0]['consultation_message_id']), (1, message.pk))
+        self.assertFalse(AfterSale.objects.filter(order_id=second_order_id).exists())
+        self.assertEqual(list(events.values_list('kind', 'amount')), before)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, buyer_balance)
+        self.assertFalse(payment.refund_records.exists())
+        print(f'{self.store.slug} order={self.order_id} other_order={second_order_id} '
+              f'receipt={self.funding_receipt.pk} allocation={allocation["allocation_id"]} '
+              f'addon={payment.pk} case={case.pk} money_waits={waits}', flush=True)
 
     def consultation_payload(self, message):
         return {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
