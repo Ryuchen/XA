@@ -3,8 +3,7 @@ from django.conf import settings
 from rest_framework.exceptions import ValidationError
 
 from stores.db import transaction
-from .models import Order, OrderPointsFundingReleaseEvidence
-from .points_checkout_test import require_isolated_checkout
+from .models import Order
 from .points_funding_plan import PointsFundingPlanError
 
 
@@ -40,7 +39,6 @@ def _plan_refunded_transfer(order_id, *, allow_finalized=False):
                 order=order, finalized_at=order.settled_at).exists():
             raise PointsFundingPlanError('转单退款后的结算凭证待核对')
     from .points_transfer_refund_continuation import verify_locked
-    from .points_transfer_refund_release import verify_release_locked
     try:
         from .models import PointsPostRefundTransferRevision
         versions = list(PointsPostRefundTransferRevision.objects.filter(order=order).order_by('pk'))
@@ -95,13 +93,7 @@ def _plan_refunded_transfer(order_id, *, allow_finalized=False):
                     raise ValidationError('转单后的加购资金版本待核对')
                 return RefundedFunding(**after[-1].refunded_main_snapshot['funding'])
             return RefundedFunding(**latest.snapshot['funding'])
-        posting = verify_locked(order)
-        if not isinstance(posting.participants, dict):
-            raise ValidationError('转单退款记账凭证类型异常')
-        evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
-        if not evidence:
-            raise ValidationError('退款后的补资释放凭证缺失')
-        initial = verify_release_locked(evidence)
+        posting, _, initial = verify_locked(order, include_release=True)
         from .points_transfer_addon_events import later_runs
         later = later_runs(order, posting)
         if later:

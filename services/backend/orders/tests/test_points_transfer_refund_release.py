@@ -10,6 +10,33 @@ from orders.points_negotiation_preview import funding_after_refund
 
 
 class PointsTransferRefundReleaseTests(SimpleTestCase):
+    def test_refunded_transfer_funding_reuses_verified_closure_release(self):
+        from orders import points_transfer_refunded_funding as refunded_funding
+        from orders.models import Order, OrderPointsFundingReleaseEvidence
+
+        order = SimpleNamespace(pk=7, status=Order.Status.IN_SERVICE, source_order_id=None,
+                                settled_at=None, refund_records=Mock())
+        order.refund_records.count.return_value = 1
+        posting = SimpleNamespace(participants={})
+        calculation = object()
+        orders = Mock()
+        orders.select_for_update.return_value.filter.return_value.first.return_value = order
+        orders.filter.return_value.exists.return_value = False
+        with (patch.object(refunded_funding.transaction, 'get_connection', return_value=SimpleNamespace(in_atomic_block=True)),
+              patch('orders.points_transfer_refund_access.require_refund_or_isolated'),
+              patch('orders.points_transfer_refund_access.permits', return_value=True),
+              patch.object(Order, 'objects', orders),
+              patch('orders.models.PointsPostRefundTransferRevision.objects.filter') as versions,
+              patch('orders.points_transfer_refund_continuation.verify_locked') as closure,
+              patch.object(OrderPointsFundingReleaseEvidence.objects, 'filter') as releases,
+              patch('orders.points_transfer_addon_events.later_runs', return_value=[])):
+            versions.return_value.order_by.return_value = []
+            closure.side_effect = lambda _order, *, include_release=False: (
+                (posting, object(), calculation) if include_release else posting)
+            releases.side_effect = AssertionError('结案已经核对过首退到账释放')
+            self.assertIs(refunded_funding._plan_refunded_transfer(order.pk), calculation)
+            closure.assert_called_once_with(order, include_release=True)
+
     def test_refunded_points_report_detail_uses_read_only_scope(self):
         from contextlib import nullcontext
         from orders import segment_reports
