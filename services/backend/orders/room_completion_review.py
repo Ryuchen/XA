@@ -86,6 +86,35 @@ def _payment_eligible(order, participants):
         return False
 
 
+def _addon_handover_blocker(order):
+    """Check paid add-on responsibility while the caller holds the order lock."""
+    from django.db.models import Q
+    from rest_framework.exceptions import ValidationError
+    from .addon_handover import current_responsibilities
+    from .models import OrderAddonPayment, OrderOriginalShareTransfer
+
+    payments = OrderAddonPayment.objects.filter(intent__order=order)
+    if not payments.exists():
+        return None
+    if payments.filter(handovers__status='PENDING').exists():
+        return '加购接替正在等待三方确认'
+    outgoing = set(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
+                   .values_list('previous_segment_id', flat=True))
+    if not outgoing:
+        return None
+    affected = payments.filter(
+        Q(intent__segment_id__in=outgoing) | Q(handovers__status='ACCEPTED', handovers__target_segment_id__in=outgoing)
+    ).select_related('intent').distinct()
+    try:
+        for payment in affected:
+            _, shares = current_responsibilities(payment)
+            if any(share['is_current'] and share['basis'] > 0 and share['segment_id'] in outgoing for share in shares):
+                return '原陪玩已转出，请先安排加购接替'
+    except ValidationError:
+        return '加购履约责任待核对'
+    return None
+
+
 def _completion_evidence_ready(order, participants):
     """Preserve existing per-provider completion evidence gates for room orders."""
     from .participation_entry import pending_transfer_segments
@@ -220,6 +249,9 @@ class RoomCompletionRequestView(APIView):
         from .refunds import negotiated_aftersale_blocks_completion
         if negotiated_aftersale_blocks_completion(order):
             return Response({'code': 409, 'msg': '售后处理中，暂不能结单'}, status=409)
+        blocker = _addon_handover_blocker(order)
+        if blocker:
+            return Response({'code': 409, 'msg': blocker}, status=409)
         participants = _participants(order)
         if participants is None or not _payment_eligible(order, participants):
             return Response({'code': 409, 'msg': '订单陪玩身份待核对'}, status=409)
@@ -296,6 +328,9 @@ class RoomCompletionReviewView(APIView):
             return Response({'code': 409, 'msg': '订单状态已变化，请核对'}, status=409)
         if decision == 'VERIFIED':
             from .refunds import negotiated_aftersale_blocks_completion
+            blocker = _addon_handover_blocker(order)
+            if blocker:
+                return Response({'code': 409, 'msg': blocker}, status=409)
             participants = _participants(order)
             if (room.objections.filter(status='OPEN').exists() or participants != row.participants
                     or not _payment_eligible(order, participants)

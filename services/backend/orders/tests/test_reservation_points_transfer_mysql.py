@@ -2767,7 +2767,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         boss, staff = self.api(self.buyer), self.api(self.staff)
         self.assertEqual((self.ok(former.get(path + 'room/'))['role'],
                           self.ok(replacement.get(path + 'room/'))['id']), ('FORMER_PROVIDER', self.room_id))
-        wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
+        # Preserve the case of a room already on the clock before deployment.
+        with patch('orders.room_completion_review._addon_handover_blocker', return_value=None):
+            wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
         confirm = f'{path}room/completion-requests/{wait.request_id}/confirm/'
         key = {'client_request_id': 'room-confirm-after-addon-handover'}
         blocked = boss.post(confirm, key, format='json')
