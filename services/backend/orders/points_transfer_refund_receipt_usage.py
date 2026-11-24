@@ -12,7 +12,7 @@ def facts(row):
     from .points_transfer_refund_evidence import current_read_matches_history, digest as transfer_digest
     from .points_negotiation_execution import participant_digest
     from .points_negotiation_preview import asset_digest, funding_after_refund
-    from .points_funding_release import _digest as release_digest
+    from .points_funding_release import first_release_hash_matches
     from .points_funding_allocation import plan_release
     from .points_funding_plan import plan_service_funding
     from .negotiation_proposals import _digest as proposal_digest, _snapshot_terms
@@ -98,12 +98,16 @@ def facts(row):
         if len(addons) > 1:
             from .points_addon_receipt_usage import _prior_addon_events
             from .models import OrderAddonHandover
-            from .addon_handover import verify_first_handover
+            from .addon_handover import verify_first_handover, verify_handover
+            from .points_returned_addon_refund import before_first_main_refund, verify_funding
+            returned = before_first_main_refund(order)
+            if returned:
+                verify_funding(order, returned, receipt_id=witness)
+            verifier = verify_handover if returned else verify_first_handover
             handover_facts = []
             for handover in OrderAddonHandover.objects.filter(payment__in=addons, status='ACCEPTED',
                     accepted_at__lt=posting.created_at).select_related('payment__intent').order_by('accepted_at', 'pk'):
-                parts = verify_first_handover(handover.payment, handover, as_of=posting.created_at,
-                                              receipt_id=witness)
+                parts = verifier(handover.payment, handover, as_of=posting.created_at, receipt_id=witness)
                 decisions = list(handover.decisions.order_by('account_id').values_list(
                     'account_id', 'role', 'accepted', 'decided_at'))
                 handover_facts.append([handover.pk, handover.payment_id, handover.accepted_at.isoformat(),
@@ -147,7 +151,7 @@ def facts(row):
                 or (part.run.refund_id and part.run.refund.payment_id in {item.pk for item in addons}
                     and part.run.refund.created_at < posting.created_at)):
             raise ValidationError('转单退款前加购释放来源异常')
-        _addon_release_facts(part)
+        _addon_release_facts(part, witness_receipt_id=getattr(row, 'read_receipt_id', allocation.receipt_id))
     shares = list(posting.shares.select_related('assignment').order_by('account_id'))
     if not 1 <= len(shares) <= 2 or len({item.account_id for item in shares}) != len(shares):
         raise ValidationError('转单退款参与人范围异常')
@@ -384,8 +388,7 @@ def facts(row):
                   .values_list('allocation_id', 'amount'))
     if (evidence.original_provider_income != original_plan.provider_income_units
             or evidence.expected_release != after.release_units
-            or evidence.evidence_hash != release_digest(posting, items, original_plan.provider_income_units,
-                    None, after.release_units, evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)
+            or not first_release_hash_matches(evidence, posting)
             or actual != [(part.allocation_id, part.amount) for part in plan]):
         raise ValidationError('转单退款 RELEASE 与实际资金不一致')
     return ('RELEASE', f'order:{allocation.pk}', f'points-transfer-refund-release:{row.pk}', row.amount,

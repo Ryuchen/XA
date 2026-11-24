@@ -7,14 +7,17 @@ from .models import (OrderAddonFundingReleaseRun, OrderAddonHandover, OrderAddon
                      OrderOriginalShareTransfer, OrderPointsFundingAllocation, OrderSegmentSettlementManifest)
 
 
-def returned_handover(order, *, payment_id=None, transfers=None):
+def returned_handover(order, *, payment_id=None, transfers=None, at_refund=None):
     from .points_business_access import configured
     from .points_service_payment import needs_integrated_processing
     from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
 
     if (not configured() or not getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False)
             or not needs_integrated_processing(order) or order.is_gift_snapshot or order.source_order_id
-            or order.room_required_snapshot or order.refund_records.exists()):
+            or order.room_required_snapshot):
+        return None
+    main_refunds = order.refund_records.all()
+    if (main_refunds if at_refund is None else main_refunds.filter(created_at__lte=at_refund)).exists():
         return None
     if transfers is None:
         transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
@@ -26,7 +29,8 @@ def returned_handover(order, *, payment_id=None, transfers=None):
         payments = [payment for payment in payments if unaffected_addon_for_return(order, payment, payments, transfers[0])]
     if not 1 <= len(payments) <= 2:
         return None
-    handovers = {payment.pk: _last_returned_handover(order, payment, transfers) for payment in payments}
+    handovers = {payment.pk: _last_returned_handover(order, payment, transfers, at_refund=at_refund)
+                 for payment in payments}
     if not all(handovers.values()):
         return None
     refunds = list(OrderAddonRefund.objects.filter(payment_id__in=handovers)[:2])
@@ -34,25 +38,26 @@ def returned_handover(order, *, payment_id=None, transfers=None):
     if refunds:
         refund = refunds[0]
         if (len(refunds) != 1 or refund.order_id != order.pk
+                or (at_refund is not None and refund.created_at != at_refund)
                 or any(refund.created_at <= handover.accepted_at for handover in handovers.values())
                 or manifests.filter(created_at__lte=refund.created_at).exists()
                 or any(payment.pk != refund.payment_id and payment.refund_earning_deductions.exists()
                        for payment in payments)):
             return None
         return handovers[refund.payment_id] if payment_id in (None, refund.payment_id) else None
-    if order.settled_at or manifests.exists():
+    if at_refund is not None or order.settled_at or manifests.exists():
         return None
     if payment_id is None and len(handovers) == 1:
         return next(iter(handovers.values()))
     return handovers.get(payment_id)
 
 
-def _last_returned_handover(order, payment, transfers):
+def _last_returned_handover(order, payment, transfers, *, at_refund):
     from .points_transfer_refund_access import _successive_addon_handovers
 
     if payment.handovers.exclude(status='ACCEPTED').exists():
         return None
-    chain = _successive_addon_handovers(order, payment, transfers, check_refund_times=False)
+    chain = _successive_addon_handovers(order, payment, transfers, check_refund_times=False, at_refund=at_refund)
     if len(chain) != 2:
         return None
     first, last = chain
@@ -73,6 +78,27 @@ def other_returned_handover(order, handover):
         payment__intent__order=order, target_segment_id=handover.target_segment_id,
         status='ACCEPTED', kind='STANDARD').exclude(payment_id=handover.payment_id)
         .select_related('payment', 'previous').first())
+
+
+def before_first_main_refund(order, *, transfers=None):
+    """Identify the posted add-on refund preceding a separate main refund."""
+    if OrderAddonPayment.objects.filter(intent__order=order).count() != 2 or order.refund_records.count() > 1:
+        return None
+    refunds = list(order.addon_refunds.all()[:2])
+    if len(refunds) != 1:
+        return None
+    refund = refunds[0]
+    returned = returned_handover(order, payment_id=refund.payment_id, transfers=transfers, at_refund=refund.created_at)
+    return returned if returned and other_returned_handover(order, returned) else None
+
+
+def require_other_seat(order, returned, segments):
+    from .models import OrderParticipationSegment
+
+    if (not segments or len(segments) != 1 or not OrderParticipationSegment.objects.filter(
+            pk=segments[0], attribution__order=order, started_at__isnull=False, released_at__isnull=True)
+            .exclude(slot=returned.target_segment.slot).exists()):
+        raise ValidationError('请为另一席选择仍在履约的主服务段')
 
 
 def verify_returned_handovers(order, handover, *, before=None, receipt_id=None):
@@ -101,7 +127,7 @@ def require_opening(case, handover, *, request_id, opened_at):
 def verify_history(refund, allocation_ids, *, receipt_id):
     """Check posting-time allocations and acceptance proofs under existing locks."""
     order = refund.order
-    returned = returned_handover(order, payment_id=refund.payment_id)
+    returned = returned_handover(order, payment_id=refund.payment_id, at_refund=refund.created_at)
     if not returned:
         return
     allocations = list(OrderPointsFundingAllocation.objects.filter(
@@ -113,7 +139,7 @@ def verify_history(refund, allocation_ids, *, receipt_id):
     verify_returned_handovers(order, returned, before=refund.created_at, receipt_id=receipt_id)
 
 
-def verify_funding(order, handover):
+def verify_funding(order, handover, *, receipt_id=None):
     from .addon_funding_release import verify_run
 
     payment = handover.payment
@@ -122,6 +148,11 @@ def verify_funding(order, handover):
         run = OrderAddonFundingReleaseRun.objects.filter(refund=refund, points_addon_snapshot__isnull=False).first()
         if not run or not run.points_addon_hash:
             raise ValidationError('转回段加购退款的补资凭证待核对')
-        verify_run(run)
+        if order.refund_records.filter(created_at__lte=run.created_at).exists():
+            raise ValidationError('末段加购与主单退款资金时序待核对')
+        if receipt_id is None:
+            verify_run(run)
+        else:
+            verify_run(run, _skip_usage=True, witness_receipt_id=receipt_id)
     else:
         verify_returned_handovers(order, handover)

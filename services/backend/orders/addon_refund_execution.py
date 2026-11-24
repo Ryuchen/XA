@@ -170,8 +170,12 @@ def _first_handover_after_refund(refund):
 
 def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
     recorded = OrderAddonRefund.objects.filter(order=order, payment_id=payment_id, proposal_id=proposal_id)
-    if order.room_required_snapshot or order.refund_records.exists() or order.prestart_handoffs.exists():
+    if order.room_required_snapshot or order.prestart_handoffs.exists():
         return False
+    if order.refund_records.exists():
+        from .points_returned_addon_refund import before_first_main_refund
+        returned = before_first_main_refund(order)
+        return bool(returned and returned.payment_id == payment_id and recorded.exists())
     transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
     refund = recorded.filter(
             payment__handovers__status='ACCEPTED', payment__handovers__kind='STANDARD',

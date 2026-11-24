@@ -65,7 +65,8 @@ def transfer_refund_eligible(order):
         slot = item.previous_segment.slot
         counts[slot] = counts.get(slot, 0) + 1
     from .points_transfer_refund_access import _supported_addon
-    if (not order or order.is_gift_snapshot or order.source_order_id or not _supported_addon(order, transfers)
+    if (not order or order.is_gift_snapshot or order.source_order_id
+            or not _supported_addon(order, transfers, allow_main_after_addon=formal)
             or order.refund_records.count() > (2 if formal and not order.addon_intents.exists() else 1)
             or not transfers or any(count > 2 for count in counts.values())
             or OrderPrestartHandoff.objects.filter(order=order).exists()):

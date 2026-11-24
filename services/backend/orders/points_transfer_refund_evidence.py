@@ -603,9 +603,10 @@ def _verify_revisions_from_verified_facts(order_id, facts, *, refund_id):
     if (type(order_id) is not int or order_id <= 0 or type(refund_id) is not int or refund_id <= 0
             or not isinstance(facts, dict) or facts.get('order_id') != order_id):
         raise ValidationError('退款或转单资金版本无效')
-    from dataclasses import asdict
     from django.db.models import Q
-    from .models import OrderPointsFundingAllocation, OrderPointsTransferFundingRevision
+    from .models import OrderAddonFundingRelease, OrderPointsFundingAllocation, OrderPointsTransferFundingRevision
+    from .addon_funding_history import combined_at
+    from .addon_funding_release import verify_run
     from .points_funding_allocation import PointsFundingAllocationError, plan_rebalance
     from .points_funding_plan import PointsFundingPlanError
     from .points_service_refund import verify_refund_history_locked
@@ -653,18 +654,30 @@ def _verify_revisions_from_verified_facts(order_id, facts, *, refund_id):
             if any(completed_at[row.pk] > end_time for row in present):
                 raise ValidationError('转单前平台补资尚未完成')
             before = _reconstruct_from_verified_facts(order_id, facts, refund_id=refund_id,
-                                                      through_transfer_id=previous).funding
+                                                      through_transfer_id=previous)
             after = _reconstruct_from_verified_facts(order_id, facts, refund_id=refund_id,
-                                                     through_transfer_id=end['id']).funding
-            rows = [[row.pk, row.receipt_id, row.amount, released.get(row.pk, 0)] for row in present]
-            if sum(row[2] - row[3] for row in rows) > before.additional_store_funding_units:
-                raise ValidationError('转单前补资超过当时缺口')
+                                                     through_transfer_id=end['id'])
+            addon_releases = list(OrderAddonFundingRelease.objects.filter(
+                allocation__in=present, run__created_at__lte=end_time).select_related('run'))
+            for run in {item.run_id: item.run for item in addon_releases}.values():
+                if run.created_at == end_time:
+                    raise ValidationError('加购补资释放与转单时序无法区分')
+                verify_run(run)
+            addon_before = {}
+            for part in addon_releases:
+                addon_before[part.allocation_id] = addon_before.get(part.allocation_id, 0) + part.amount
+            rows = [[row.pk, row.receipt_id, row.amount, released.get(row.pk, 0) + addon_before.get(row.pk, 0)]
+                    for row in present]
             try:
+                before_funding = combined_at(order, before.funding, end_time, segment_shares=before.segment_shares)
+                after_funding = combined_at(order, after.funding, end_time, segment_shares=after.segment_shares)
+                if sum(row[2] - row[3] for row in rows) > before_funding['additional_store_funding_units']:
+                    raise ValidationError('转单前补资超过当时缺口')
                 planned = plan_rebalance(allocations=[(row[0], row[2], row[3]) for row in rows],
-                                         required=after.additional_store_funding_units)
-            except PointsFundingAllocationError as exc:
+                                         required=after_funding['additional_store_funding_units'])
+            except (PointsFundingAllocationError, PointsFundingPlanError) as exc:
                 raise ValidationError('转单补资历史计算异常') from exc
-            expected = PendingRevision(end['id'], previous, rows, asdict(before), asdict(after), planned.release_parts)
+            expected = PendingRevision(end['id'], previous, rows, before_funding, after_funding, planned.release_parts)
             if (not revision or revision.created_at < end_time or revision.created_at > proof.refund.created_at
                     or revision.previous_transfer_id != previous or revision.allocations != rows
                     or revision.before_funding != expected.before_funding or revision.after_funding != expected.after_funding
@@ -682,7 +695,6 @@ def _verify_revisions_from_verified_facts(order_id, facts, *, refund_id):
             # An add-on refund before this transfer can create a real funding
             # version even when no receipt was allocated and nothing released.
             from .models import OrderAddonRefund
-            from .addon_funding_history import combined_at
             if not OrderAddonRefund.objects.filter(order=order, created_at__lt=end_time).exists():
                 raise ValidationError('无已分配补资的转单不应有资金版本')
             before = _reconstruct_from_verified_facts(order_id, facts, refund_id=refund_id,

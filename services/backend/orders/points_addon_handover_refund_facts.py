@@ -286,10 +286,11 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
             raise ValidationError('此前退款已超出履约段份额')
     participants = list(proposal.participants.select_related('provider_transaction__wallet').order_by('account_id'))
     returned_segment = None
-    if len(handovers) > 1 and handovers[-1].kind == 'STANDARD' and not team_run and not order.refund_records.exists():
+    if (len(handovers) > 1 and handovers[-1].kind == 'STANDARD' and not team_run
+            and not order.refund_records.filter(created_at__lte=refund.created_at).exists()):
         from .points_returned_addon_refund import require_opening, returned_handover
 
-        returned = returned_handover(order, payment_id=payment.pk)
+        returned = returned_handover(order, payment_id=payment.pk, at_refund=refund.created_at)
         if not returned or returned.pk != handovers[-1].pk or proposal.case.order_id != order.pk:
             raise ValidationError('转回段加购退款的接替凭证异常')
         try:

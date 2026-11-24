@@ -1246,6 +1246,13 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                              'msg': '已有售后处理中，请查看原记录'}, status=409)
         from .aftersale_segment_scope import resolve_locked as resolve_segments
         segments = resolve_segments(order, scope, requested_segments) if addon_payment_id is None else None
+        if addon_payment_id is None:
+            from .points_transfer_refund_access import permits as points_transfer_permits
+            if points_transfer_permits(order, phase='refund'):
+                from .points_returned_addon_refund import before_first_main_refund, require_other_seat
+                returned = before_first_main_refund(order)
+                if returned:
+                    require_other_seat(order, returned, segments)
         addon_only = False
         addon_segments = None
         if addon_payment_id is not None:
