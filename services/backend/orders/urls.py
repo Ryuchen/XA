@@ -61,7 +61,11 @@ from .room_completion_review import RoomCompletionRequestView
 from .room_boss_confirmation import RoomBossConfirmView
 from .addon_offers import OrderAddonOffersView, OrderAddonQuoteView
 from .addon_intents import OrderAddonIntentView, OrderAddonPaymentView
-from .addon_refund import UserAddonRefundProposalListView, UserAddonRefundProposalView
+from .addon_refund import (
+    UserAddonRefundProposalListView,
+    UserAddonRefundProposalView,
+    UserOrderAddonRefundProposalListView,
+)
 from .addon_handover import UserAddonHandoverListView, UserAddonHandoverDecisionView
 from .addon_completion import UserAddonCompletionView
 from .grab_team_flow import TeamInviteView, TeamInvitationsView, TeamActionView
@@ -75,6 +79,7 @@ urlpatterns = [
     path('orders/<int:order_id>/addons/quote/', OrderAddonQuoteView.as_view()),
     path('orders/<int:order_id>/addons/intents/', OrderAddonIntentView.as_view()),
     path('orders/<int:order_id>/addons/intents/<int:intent_id>/pay/', OrderAddonPaymentView.as_view()),
+    path('orders/<int:order_id>/addons/refund-proposals/', UserOrderAddonRefundProposalListView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/refund-proposals/', UserAddonRefundProposalListView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/refund-proposals/<int:proposal_id>/', UserAddonRefundProposalView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/handovers/', UserAddonHandoverListView.as_view()),

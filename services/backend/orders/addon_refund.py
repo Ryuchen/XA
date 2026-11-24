@@ -465,6 +465,25 @@ class StaffAddonRefundProposalView(APIView):
         return Response({'code': 0, 'data': _data(proposal, account=request.account)})
 
 
+class UserOrderAddonRefundProposalListView(APIView):
+    permission_classes = [IsClubAccountAuthenticated]
+
+    def get(self, request, order_id):
+        if not 0 < order_id <= 9223372036854775807:
+            return Response({'code': 0, 'data': []})
+
+        decisions = (
+            OrderAddonRefundDecision.objects
+            .filter(account=request.account, proposal__payment__intent__order_id=order_id)
+            .order_by('-proposal_id')
+            .values_list('proposal__payment_id', 'proposal_id', 'proposal__status', 'accepted')
+        )
+        return Response({'code': 0, 'data': [
+            {'payment_id': payment_id, 'proposal_id': proposal_id, 'status': status, 'my_accepted': accepted}
+            for payment_id, proposal_id, status, accepted in decisions
+        ]})
+
+
 class UserAddonRefundProposalListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 

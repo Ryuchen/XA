@@ -6,8 +6,10 @@ from unittest import skipUnless
 from console.models import AdminAuditLog
 from orders import addon_payment
 from orders.models import AfterSale, OrderOriginalShareTransfer, OrderParticipationSegment
-from orders.tests.test_addon_configuration import staff_client
 from orders.tests import test_addon_intents
+from orders.tests.factories import make_provider
+from orders.tests.test_addon_configuration import staff_client
+from orders.tests.test_addon_offers import authenticated
 from orders.tests.test_addon_payment import prepare
 from stores.context import resolve_store, store_context
 from stores.tests_hosts import xinan_store
@@ -25,7 +27,45 @@ class AddonRefundFlowTests(TestCase):
         self.staff = staff_client(['order:refund'])
         self.staff_url = f'/api/admin/orders/{self.fixture.order.pk}/addons/payments/{self.payment.pk}/refund-proposals/'
         self.user_url = f'/api/orders/orders/{self.fixture.order.pk}/addons/payments/{self.payment.pk}/refund-proposals/'
+        self.discovery_url = f'/api/orders/orders/{self.fixture.order.pk}/addons/refund-proposals/'
         self.body = {'request_id': 'addon-refund-1', 'amount_raw': 500, 'explanation': '加购部分服务未履行'}
+
+    def test_only_decision_accounts_can_find_and_read_back_their_proposals_from_the_order(self):
+        buyer = self.fixture.client
+        provider = self.fixture.provider_client
+        other = self.fixture.other_client
+        _, other_provider = authenticated(make_provider())
+        empty = {'code': 0, 'data': []}
+        self.assertEqual(provider.get(self.discovery_url).data, empty)
+        response = self.staff.post(self.staff_url, self.body, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        proposal_id = response.data['data']['id']
+        pending = {'payment_id': self.payment.pk, 'proposal_id': proposal_id,
+                   'status': 'PENDING', 'my_accepted': None}
+
+        self.assertEqual(buyer.get(self.discovery_url).data, {'code': 0, 'data': [pending]})
+        self.assertEqual(provider.get(self.discovery_url).data, {'code': 0, 'data': [pending]})
+        self.assertEqual(other.get(self.discovery_url).data, empty)
+        self.assertEqual(other_provider.get(self.discovery_url).data, empty)
+        unknown_url = f'/api/orders/orders/{self.fixture.order.pk + 1}/addons/refund-proposals/'
+        self.assertEqual(provider.get(unknown_url).data, empty)
+        self.assertEqual(provider.get('/api/orders/orders/9223372036854775808/addons/refund-proposals/').data, empty)
+
+        detail_url = self.user_url + f'{proposal_id}/'
+        response = provider.get(detail_url)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['data']['id'], proposal_id)
+        self.assertEqual(provider.post(detail_url, {'accepted': True}, format='json').status_code, 200)
+        self.assertEqual(provider.get(self.discovery_url).data,
+                         {'code': 0, 'data': [{**pending, 'my_accepted': True}]})
+        self.assertEqual(buyer.get(self.discovery_url).data, {'code': 0, 'data': [pending]})
+        self.assertEqual(buyer.post(detail_url, {'accepted': True}, format='json').status_code, 200)
+        signed = {**pending, 'status': 'ACCEPTED', 'my_accepted': True}
+        self.assertEqual(provider.get(self.discovery_url).data, {'code': 0, 'data': [signed]})
+        self.assertEqual(other.get(self.discovery_url).data, empty)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 1500)
+        self.assertFalse(Transaction.objects.filter(wallet=self.wallet, tx_type='REFUND').exists())
 
     def test_staff_boss_and_player_confirm_one_paid_addon_without_premature_refund(self):
         self.assertEqual(self.fixture.denied.post(self.staff_url, self.body, format='json').status_code, 403)
@@ -60,6 +100,12 @@ class AddonRefundFlowTests(TestCase):
         self.assertEqual(result.data['data']['status'], 'REJECTED')
         replacement = self.staff.post(self.staff_url, {**self.body, 'request_id': 'replacement', 'amount_raw': 400}, format='json')
         self.assertEqual(replacement.status_code, 200, replacement.data)
+        self.assertEqual(self.fixture.provider_client.get(self.discovery_url).data['data'], [
+            {'payment_id': self.payment.pk, 'proposal_id': replacement.data['data']['id'],
+             'status': 'PENDING', 'my_accepted': None},
+            {'payment_id': self.payment.pk, 'proposal_id': response.data['data']['id'],
+             'status': 'REJECTED', 'my_accepted': False},
+        ])
         self.case.affected_provider_account_ids = [self.fixture.other.pk]
         self.case.save(update_fields=['affected_provider_account_ids'])
         url = self.user_url + f"{replacement.data['data']['id']}/"
@@ -100,6 +146,11 @@ class AddonRefundStoresTests(TestCase):
                                              'explanation': '加购项目协商退款'}, format='json')
                 self.assertEqual(response.status_code, 200, response.data)
                 records.append((fixture, payment.pk, response.data['data']))
+                if index:
+                    user_url = f'/api/orders/orders/{fixture.order.pk}/addons/payments/{payment.pk}/refund-proposals/'
+                    signed = fixture.client.post(user_url + f"{response.data['data']['id']}/",
+                                                 {'accepted': True}, format='json')
+                    self.assertEqual(signed.status_code, 200, signed.data)
         self.assertEqual(records[0][1], records[1][1])
         self.assertEqual(records[0][2]['id'], records[1][2]['id'])
         for index, (fixture, payment_id, expected) in enumerate(records):
@@ -107,3 +158,12 @@ class AddonRefundStoresTests(TestCase):
             response = fixture.client.get(url)
             self.assertEqual(response.status_code, 200, response.data)
             self.assertEqual(response.data['data'][0]['amount_raw'], 500 + 100 * index)
+            discovery = f'/api/orders/orders/{fixture.order.pk}/addons/refund-proposals/'
+            response = fixture.client.get(discovery)
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertEqual(response.data['data'], [
+                {'payment_id': payment_id, 'proposal_id': expected['id'],
+                 'status': 'PENDING', 'my_accepted': True if index else None},
+            ])
+            wrong_host = 'sl.esports.club' if index else 'xa.esports.club'
+            self.assertEqual(fixture.client.get(discovery, HTTP_HOST=wrong_host).status_code, 401)
