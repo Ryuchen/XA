@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $taskRoot=[System.IO.Path]::GetFullPath($Project).TrimEnd('\')
 $taskManifest=Get-Content -LiteralPath (Join-Path $taskRoot 'output\manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $taskRelative=@('content.json','campaign-state.json','layout.json','layout-adapter.mjs','output/manifest.json','output/DELIVERY.md','review/index.html')
-foreach($taskPage in $taskManifest){$taskRelative+=@($taskPage.png,$taskPage.outlinedSVG,$taskPage.editableSVG,$taskPage.preview)}
+foreach($taskPage in $taskManifest){$taskRelative+=@($taskPage.raster,$taskPage.outlinedSVG,$taskPage.editableSVG,$taskPage.preview)}
 foreach($taskDir in @('assets\backgrounds','source')){
   $taskRelative+=Get-ChildItem -LiteralPath (Join-Path $taskRoot $taskDir) -File -Recurse | ForEach-Object {$_.FullName.Substring($taskRoot.Length+1)}
 }
