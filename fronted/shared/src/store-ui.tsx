@@ -3,7 +3,12 @@ import { ApiError, createApiClient } from "./client.ts";
 import { clearSession, useSession, type Role } from "./session.ts";
 import { adoptLegacyStoreStorage, canonicalizeStoreUrl, getStoreSlug, hostStoreBrandName, hostStoreSlug, isAdminEntry, registerStoreCurrency, storeBrandLogo, switchStore, validStoreSlug } from "./store.ts";
 import type { H5Entitlement, H5Branding } from "./saas";
-import { StoreEntryStatusPage } from "./store-closed";
+import {
+  disabledStoreAnnouncement,
+  StoreEntryStatusPage,
+  type StoreEntryIssue,
+  type StoreEntryIssueKind,
+} from "./store-closed";
 
 export interface StoreInfo {
   id: number;
@@ -26,6 +31,21 @@ export interface StoreInfo {
 const StoreContext = createContext<StoreInfo | null>(null);
 // The same 403 is also used for routing and database failures.
 const closedStoreMessage = "门店尚未开放或已停用，请联系门店管理员";
+
+export function storeEntryStatusIssueKind(value: { status: unknown; is_active?: unknown }): StoreEntryIssueKind | null {
+  if (value.status === "ACTIVE") return value.is_active === true ? null : "UNAVAILABLE";
+  if (value.is_active !== false) return "UNAVAILABLE";
+  if (value.status === "DISABLED") return "DISABLED";
+  if (value.status === "PROVISIONING" || value.status === "CONFIGURING") return "NOT_OPEN";
+  return "UNAVAILABLE";
+}
+
+export function storeEntryTransportIssueKind(cause: unknown): StoreEntryIssueKind {
+  return cause instanceof ApiError && cause.status === 403 && cause.message === closedStoreMessage
+    ? "NOT_OPEN"
+    : "UNAVAILABLE";
+}
+
 const visitorStoreCheckTimeout = 10_000;
 const entryNames = { admin: "管理后台", boss: "老板服务中心", provider: "陪玩工作台" };
 const neutralAdminStore: StoreInfo = {
@@ -103,9 +123,9 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
   const neutralAdmin = role === "admin" && isAdminEntry() && !session.token;
   const [store, setStore] = useState<StoreInfo | null>(null);
   const scope = `${role}:${slug}:${session.revision}`;
-  const [failure, setFailure] = useState<{
-    scope: string; attempt: number; message: string; closed: boolean; checkedAt: Date;
-  } | null>(null);
+  const [failure, setFailure] = useState<(StoreEntryIssue & {
+    scope: string; attempt: number;
+  }) | null>(null);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     const refresh = () => setRetry((value) => value + 1);
@@ -114,13 +134,14 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
   }, []);
   useEffect(() => {
     const controller = new AbortController();
-    function fail(message: string, closed = false) {
+    function fail(message: string, kind: StoreEntryIssueKind = "UNAVAILABLE") {
       setStore(null);
-      setFailure({ scope, attempt: retry, message, closed, checkedAt: new Date() });
-      const title = `${closed ? "门店暂未开放" : "暂时无法进入门店"} · ${entryNames[role]}`;
+      setFailure({ scope, attempt: retry, message, kind, checkedAt: new Date() });
+      const entryStatus = kind === "DISABLED" ? "门店已停用" : kind === "NOT_OPEN" ? "门店暂未开放" : "暂时无法进入门店";
+      const title = `${entryStatus} · ${entryNames[role]}`;
       const brandName = role === "admin" ? undefined : hostStoreBrandName(location.hostname);
       document.title = brandName ? `${brandName} · ${title}` : title;
-      if (closed && role !== "admin" && hostStoreSlug(location.hostname) === slug) applyStoreFavicon({ slug });
+      if (kind !== "UNAVAILABLE" && role !== "admin" && hostStoreSlug(location.hostname) === slug) applyStoreFavicon({ slug });
     }
     if (neutralAdmin) {
       setStore(null);
@@ -142,9 +163,14 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
         if (controller.signal.aborted) return;
         if (!value || value.slug !== slug) { fail("门店信息与当前入口不一致，请核对门店链接"); return; }
         const configuringAdmin = role === "admin" && isAdminEntry() && !!session.token && value.status === "CONFIGURING";
-        if (!configuringAdmin && (value.is_active === false || value.status !== "ACTIVE")) {
-          const closed = value.is_active === false || ["PROVISIONING", "CONFIGURING", "DISABLED"].includes(value.status);
-          fail(closed ? closedStoreMessage : "无法确认门店营业状态，请稍后重试", closed);
+        const issueKind = storeEntryStatusIssueKind(value);
+        if (!configuringAdmin && issueKind !== null) {
+          const message = issueKind === "DISABLED"
+            ? disabledStoreAnnouncement
+            : issueKind === "NOT_OPEN"
+              ? closedStoreMessage
+              : "无法确认门店营业状态，请稍后重试";
+          fail(message, issueKind);
           return;
         }
         registerStoreCurrency(slug, value.currency_name);
@@ -159,8 +185,10 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
           clearSession(role);
           return;
         }
-        fail(cause instanceof Error ? cause.message : "门店暂时无法读取，请重试",
-          cause instanceof ApiError && cause.status === 403 && cause.message === closedStoreMessage);
+        fail(
+          cause instanceof Error ? cause.message : "门店暂时无法读取，请重试",
+          storeEntryTransportIssueKind(cause),
+        );
       })
       .finally(() => window.clearTimeout(timeout));
     return () => {

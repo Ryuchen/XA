@@ -42,6 +42,7 @@ def public_store(store, request=None):
         'logo_url': build_media_url_from_path(request, store.logo_url, store=store),
         'background_url': public_background_url(store, request),
         'introduction': store.introduction,
+        'content_compliance_enabled': store.content_compliance_enabled,
         'status': store.status, 'is_active': store.is_active,
         'boss_url': store_entry_url(store.boss_url, store.slug),
         'provider_url': store_entry_url(store.provider_url, store.slug),
@@ -61,6 +62,27 @@ def validate_introduction(value):
         raise serializers.ValidationError('请填写纯文本介绍')
 
 
+def _check_store_content(serializer, field, value, *, enabled):
+    from common.compliance import check_content
+    result = check_content(field, value, enabled=enabled)
+    if result is not None:
+        if not hasattr(serializer, '_compliance_results'):
+            serializer._compliance_results = {}
+        serializer._compliance_results[field] = result
+    return value
+
+
+def _validate_store_content(serializer, attrs):
+    enabled = attrs.get(
+        'content_compliance_enabled',
+        getattr(serializer.instance, 'content_compliance_enabled', True),
+    )
+    fields = {'name': 'STORE_NAME', 'introduction': 'STORE_INTRODUCTION'}
+    for name, compliance_field in fields.items():
+        if name in attrs:
+            _check_store_content(serializer, compliance_field, attrs[name], enabled=enabled)
+
+
 class StoreCreateSerializer(serializers.ModelSerializer):
     database_alias = serializers.CharField(max_length=64, required=False)
     entity_prefix = serializers.CharField(max_length=4, required=True, allow_blank=False)
@@ -75,7 +97,7 @@ class StoreCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Store
-        fields = ['slug', 'name', 'entity_prefix', 'provider_name_prefix', 'currency_name', 'logo_url', 'introduction', 'database_alias', 'boss_url', 'provider_url', 'admin_url',
+        fields = ['slug', 'name', 'entity_prefix', 'provider_name_prefix', 'currency_name', 'logo_url', 'introduction', 'content_compliance_enabled', 'database_alias', 'boss_url', 'provider_url', 'admin_url',
                   'admin_username', 'admin_password', 'admin_phone', 'admin_nickname']
 
     def validate_logo_url(self, value):
@@ -98,6 +120,10 @@ class StoreCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('请输入门店名称')
         return value
 
+    def validate_introduction(self, value):
+        validate_introduction(value)
+        return value
+
     def validate_currency_name(self, value):
         return value.strip()
 
@@ -107,6 +133,7 @@ class StoreCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        _validate_store_content(self, attrs)
         from .dynamic_database import alias_for_slug, enabled, materialize
         # A newly provisioned store must choose its own coin name before
         # opening; the model's default belongs to neither a new SaaS tenant
@@ -182,7 +209,7 @@ class StoreUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Store
         fields = ['name', 'provider_name_prefix', 'currency_name', 'logo_url', 'background_url', 'introduction',
-                  'status', 'boss_url', 'provider_url', 'admin_url']
+                  'content_compliance_enabled', 'status', 'boss_url', 'provider_url', 'admin_url']
 
     def validate_provider_name_prefix(self, value):
         return validate_provider_name_prefix(value)
@@ -212,6 +239,10 @@ class StoreUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('请输入门店名称')
         return value
 
+    def validate_introduction(self, value):
+        validate_introduction(value)
+        return value
+
     def validate_status(self, value):
         if value in (Store.Status.PROVISIONING, Store.Status.CONFIGURING):
             raise serializers.ValidationError('初始化状态仅由部署命令维护')
@@ -226,3 +257,7 @@ class StoreUpdateSerializer(serializers.ModelSerializer):
             if not store_connection_ready(self.instance):
                 raise serializers.ValidationError('门店数据库未配置，不能营业')
         return value
+
+    def validate(self, attrs):
+        _validate_store_content(self, attrs)
+        return attrs

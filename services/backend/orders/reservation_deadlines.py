@@ -54,15 +54,19 @@ def required_rules(*, lock=False):
     return rules
 
 
+def saved_deadline(reservation):
+    """Return the cutoff snapshot; legacy rows retain their end-time fallback."""
+    if reservation.status == reservation.Status.PENDING:
+        return reservation.confirmation_deadline or reservation.end_time
+    if reservation.status == reservation.Status.CONFIRMED:
+        return reservation.payment_deadline or reservation.end_time
+    return None
+
+
 def due(reservation, *, now):
     """Legacy rows without snapshots keep their former end-time behavior."""
-    if reservation.status == reservation.Status.PENDING:
-        deadline = reservation.confirmation_deadline
-    elif reservation.status == reservation.Status.CONFIRMED:
-        deadline = reservation.payment_deadline
-    else:
-        return False
-    return (deadline if deadline is not None else reservation.end_time) <= now
+    deadline = saved_deadline(reservation)
+    return deadline is not None and deadline <= now
 
 
 def confirmation_snapshot(start, now, rules):

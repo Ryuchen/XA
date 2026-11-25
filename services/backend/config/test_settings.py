@@ -4,6 +4,7 @@ from .settings import *  # noqa: F403
 # 显式钉死安全基线相关配置，避免测试环境被 config.checks 的生产 fail-fast 打死：
 # 无论宿主机 / CI 是否导出了 DJANGO_DEBUG=0，测试都以「本地零配置」语义运行。
 DEBUG = True
+COMPLIANCE_ALLOW_BUILTIN_BOOTSTRAP = True
 ISOLATED_CONTROL_PLANE = False
 SECRET_KEY = 'xa-test-only-secret-key-not-for-production-use'
 ALLOWED_HOSTS = ['*']
@@ -79,6 +80,12 @@ LOGIN_OTP_REQUIRED = False
 # Existing historical fixtures predate the mandatory WeChat gate. Dedicated
 # acceptance tests explicitly enable it and exercise real eligibility logic.
 PROVIDER_WECHAT_GATE_ENABLED = False
+# SQLite is never a production clock. This explicit test-only seam preserves
+# controllable reservation time fixtures; production MySQL always samples DB time.
+RESERVATION_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY = True
+# Settlement tests explicitly opt into the same isolated SQLite seam. Production
+# still accepts only the current store MySQL clock and rejects raw datetimes.
+SETTLEMENT_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY = True
 
 # 新流量场景在专项测试中显式启用。
 ORDER_TRAFFIC_ENABLED = False

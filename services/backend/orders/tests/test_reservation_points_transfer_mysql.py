@@ -2767,7 +2767,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
     def test_room_addon_refund_before_confirmation_can_be_read_back_after_settlement(self):
         self.room_service = self.room_addon_purchase = True
+        self.addon_receipt_reads = []
         self.run_in_stores(self.exercise_room_addon_refund_before_confirmation)
+        if len(self.routes) > 1:
+            for slug, staff, path in self.addon_receipt_reads:
+                wrong_host = next(host for other_slug, host, _ in self.routes if other_slug != slug)
+                self.assertEqual(staff.get(path, HTTP_HOST=wrong_host).status_code, 401)
 
     @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
         ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
@@ -2845,6 +2850,16 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                                                       other_payment=other_payment)
             return
         settled = self.settle_consultation_addon_refund(staff, transfer, refund)
+        receipt_path = f'/api/admin{path}{proposal["id"]}/execution-receipt/'
+        with (connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes),
+              connections['default'].execute_wrapper(self.reject_detail_writes)):
+            receipt = self.ok(staff.get(receipt_path))
+            self.assertEqual(self.ok(staff.get(receipt_path)), receipt)
+        self.assertEqual((receipt['order_id'], receipt['payment_id'], receipt['proposal_id'],
+                          receipt['case_id'], receipt['case_request_id'], receipt['refund_executed']),
+                         (order.pk, payment.pk, proposal['id'], case['id'], proposal['case_request_id'], True))
+        self.assertEqual(receipt['execution_receipt'], posted['execution_receipt'])
+        self.addon_receipt_reads.append((self.store.slug, staff, receipt_path))
         print(f'{self.store.slug} order={order.pk} addon_net_income_transaction={settled.income_transaction_id}:'
               f'{settled.amount} refund_replay={refund.pk}', flush=True)
 

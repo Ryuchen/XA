@@ -7,8 +7,9 @@ flows are not automatically opted in until their source priority is updated.
 """
 from django.conf import settings
 from django.db.models import Q, Sum
-from django.utils import timezone
 from stores.db import transaction
+
+from .settlement_clocks import require_clock
 
 from .models import (RefundDepositCashRepayment, RefundDepositDeficit, RefundDepositIncomeApplication, RefundDepositRepayment,
                      Transaction, get_platform_wallet)
@@ -100,6 +101,7 @@ def apply_cash_topup_locked(*, topup, profile, platform):
             if paid + deficit.remaining != deficit.amount or deficit.closed_at:
                 raise ValueError('退款押金缺口历史记录不一致')
     available = topup.amount
+    clock = None
     for deficit in deficits:
         if not available:
             break
@@ -107,7 +109,8 @@ def apply_cash_topup_locked(*, topup, profile, platform):
         RefundDepositCashRepayment.objects.create(topup=topup, deficit=deficit, amount=amount)
         deficit.remaining -= amount
         if not deficit.remaining:
-            deficit.closed_at = timezone.now()
+            clock = require_clock(clock)
+            deficit.closed_at = clock.at
         deficit.save(update_fields=['remaining', 'closed_at'])
         available -= amount
     if not RefundDepositDeficit.objects.filter(profile=profile, account_id=profile.account_id, remaining__gt=0).exists():
@@ -118,7 +121,8 @@ def apply_cash_topup_locked(*, topup, profile, platform):
             raise ValueError('陪玩存在多个未关闭的补差机会')
         if permits:
             permit = permits[0]
-            permit.closed_at, permit.close_reason, permit.cash_topup = timezone.now(), 'CASH_GAP_PAID', topup
+            clock = require_clock(clock)
+            permit.closed_at, permit.close_reason, permit.cash_topup = clock.at, 'CASH_GAP_PAID', topup
             permit.save(update_fields=['closed_at', 'close_reason', 'cash_topup'])
     return topup.amount - available
 
@@ -470,10 +474,11 @@ def apply_released_income(*, source, profile, wallet, hold=None, now=None):
                 or max(gift.gift_aftersale_hours, gift.gift_freeze_hours) != 0
                 or gift.aftersales.filter(status='OPEN').exists()):
             raise ValueError('礼物收益尚未满足释放条件')
+    clock = None
     if source.tx_type == 'EARNINGS_RELEASE':
-        now = now or timezone.now()
+        clock = require_clock(now)
         if (not source.order_id or not hold or hold.wallet_id != wallet.pk or hold.income_transaction.order_id != source.order_id
-                or hold.released_at or hold.cancelled_at or hold.release_at > now
+                or hold.released_at or hold.cancelled_at or hold.release_at > clock.at
                 or source.amount != hold.amount - hold.recovered_amount):
             raise ValueError('解冻收益或释放时间不一致')
     prior = RefundDepositIncomeApplication.objects.select_for_update().filter(source_transaction=source).first()
@@ -517,7 +522,8 @@ def apply_released_income(*, source, profile, wallet, hold=None, now=None):
         profile.deposit_paid += amount; profile.save(update_fields=['deposit_paid', 'deposit_business_cycle'])
         deficit.remaining -= amount
         if not deficit.remaining:
-            deficit.closed_at = timezone.now()
+            clock = require_clock(clock or now)
+            deficit.closed_at = clock.at
         deficit.save(update_fields=['remaining', 'closed_at'])
         RefundDepositRepayment.objects.create(application=application, deficit=deficit, amount=amount,
             provider_transaction=provider_tx, store_transaction=store_tx)
@@ -525,5 +531,5 @@ def apply_released_income(*, source, profile, wallet, hold=None, now=None):
     application.applied_amount = source.amount - remaining
     application.save(update_fields=['applied_amount'])
     from .refund_recovery_order import close_for_income
-    close_for_income(profile, application)
+    close_for_income(profile, application, now=clock or now)
     return application.applied_amount

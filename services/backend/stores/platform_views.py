@@ -30,7 +30,8 @@ def admin_origin(request):
 
 def profile(account):
     grants = PlatformRoleGrant.objects.filter(account=account, is_active=True).values('role', 'scope_slug')
-    capabilities = ['STORE_MANAGEMENT_V1', 'PLATFORM_SETUP_V1', 'PLATFORM_CLOCKS_V1', 'PLATFORM_DEPOSIT_V1', 'PLATFORM_WITHDRAW_V1']
+    capabilities = ['STORE_MANAGEMENT_V1', 'PLATFORM_SETUP_V1', 'PLATFORM_CLOCKS_V1', 'PLATFORM_DEPOSIT_V1', 'PLATFORM_WITHDRAW_V1',
+                    'PLATFORM_ORDERS_V1']
     if getattr(settings, 'PLATFORM_PASS_REPAYMENT_ENABLED', False):
         capabilities.append('PLATFORM_PASS_REPAYMENT_V1')
     return {'id': str(account.pk), 'username': account.username, 'nickname': account.nickname,
@@ -155,7 +156,7 @@ class PlatformStoresView(APIView):
             return fail('平台账号请从管理后台入口访问', 403)
         account = request.platform_account
         ids = set()
-        for action in ('stores:view', 'withdraw:view', 'salary:view'):
+        for action in ('stores:view', 'withdraw:view', 'salary:view', 'orders:view'):
             ids.update(platform_stores_for(account, action).values_list('pk', flat=True))
         from .models import Store
         stores = Store.objects.filter(pk__in=ids).order_by('id')

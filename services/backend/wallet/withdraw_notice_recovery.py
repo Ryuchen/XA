@@ -13,7 +13,7 @@ from .withdraw_notifications import PLATFORM_EVENTS, withdrawal_message
 log = logging.getLogger(__name__)
 
 
-def _project(withdrawal_id, *, platform_event_id=None, owner_event=None, retry_owner_review=False):
+def _project(withdrawal_id, *, platform_event_id=None, owner_event=None, store_event=None, retry_source_review=False):
     initial = WithdrawRequest.objects.filter(pk=withdrawal_id).values('account_id').first()
     if not initial:
         return
@@ -30,23 +30,31 @@ def _project(withdrawal_id, *, platform_event_id=None, owner_event=None, retry_o
         if not row or row.account_id != initial['account_id']:
             return
         if owner_event in ('submitted', 'owner_cancelled'):
-            withdrawal_message(row, owner_event, retry_owner_review=retry_owner_review)
+            withdrawal_message(row, owner_event, retry_source_review=retry_source_review)
+            return
+        if store_event in ('store_approved', 'store_rejected'):
+            reason = row.audit_remark if store_event == 'store_rejected' else ''
+            withdrawal_message(row, store_event, reason=reason, retry_source_review=retry_source_review)
             return
         if platform_event_id is not None:
             event = WithdrawalPlatformEvent.objects.filter(pk=platform_event_id, withdrawal=row).first()
             if not event or event.action not in PLATFORM_EVENTS:
                 return
             reason = event.detail.get('reason', '') if isinstance(event.detail, dict) else ''
-            withdrawal_message(row, PLATFORM_EVENTS[event.action], reason=reason, platform_event=event)
+            if PLATFORM_EVENTS[event.action] not in ('rejected', 'cancelled'):
+                reason = ''
+            withdrawal_message(row, PLATFORM_EVENTS[event.action], reason=reason, platform_event=event,
+                               retry_source_review=retry_source_review)
             return
         if not row.audited_at:
             return
         has_platform = WithdrawalPlatformEvent.objects.filter(withdrawal=row).exists()
         if has_platform or row.status in (row.Status.STORE_APPROVED, row.Status.PLATFORM_APPROVED,
                                            row.Status.PAYMENT_UNKNOWN, row.Status.PAID):
-            withdrawal_message(row, 'store_approved')
+            withdrawal_message(row, 'store_approved', retry_source_review=retry_source_review)
         elif row.status == row.Status.REJECTED:
-            withdrawal_message(row, 'store_rejected', reason=row.audit_remark)
+            withdrawal_message(row, 'store_rejected', reason=row.audit_remark,
+                               retry_source_review=retry_source_review)
 
 
 def recover_withdrawal_messages(limit=100):
@@ -60,7 +68,7 @@ def recover_withdrawal_messages(limit=100):
     submissions = list(WithdrawRequest.objects.filter(workflow_version=2).annotate(
         has_notice=Exists(submitted_done)).filter(has_notice=False).order_by('pk').values_list('pk', flat=True)[:limit])
     cancellations = list(WithdrawRequest.objects.filter(workflow_version=2, status=WithdrawRequest.Status.CANCELLED,
-        release__actor_kind='OWNER').annotate(has_notice=Exists(cancelled_done)).filter(has_notice=False)
+        release__actor_kind='OWNER', platform_events__isnull=True).annotate(has_notice=Exists(cancelled_done)).filter(has_notice=False)
         .order_by('pk').values_list('pk', flat=True)[:limit])
     platform = WithdrawalPlatformEvent.objects.filter(withdrawal_id=OuterRef('pk'))
     local_done = WithdrawalNoticeDelivery.objects.filter(withdrawal_id=OuterRef('pk'),

@@ -120,7 +120,7 @@ def _provider_reservations(account):
         order__providers__provider_account=account, order__providers__released_at__isnull=True))
 
 
-def _visible_reservation(account, reservation_id: int, *, for_action=False):
+def _visible_reservation(account, reservation_id: int, *, for_action=False, check_deadline=True):
     """按身份取一条可见的预约；不可见与不存在一律当作不存在。
 
     把「无权查看」暴露成 403 等于告诉外人「这条预约确实存在」，
@@ -131,13 +131,18 @@ def _visible_reservation(account, reservation_id: int, *, for_action=False):
         qs = qs.filter(Q(customer_account=account) | _provider_reservations(account)).distinct()
     reservation = qs.first()
     from .reservation_deadlines import due
-    if reservation and due(reservation, now=timezone.now()):
-        from .reservation_expiration import expire_reservation
-        expire_reservation(reservation.pk)
-        # Expiring a team invitation can remove the requesting provider from
-        # its seat. Reapply the same visibility filter after the state change;
-        # the initially authorized object may no longer belong to this actor.
-        reservation = qs.first()
+    if reservation and check_deadline:
+        from .reservation_clock import sample, same_connection, ClockUnavailable
+        observed = sample()
+        if not same_connection(observed):
+            raise ClockUnavailable('预约可见性复检期间数据库连接发生变化')
+        if due(reservation, now=observed.instant):
+            from .reservation_expiration import expire_reservation
+            expire_reservation(reservation.pk)
+            # Expiring a team invitation can remove the requesting provider from
+            # its seat. Reapply the same visibility filter after the state change;
+            # the initially authorized object may no longer belong to this actor.
+            reservation = qs.first()
     if reservation and for_action and not _is_staff(account):
         from .reservation_cycle import viewer_cycle_status, viewer_participation_status
         if (viewer_cycle_status(reservation, account) != 'CURRENT'
@@ -174,7 +179,7 @@ class ReservationListCreateView(APIView):
     def get(self, request):
         account = request.account
         if _is_staff(account) and not staff_can(account, 'order:view'):
-            return Response({'code': 403, 'msg': '无查看订单权限'})
+            return Response({'code': 403, 'msg': '无查看订单权限'}, status=403)
         qs = _base_queryset()
 
         role = (request.query_params.get('role') or '').strip().lower()
@@ -256,6 +261,11 @@ class ReservationListCreateView(APIView):
             return Response({'code': 403, 'msg': '仅玩家或客服可发起预约'})
         if _is_staff(account) and not staff_can(account, 'order:dispatch'):
             return Response({'code': 403, 'msg': '无代派单权限'})
+        from stores.closure import closure_refusal_response
+        from stores.context import current_store
+        closure_denied = closure_refusal_response(current_store())
+        if closure_denied is not None:
+            return closure_denied
         serializer = ReservationCreateSerializer(
             data=request.data, context={'request': request},
         )
@@ -288,21 +298,24 @@ class ReservationListCreateView(APIView):
                 remark=data['remark'],
                 operator=request.legacy_user,
                 operator_account=account,
+                decision_key=request.data.get('decision_key'),
             )
         except ReservationConflictError as exc:
             return Response({'code': 409, 'msg': str(exc)})
         except ReservationError as exc:
             return Response({'code': 400, 'msg': str(exc)})
 
-        notify_reservation_after_commit(reservation)
-        if not (getattr(settings, 'RESERVATION_NOTICE_RECOVERY_ENABLED', False)
+        replayed = getattr(reservation, '_decision_replayed', False)
+        if not replayed:
+            notify_reservation_after_commit(reservation)
+        if not replayed and not (getattr(settings, 'RESERVATION_NOTICE_RECOVERY_ENABLED', False)
                 and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)):
             _reservation_notice(
                 reservation, 'provider', '有新的预约待确认',
                 f'{timezone.localtime(reservation.start_time):%m-%d %H:%M} 起'
                 f'{reservation.duration_minutes} 分钟，请尽快确认',
             )
-        if _is_staff(account):
+        if _is_staff(account) and not replayed:
             _reservation_notice(reservation, 'customer', '客服已创建预约',
                                 f'预约 {reservation.reservation_no} 已创建，等待陪玩确认')
 
@@ -322,7 +335,7 @@ class ReservationDetailView(APIView):
 
     def get(self, request, reservation_id: int):
         if _is_staff(request.account) and not staff_can(request.account, 'order:view'):
-            return Response({'code': 403, 'msg': '无查看订单权限'})
+            return Response({'code': 403, 'msg': '无查看订单权限'}, status=403)
         reservation = _visible_reservation(request.account, reservation_id)
         if reservation is None:
             return Response({'code': 404, 'msg': '预约不存在'})
@@ -358,6 +371,46 @@ class _ReservationTransitionView(APIView):
             permission = 'order:cancel' if self.target_status == Reservation.Status.CANCELLED else 'order:dispatch'
             if not staff_can(account, permission):
                 return Response({'code': 403, 'msg': '无预约操作权限'})
+        serializer = ReservationCancelSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'code': 400, 'msg': _first_error(serializer.errors)})
+        reason = serializer.validated_data['reason'].strip()
+        timed_decision = self.target_status in (Reservation.Status.CONFIRMED, Reservation.Status.REJECTED)
+        decision_key = None
+        request_hash = ''
+        from .reservation_clock import ClockAfter, ClockConflict
+        if timed_decision:
+            from .reservation_clock import (
+                assert_replay, fingerprint_request, get_receipt, validate_decision_key,
+            )
+            decision_key = validate_decision_key(request.data.get('decision_key'))
+            request_hash = fingerprint_request({
+                'reason': '' if self.target_status == Reservation.Status.CONFIRMED else reason,
+            })
+            if decision_key:
+                receipt = get_receipt(decision_key)
+                if receipt is not None:
+                    if receipt.reservation_id != reservation_id:
+                        raise ClockConflict('原 decision_key 对应的预约决策内容不同')
+                    team = receipt.reservation.required_provider_count == 2
+                    action = ('TEAM_' if team else '') + (
+                        'CONFIRM' if self.target_status == Reservation.Status.CONFIRMED else 'REJECT')
+                    # A lost upper-bound ACK must replay from its original row,
+                    # not trigger a fresh visibility/deadline clock decision.
+                    assert_replay(receipt, reservation=receipt.reservation, action=action,
+                                  seat_number=receipt.seat_number, actor_account=account,
+                                  deadline=receipt.deadline, request_fingerprint=request_hash)
+                    reservation = _visible_reservation(
+                        account, reservation_id, for_action=True, check_deadline=False)
+                    if reservation is None:
+                        return Response({'code': 404, 'msg': '预约不存在'})
+                    if not team:
+                        denied = self.check_actor(account, reservation)
+                        if denied:
+                            return Response({'code': 403, 'msg': denied}, status=403)
+                    return Response({'code': 0, 'msg': self.success_msg,
+                                     'data': ReservationSerializer(reservation, context={'request': request}).data})
+
         reservation = _visible_reservation(account, reservation_id, for_action=True)
         if reservation is None:
             return Response({'code': 404, 'msg': '预约不存在'})
@@ -373,7 +426,11 @@ class _ReservationTransitionView(APIView):
             try:
                 reservation, error = decide(reservation.id, account,
                     accept=self.target_status == Reservation.Status.CONFIRMED,
-                    reason=serializer.validated_data['reason'].strip())
+                    reason=reason, decision_key=decision_key)
+            except ClockAfter:
+                from .reservation_expiration import expire_reservation
+                expire_reservation(reservation.id)
+                return Response({'code': 409, 'msg': '预约已到达截止时间'}, status=409)
             except ReservationError as exc:
                 return Response({'code': 400, 'msg': str(exc)})
             replayed = getattr(reservation, '_decision_replayed', False)
@@ -419,7 +476,7 @@ class _ReservationTransitionView(APIView):
                         or self.check_actor(current_actor, r)):
                     raise ReservationError('预约属于此前入店周期或当前账号已无权操作')
             from .reservation_deadlines import due, required_rules
-            if due(r, now=timezone.now()):
+            if due(r, now=r._reservation_clock_now):
                 raise IllegalReservationTransitionError('预约已过期，请重新预约', current_status=Reservation.Status.EXPIRED)
             if self.target_status in (Reservation.Status.CONFIRMED, Reservation.Status.REJECTED):
                 if r.provider_account_id != account.pk or r.provider_business_cycle != decision_cycle:
@@ -487,15 +544,25 @@ class _ReservationTransitionView(APIView):
                     from .reservation_services import lock_provider_profile
                     lock_provider_profile(account)
                 reservation = transition_reservation(
-                    reservation.id,
-                    self.target_status,
-                    operator=request.legacy_user,
-                    operator_account=account,
-                    reason=reason,
-                    pre_check=ensure_current,
-                    side_effect=write_reason,
+                    reservation.id, self.target_status,
+                    operator=request.legacy_user, operator_account=account,
+                    reason=reason, pre_check=ensure_current, side_effect=write_reason,
                     update_fields=update_fields,
+                    clock_action=(('CONFIRM' if self.target_status == Reservation.Status.CONFIRMED
+                                   else 'REJECT') if timed_decision else None),
+                    clock_deadline=((reservation.confirmation_deadline or reservation.end_time)
+                                    if timed_decision else None),
+                    clock_decision_key=decision_key,
+                    clock_request_fingerprint=request_hash,
                 )
+            clock_decision = getattr(reservation, '_reservation_clock_decision', None)
+            if clock_decision is not None:
+                from .reservation_clock import finalize_decision
+                finalize_decision(clock_decision, state_after=reservation.status)
+        except ClockAfter:
+            from .reservation_expiration import expire_reservation
+            expire_reservation(reservation.id)
+            return Response({'code': 409, 'msg': '预约已到达截止时间'}, status=409)
         except IllegalReservationTransitionError as exc:
             from .reservation_expiration import expire_reservation
             expire_reservation(reservation.id)
@@ -584,6 +651,48 @@ class ReservationCancelView(_ReservationTransitionView):
         return '无权取消该预约'
 
 
+class ReservationReplacementCandidatesView(APIView):
+    """Read-only candidates for a currently replaceable, genuinely vacant seat."""
+
+    permission_classes = [IsClubAccountAuthenticated]
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response['Cache-Control'] = 'no-store'
+        return response
+
+    def get(self, request, reservation_id):
+        account = request.account
+        # Unlike ordinary detail reads, this GET must never expire/refresh rows.
+        booking = _visible_reservation(
+            account, reservation_id, for_action=True, check_deadline=False,
+        )
+        if booking is None:
+            return Response({'code': 404, 'msg': '预约不存在'})
+        if account.account_type != ClubAccount.AccountType.BOSS or booking.customer_account_id != account.pk:
+            return Response({'code': 403, 'msg': '仅预约老板本人可读取补位候选'}, status=403)
+        if set(request.query_params) != {'seat_number'} or len(request.query_params.getlist('seat_number')) != 1:
+            return Response({'code': 400, 'msg': '请仅指定一个有效席位'})
+        try:
+            number = serializers.IntegerField(min_value=1, max_value=2).run_validation(
+                request.query_params.get('seat_number'),
+            )
+        except serializers.ValidationError:
+            return Response({'code': 400, 'msg': '预约席位无效'})
+        allowed = ReservationSerializer(booking, context={'request': request}).get_allowed_actions(booking)
+        if 'replace_provider' not in allowed:
+            return Response({'code': 409, 'msg': '当前预约不允许补位'})
+        seat = next((row for row in booking.seats.all() if row.number == number), None)
+        if seat is None or seat.status != 'VACANT':
+            return Response({'code': 409, 'msg': '只能读取空出席位的补位候选'})
+        from .reservation_replacement_candidates import read_candidates
+        try:
+            data = read_candidates(booking, number, request)
+        except ReservationError as exc:
+            return Response({'code': 409, 'msg': str(exc)})
+        return Response({'code': 0, 'data': data})
+
+
 class ReservationReplaceProviderView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
     throttle_scope = 'order_write'
@@ -654,6 +763,8 @@ class ReservationQuoteView(APIView):
             return Response({'code': 404, 'msg': '预约不存在'})
         if not _is_staff(request.account) and reservation.customer_account_id != request.account.pk:
             return Response({'code': 403, 'msg': '仅预约所属玩家可查看报价'})
+        from .reservation_clock import assert_clock_clear
+        assert_clock_clear(reservation)
         if reservation.status != Reservation.Status.CONFIRMED:
             return Response({'code': 409, 'msg': '仅已确认的预约可转订单'})
         if not reservation.customer_account_id or not reservation.provider_id:
@@ -749,6 +860,26 @@ class ReservationQuoteView(APIView):
         funding_amount = (points_preview['estimated_payable_units'] if points_preview and points_preview.get('applicable')
                           else data['amount'])
         funding = funding_quote(wallet, funding_amount, gift, compensation)
+        from .reservation_clock import (
+            ClockConflict, fingerprint_request, record_probe, require_before, validate_decision_key,
+        )
+        from .reservation_deadlines import saved_deadline
+        request_hash = fingerprint_request(sorted(
+            (key, list(values)) for key, values in request.query_params.lists()))
+        decision_key = validate_decision_key(request.query_params.get('decision_key'))
+        with transaction.atomic():
+            locked = Reservation.objects.select_for_update().get(pk=reservation.pk)
+            if locked.status != Reservation.Status.CONFIRMED or locked.updated_at != reservation.updated_at:
+                raise ClockConflict('预约已变化，请刷新后重新报价')
+            clock_probe = record_probe(
+                reservation=locked, action='QUOTE', deadline=saved_deadline(locked),
+                actor_account=request.account, decision_key=decision_key,
+                state_before=Reservation.Status.CONFIRMED, request_fingerprint=request_hash,
+            )
+        if clock_probe.state == 'AFTER':
+            from .reservation_expiration import expire_reservation
+            expire_reservation(reservation.pk)
+        require_before(clock_probe)
         return Response({'code': 0, 'data': {
             'original_amount': data['original_amount'], 'boss_discount': data['boss_discount'],
             'promo_discount': data['promo_discount'], 'coupon_discount': data['coupon_discount'],

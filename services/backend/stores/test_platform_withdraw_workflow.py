@@ -78,7 +78,7 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         with store_context(self.second):
             row.refresh_from_db(); wallet.refresh_from_db()
             self.assertEqual((row.status, wallet.frozen_amount, row.transaction.status), ('PLATFORM_APPROVED', 20000, 'PENDING'))
-        payload = {'client_request_id':'payment-one', 'payout_reference':'QA-BATCH-1', 'paid_at':timezone.now().isoformat()}
+        payload = {'client_request_id':'payment-one', 'payout_reference':'QA-BATCH-1', 'paid_amount_fen':19000, 'paid_at':timezone.now().isoformat()}
         result = self.action(pk, 'paid', **payload)
         self.assertEqual(result.data['code'], 0, result.data)
         self.assertTrue(self.action(pk, 'paid', **payload).data['data']['replayed'])
@@ -345,7 +345,7 @@ class PlatformWithdrawalWorkflowTest(TestCase):
             self.assertEqual(self.action(pk, 'approve', client_request_id='paid-audit-approve').data['code'], 0)
         with self.captureOnCommitCallbacks(using='store_b', execute=True):
             self.assertEqual(self.action(pk, 'mark-unknown', client_request_id='paid-audit-unknown', reason='等待核对').data['code'], 0)
-        payload = {'client_request_id': 'paid-audit-paid', 'payout_reference': 'synthetic-receipt', 'paid_at': timezone.now().isoformat()}
+        payload = {'client_request_id': 'paid-audit-paid', 'payout_reference': 'synthetic-receipt', 'paid_amount_fen': 19000, 'paid_at': timezone.now().isoformat()}
         def fail_audit_insert(execute, sql, params, many, context):
             if sql.lstrip().upper().startswith('INSERT') and 'stores_platformauditevent' in sql.lower():
                 raise DatabaseError('simulated control audit write outage')
@@ -583,23 +583,24 @@ class PlatformWithdrawalWorkflowTest(TestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
+    @override_settings(WITHDRAWAL_NOTICE_RECOVERY_ENABLED=True)
     def test_review_and_payment_notices_follow_real_transitions_without_duplicates(self):
         pk = self.apply(); self.initial(pk)
         self.assertEqual(self.action(pk, 'approve', client_request_id='notices-approve').data['code'], 0)
         self.assertEqual(self.action(pk, 'mark-unknown', client_request_id='notices-unknown',
                                      reason='财务内部核实').data['code'], 0)
-        payload = {'client_request_id':'notices-paid', 'payout_reference':'QA-NOTICE', 'paid_at':timezone.now().isoformat()}
+        payload = {'client_request_id':'notices-paid', 'payout_reference':'QA-NOTICE', 'paid_amount_fen':19000, 'paid_at':timezone.now().isoformat()}
         self.assertEqual(self.action(pk, 'paid', **payload).data['code'], 0)
         self.assertTrue(self.action(pk, 'paid', **payload).data['data']['replayed'])
         with store_context(self.second):
             messages = list(Message.objects.filter(recipient_account=self.account).order_by('id'))
-            self.assertEqual([msg.title for msg in messages], ['提现门店初审通过', '提现平台终审通过',
-                             '提现打款待核实', '提现已登记打款'])
+            self.assertEqual([msg.title for msg in messages], ['提现申请已提交', '提现门店初审通过',
+                             '提现平台终审通过', '提现打款待核实', '提现已登记打款'])
             self.assertTrue(all(msg.action_url == f'/pages/wallet/index?withdraw_id={pk}' for msg in messages))
             self.assertNotIn('财务内部核实', messages[2].detail)
         with store_context(self.first):
             self.assertFalse(Message.objects.filter(title='提现已登记打款').exists())
-        self.assertEqual(self.p.get('/api/messages/').data['data']['total'], 4)
+        self.assertEqual(self.p.get('/api/messages/').data['data']['total'], 5)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
@@ -609,7 +610,8 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         with patch('site_messages.models.Message.objects.create', side_effect=DatabaseError('isolated failure')):
             with self.assertLogs('wallet.withdraw_notifications', level='ERROR'):
                 result = self.action(pk, 'paid', client_request_id='notice-failure-paid',
-                                     payout_reference='QA-FAIL-NOTICE', paid_at=timezone.now().isoformat())
+                                     payout_reference='QA-FAIL-NOTICE', paid_amount_fen=19000,
+                                     paid_at=timezone.now().isoformat())
         self.assertEqual(result.data['code'], 0, result.data)
         with store_context(self.second):
             row = WithdrawRequest.objects.get(pk=pk); wallet = get_wallet(account=self.account)
@@ -659,7 +661,7 @@ class PlatformWithdrawalWorkflowTest(TestCase):
             pk = self.apply('request-' + suffix); self.initial(pk)
             self.assertEqual(self.action(pk, 'approve', client_request_id='approve-' + suffix).data['code'], 0)
             payload = {'client_request_id':'paid-' + suffix, 'payout_reference':'QA-SHARED-BATCH',
-                       'paid_at':timezone.now().isoformat()}
+                       'paid_amount_fen':19000, 'paid_at':timezone.now().isoformat()}
             result = self.action(pk, 'paid', **payload)
             if suffix == 'two':
                 self.assertEqual(result.data['errorCode'], 'DUPLICATE_PAYOUT_REFERENCE')

@@ -96,6 +96,48 @@ export async function checkAddonExecution(intent: AddonExecutionIntent, io: Pick
   io.clear()
   return proposal
 }
+export type ExactAddonExecutionOutcome =
+  | { status: "verified"; receipt: Data }
+  | { status: "not-executed" | "unknown"; message: string }
+/** This receipt proves an original refund only. It never grants execution eligibility. */
+function inspectExactReceipt(data: Data, target: AddonProposalTarget, proposalId: number, expectedAmount?: number): ExactAddonExecutionOutcome {
+  if (!validScope(target) || !positiveId(proposalId) || expectedAmount !== undefined && !amount(expectedAmount) ||
+    data?.order_id !== target.orderId || data.payment_id !== target.paymentId ||
+    data.proposal_id !== proposalId || data.case_id !== target.caseId || data.case_request_id !== target.caseRequestId) throw new Error("精确退款凭证与原订单、付款、方案或工单轮次不一致，请保留原记录。")
+  if (data.refund_executed === false && data.execution_receipt === null) return { status: "not-executed", message: "服务端尚未记录原方案退款。原执行记录继续保留；此查询不表示当前可以执行。" }
+  if (data.refund_executed === true && data.execution_receipt === null) return { status: "unknown", message: "原方案已有退款记录，返款流水凭证仍待核对。原执行记录继续保留。" }
+  const proof = data.execution_receipt
+  if (data.refund_executed !== true || !positiveId(proof?.refund_id) || !positiveId(proof.buyer_transaction_id) ||
+    !amount(proof.amount_raw) || expectedAmount !== undefined && proof.amount_raw !== expectedAmount || !time(proof.executed_at)) throw new Error("精确退款凭证的金额、退款或返款流水信息无法核对，请保留原记录。")
+  return { status: "verified", receipt: { id: data.proposal_id, order_id: data.order_id, payment_id: data.payment_id,
+    case_id: data.case_id, case_request_id: data.case_request_id, refund_executed: true, execution_receipt: proof } }
+}
+export function inspectExactAddonExecution(data: Data, intent: AddonExecutionIntent): ExactAddonExecutionOutcome {
+  return inspectExactReceipt(data, intent.target, intent.proposalId, intent.amountRaw)
+}
+/** A known proposal number can be read without local state; its case scope must still be independently known. */
+export function lookupExactAddonReceipt(data: Data, proposalId: number, current: AddonProposalTarget, history: unknown): ExactAddonExecutionOutcome {
+  if (data?.order_id !== current.orderId || data.payment_id !== current.paymentId || data.case_id !== current.caseId || data.proposal_id !== proposalId || typeof data.case_request_id !== "string") throw new Error("该凭证不属于本工单指定的订单、付款和方案。")
+  let original = current
+  if (data.case_request_id !== current.caseRequestId) {
+    const openings = Array.isArray(history) ? history.filter(entry => entry?.status === "OPEN" && entry.client_request_id === data.case_request_id) : []
+    if (openings.length !== 1 || openings[0].addon_payment_id !== current.paymentId) throw new Error("历史轮次缺少唯一且匹配原付款的授权开案记录。")
+    original = { ...current, caseRequestId: openings[0].client_request_id,
+      accounts: openings[0].affected_provider_account_ids, segments: openings[0].affected_segment_ids }
+  }
+  return inspectExactReceipt(data, original, proposalId)
+}
+export async function checkExactAddonExecution(intent: AddonExecutionIntent, io: { readExact: () => Promise<Data>; clear: () => void }) {
+  const outcome = inspectExactAddonExecution(await io.readExact(), intent)
+  if (outcome.status === "verified") io.clear()
+  return outcome
+}
+/** Only an explicit execution request plus a fresh standard-list eligibility check can retry an unexecuted key. */
+export async function resumeAddonExecution(intent: AddonExecutionIntent, io: ExecutionIo & { readExact: () => Promise<Data> }): Promise<ExactAddonExecutionOutcome> {
+  const outcome = await checkExactAddonExecution(intent, io)
+  if (outcome.status !== "not-executed") return outcome
+  return { status: "verified", receipt: await executeAddonExecution(intent, io) }
+}
 /** First writes always re-read. An explicit original-key retry can recover a guarded historical read. */
 export async function executeAddonExecution(intent: AddonExecutionIntent, io: ExecutionIo, retrySubmitted = false) {
   let rows: unknown

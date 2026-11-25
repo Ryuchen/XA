@@ -58,6 +58,35 @@ from .models import AccountBan, AdminAuditLog, AdminMembership, AdminRole
 User = get_user_model()
 
 
+def _check_content_field(serializer, field, value, *, allow_reserved=False):
+    from common.compliance import check_content
+    result = check_content(field, value, allow_reserved=allow_reserved)
+    if result is not None:
+        if not hasattr(serializer, '_compliance_results'):
+            serializer._compliance_results = {}
+        serializer._compliance_results[field] = result
+    return value
+
+
+def _official_name_allowed(serializer):
+    from .permissions import get_account_permissions
+    request = serializer.context.get('request')
+    account = getattr(request, 'account', None) if request is not None else None
+    return bool(account is not None and 'content:official_name' in get_account_permissions(account))
+
+
+def _record_content_field(serializer, content_type, instance, field):
+    from common.compliance import record_content_receipt, store_actor_from_request
+    request = serializer.context.get('request')
+    account = getattr(request, 'account', None) if request is not None else None
+    actor_type, actor_id, actor_label = store_actor_from_request(request) if request is not None else ('SYSTEM', '', '')
+    result = getattr(serializer, '_compliance_results', {}).get(field)
+    if result is None:
+        return
+    record_content_receipt(content_type, instance.pk, field, result, actor_account=account,
+                           actor_type=actor_type, actor_id=actor_id, actor_label=actor_label)
+
+
 def normalize_escort_skills(attrs, instance=None):
     """Validate new links, retain retired links, and include each skill's game."""
     if not {'service_items', 'game_categories'}.intersection(attrs):
@@ -211,8 +240,8 @@ from users.qualification_serializers import QualificationsField, save_qualificat
 class AdminEscortSerializer(EscortRelationsInputMixin, EntityNumberModelSerializer):
     qualifications = QualificationsField(required=False)
     user = serializers.PrimaryKeyRelatedField(source='account', read_only=True)
-    username = serializers.CharField(source='account.username', read_only=True)
-    phone = serializers.CharField(source='account.phone', read_only=True)
+    username = serializers.CharField(source='account.username', read_only=True, allow_null=True)
+    phone = serializers.CharField(source='account.phone', read_only=True, allow_null=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     level_name = serializers.CharField(source='level.name', read_only=True)
@@ -259,6 +288,10 @@ class AdminEscortSerializer(EscortRelationsInputMixin, EntityNumberModelSerializ
         'deposit_paid': '已缴押金不可直接编辑，请走缴纳/退还流程',
         'deposit_required': '押金目标由门店统一配置，请在押金规则中修改',
     }
+
+    def validate_display_name(self, value):
+        return _check_content_field(self, 'PROVIDER_DISPLAY_NAME', value,
+                                    allow_reserved=_official_name_allowed(self))
 
     def validate(self, attrs):
         """拦截绕过押金流程直改 ``deposit_paid`` 的后台 PATCH/PUT。
@@ -339,7 +372,11 @@ class AdminEscortSerializer(EscortRelationsInputMixin, EntityNumberModelSerializ
         if avatar_changed:
             validated_data['avatar_source'] = 'STAFF_UPLOAD' if avatar else 'UNKNOWN'
         qualifications = validated_data.pop('qualifications', None)
+        display_name_changed = ('display_name' in validated_data
+                                and validated_data['display_name'] != instance.display_name)
         instance = super().update(instance, validated_data)
+        if display_name_changed:
+            _record_content_field(self, 'escort_profile', instance, 'PROVIDER_DISPLAY_NAME')
         if qualifications is not None: save_qualifications(instance,qualifications)
         # 迁移期同步新旧账户头像，避免未切换的订单展示链路丢失头像。
         if avatar_changed:
@@ -386,6 +423,10 @@ class AdminCreateEscortSerializer(EscortRelationsInputMixin, serializers.Seriali
     avatar = serializers.ImageField(required=False, allow_null=True)
     intro_video = serializers.FileField(required=False, allow_null=True)
     cheat_proof = serializers.ImageField(required=False, allow_null=True)
+
+    def validate_display_name(self, value):
+        return _check_content_field(self, 'PROVIDER_DISPLAY_NAME', value,
+                                    allow_reserved=_official_name_allowed(self))
 
     def validate(self, attrs):
         from wallet.club_rules import deposit_target
@@ -1814,7 +1855,15 @@ class AdminServiceItemSerializer(EntityNumberModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         old_game = instance.game_category_id
+        changed_text = tuple(
+            field for field in ('rules', 'details_html')
+            if field in validated_data and validated_data[field] != getattr(instance, field)
+        )
         instance = super().update(instance, validated_data)
+        compliance_fields = {'rules': 'SERVICE_RULES', 'details_html': 'SERVICE_DETAILS'}
+        if not self.context.get('compliance_receipts_recorded_externally'):
+            for field in changed_text:
+                _record_content_field(self, 'service_item', instance, compliance_fields[field])
         if old_game != instance.game_category_id:
             for profile in instance.escorts.select_for_update().order_by('pk'):
                 if old_game and not profile.service_items.filter(game_category_id=old_game).exists():
@@ -1826,9 +1875,12 @@ class AdminServiceItemSerializer(EntityNumberModelSerializer):
     rules = serializers.CharField(max_length=5000, allow_blank=True, required=False)
     details_html = serializers.CharField(max_length=100000, allow_blank=True, required=False)
 
+    def validate_rules(self, value):
+        return _check_content_field(self, 'SERVICE_RULES', value)
+
     def validate_details_html(self, value):
         from common.rich_text import sanitize_catalog_html
-        return sanitize_catalog_html(value)
+        return _check_content_field(self, 'SERVICE_DETAILS', sanitize_catalog_html(value))
 
     cover_url = serializers.CharField(max_length=500, allow_blank=True, required=False)
     rules_images = serializers.ListField(child=serializers.CharField(max_length=500), max_length=10, required=False)

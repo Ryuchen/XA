@@ -1495,6 +1495,102 @@ class ReservationStatusLog(models.Model):
             f"{self.from_status}->{self.to_status}>"
         )
 
+class ReservationClockReceipt(models.Model):
+    """Append-only tenant-DB evidence for one reservation deadline decision.
+
+    A receipt is inserted as ``PENDING`` before the business write commits. Its
+    terminal state is written exactly once by ``ReservationClockReceipt.finalize``;
+    normal model saves and deletes are rejected. Terminal rows therefore remain
+    immutable even when a later scanner performs forward compensation.
+    """
+
+    class State(models.TextChoices):
+        PENDING = 'PENDING', '待取上界'
+        BEFORE = 'BEFORE', '上界早于截止'
+        AFTER = 'AFTER', '下界已到截止'
+        REVIEW = 'REVIEW', '需人工核对'
+
+    reservation = models.ForeignKey(
+        Reservation, on_delete=models.CASCADE, related_name='clock_receipts',
+    )
+    seat_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    action = models.CharField(max_length=24)
+    actor_account = models.ForeignKey(
+        'club_accounts.ClubAccount', on_delete=models.PROTECT,
+        related_name='+', null=True, blank=True,
+    )
+    decision_key = models.CharField(max_length=64, unique=True)
+    deadline = models.DateTimeField()
+    lower_at = models.DateTimeField()
+    upper_at = models.DateTimeField(null=True, blank=True)
+    precision_us = models.PositiveIntegerField()
+    database_identity = models.CharField(max_length=64)
+    connection_id = models.PositiveIntegerField()
+    process_id = models.PositiveIntegerField()
+    monotonic_before_ns = models.BigIntegerField()
+    monotonic_after_ns = models.BigIntegerField()
+    upper_database_identity = models.CharField(max_length=64, blank=True, default='')
+    upper_connection_id = models.PositiveIntegerField(null=True, blank=True)
+    upper_process_id = models.PositiveIntegerField(null=True, blank=True)
+    upper_monotonic_before_ns = models.BigIntegerField(null=True, blank=True)
+    upper_monotonic_after_ns = models.BigIntegerField(null=True, blank=True)
+    state = models.CharField(max_length=8, choices=State.choices, default=State.PENDING)
+    review_reason = models.CharField(max_length=40, blank=True, default='')
+    state_before = models.CharField(max_length=20, blank=True, default='')
+    state_after = models.CharField(max_length=20, blank=True, default='')
+    before_snapshot = models.JSONField(default=dict, blank=True)
+    request_fingerprint = models.CharField(max_length=64, blank=True, default='')
+    fingerprint = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+        indexes = [
+            models.Index(fields=['reservation', 'state'], name='reservation_clock_state_idx'),
+            models.Index(fields=['state', 'created_at'], name='reservation_clock_scan_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(state__in=['PENDING', 'BEFORE', 'AFTER', 'REVIEW']),
+                name='reservation_clock_state_valid',
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(state__in=['PENDING', 'REVIEW'], upper_at__isnull=True)
+                           | models.Q(state='REVIEW', upper_at__isnull=False)
+                           | models.Q(state__in=['BEFORE', 'AFTER'], upper_at__isnull=False)),
+                name='reservation_clock_upper_required',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(monotonic_after_ns__gte=models.F('monotonic_before_ns')),
+                name='reservation_clock_monotonic_valid',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('预约时钟回执创建后不可修改')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError('预约时钟回执创建后不可删除')
+
+    @classmethod
+    def finalize(cls, *, pk, upper_at, upper_sample, state, review_reason='', state_after=''):
+        """The only controlled update path; concurrent scanners finalize once."""
+        updated = cls.objects.filter(pk=pk, state=cls.State.PENDING).update(
+            upper_at=upper_at,
+            upper_database_identity=upper_sample.evidence['database_identity'],
+            upper_connection_id=upper_sample.evidence['connection_id'],
+            upper_process_id=upper_sample.evidence['process_id'],
+            upper_monotonic_before_ns=upper_sample.evidence['before_ns'],
+            upper_monotonic_after_ns=upper_sample.evidence['after_ns'],
+            state=state,
+            review_reason=review_reason,
+            state_after=state_after,
+        )
+        return cls.objects.filter(pk=pk).first() if updated else None
+
+
 from .applications_models import OrderApplication  # noqa: E402,F401
 
 from .traffic_models import OrderTrafficConfig  # noqa: E402,F401

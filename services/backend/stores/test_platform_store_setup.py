@@ -38,6 +38,66 @@ class PlatformSetupTests(TransactionTestCase):
         token, _ = issue_tokens(account, 'SMS', account.phone)
         return account, APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + token)
 
+    def test_initial_catalog_text_writes_are_receipted_and_audit_is_metadata_only(self):
+        from console.models import ContentComplianceReceipt
+        cases = (
+            ('service', 'service_item', {'name': '开业套餐', 'price': 10000,
+                'rules': '按约定完成服务', 'details_html': '<p>服务内容与价格已列明</p>'}),
+            ('gameplay', 'gameplay', {'name': '开业玩法', 'code': 'opening-gameplay',
+                'rules': '遵守玩法规则', 'details_html': '<p>完整玩法说明</p>'}),
+        )
+        for kind, content_type, configuration in cases:
+            with self.subTest(kind=kind):
+                route = f'{self.url}/catalog/{kind}'
+                current = self.client.get(route)
+                self.assertEqual(current.status_code, 200, current.content)
+                response = self.client.put(route, {'version': current.data['data']['version'],
+                    'id': None, 'configuration': configuration}, format='json')
+                self.assertEqual(response.status_code, 200, response.content)
+                object_id = response.data['data']['id']
+                with store_context(self.branch):
+                    receipts = list(ContentComplianceReceipt.objects.filter(
+                        content_type=content_type, object_id=object_id).order_by('field_name'))
+                    self.assertEqual({row.field_name for row in receipts}, {
+                        'SERVICE_RULES', 'SERVICE_DETAILS'} if kind == 'service' else {
+                        'GAMEPLAY_RULES', 'GAMEPLAY_DETAILS'})
+                    for receipt in receipts:
+                        self.assertEqual((receipt.actor_type, receipt.actor_id),
+                                         ('PLATFORM_ACCOUNT', str(self.actor.pk)))
+                        self.assertIsNone(receipt.actor_account_id)
+                    audit = AdminAuditLog.objects.get(resource=f'initial-catalog-{kind}', object_id=str(object_id))
+                    self.assertNotIn('configuration', audit.request_body)
+                    self.assertEqual(audit.request_body['configuration_fields'], sorted(configuration))
+                    self.assertEqual(len(audit.request_body['configuration_sha256']), 64)
+                    self.assertNotIn(configuration['rules'], str(audit.request_body))
+                    self.assertNotIn(configuration['details_html'], str(audit.request_body))
+
+                update = {'rules': configuration['rules'] + '（更新）',
+                          'details_html': configuration['details_html'] + '<p>更新说明</p>'}
+                changed = self.client.put(route, {
+                    'version': response.data['data']['version'], 'id': object_id,
+                    'configuration': update,
+                }, format='json')
+                self.assertEqual(changed.status_code, 200, changed.content)
+                with store_context(self.branch):
+                    updated_receipts = ContentComplianceReceipt.objects.filter(
+                        content_type=content_type, object_id=object_id)
+                    self.assertEqual(updated_receipts.count(), 4)
+                    self.assertEqual(updated_receipts.filter(
+                        content_sha256__in=[receipt.content_sha256 for receipt in receipts],
+                    ).count(), 2)
+                    self.assertTrue(all(row.actor_id == str(self.actor.pk)
+                                        for row in updated_receipts))
+
+                replay = self.client.put(route, {
+                    'version': changed.data['data']['version'], 'id': object_id,
+                    'configuration': update,
+                }, format='json')
+                self.assertEqual(replay.status_code, 200, replay.content)
+                with store_context(self.branch):
+                    self.assertEqual(ContentComplianceReceipt.objects.filter(
+                        content_type=content_type, object_id=object_id).count(), 4)
+
     def test_approved_price_references_show_only_the_selected_store_current_values(self):
         from orders.models import GameCategory
         from orders.tests.factories import make_service

@@ -39,6 +39,9 @@ class MaturedSettlementRealTest(APITestCase):
         Order.objects.filter(pk=order.pk).update(completed_at=completed, report_ready_at=submitted,
                                                   consumption_ready_at=submitted + timedelta(hours=72))
         ProviderReport.objects.filter(pk=report.pk).update(submitted_at=submitted)
+        report.refresh_from_db()
+        from engagement.test_confirmation_realtime import attest_legacy_report
+        attest_legacy_report(order, report, submitted_at=submitted)
 
     def test_order_matures_once_and_all_roles_see_settlement(self):
         order = self.new_order()
@@ -158,7 +161,11 @@ class MaturedSettlementRealTest(APITestCase):
         self.assertIsNone(detail['consumption_confirmed_at'])
 
         # Later both clocks are due; the scan settles and confirms once.
-        ProviderReport.objects.filter(pk=report.pk).update(submitted_at=timezone.now() - timedelta(hours=73))
+        historical = timezone.now() - timedelta(hours=73)
+        ProviderReport.objects.filter(pk=report.pk).update(submitted_at=historical)
+        report.refresh_from_db()
+        from engagement.test_confirmation_realtime import attest_legacy_report
+        attest_legacy_report(order, report, submitted_at=historical)
         self.assertEqual(confirm_due_consumption(), 1)
         self.assertEqual(confirm_due_consumption(), 0)
         order.refresh_from_db()

@@ -1,6 +1,6 @@
 import uuid
 
-from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
 
@@ -54,6 +54,7 @@ class Store(DirectoryModel):
     logo_url = models.CharField(max_length=500, blank=True, default='')
     background_url = models.CharField(max_length=500, blank=True, default='')
     introduction = models.TextField(max_length=2000, blank=True, default='')
+    content_compliance_enabled = models.BooleanField(default=True)
     database_alias = models.CharField(max_length=64, unique=True, editable=False)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PROVISIONING, db_index=True)
     initialized_at = models.DateTimeField(null=True, blank=True)
@@ -154,6 +155,8 @@ class PlatformRoleGrant(DirectoryModel):
     class Role(models.TextChoices):
         SUPER_ADMIN = 'SUPER_ADMIN', '平台超级管理员'
         FINANCE = 'FINANCE', '平台财务'
+        ORDER_VIEWER = 'ORDER_VIEWER', '平台订单查看'
+        ORDER_OPERATOR = 'ORDER_OPERATOR', '平台订单操作'
 
     account = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name='grants')
     role = models.CharField(max_length=16, choices=Role.choices)
@@ -165,7 +168,9 @@ class PlatformRoleGrant(DirectoryModel):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['account', 'role', 'scope_slug'], name='platform_role_scope_unique'),
-            models.CheckConstraint(condition=models.Q(role__in=['SUPER_ADMIN', 'FINANCE']), name='platform_role_valid'),
+            models.CheckConstraint(condition=models.Q(role__in=[
+                'SUPER_ADMIN', 'FINANCE', 'ORDER_VIEWER', 'ORDER_OPERATOR',
+            ]), name='platform_role_valid'),
             models.CheckConstraint(condition=~models.Q(scope_slug=''), name='platform_scope_not_empty'),
         ]
 
@@ -704,3 +709,282 @@ class StoreDomain(DirectoryModel):
     revision = models.PositiveBigIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class ComplianceRuleVersion(DirectoryModel):
+    """Immutable published snapshot of the platform's literal text rules."""
+
+    class Status(models.TextChoices):
+        DRAFT = 'DRAFT', '草稿'
+        PUBLISHED = 'PUBLISHED', '已发布'
+
+    version = models.PositiveIntegerField(unique=True, validators=[MinValueValidator(1)])
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    rules = models.JSONField(default=list)
+    rules_sha256 = models.CharField(max_length=64)
+    created_by = models.ForeignKey(PlatformAccount, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    published_by = models.ForeignKey(PlatformAccount, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-version']
+        verbose_name = '内容合规规则版本'
+        verbose_name_plural = '内容合规规则版本'
+        constraints = [models.CheckConstraint(condition=models.Q(version__gt=0), name='compliance_rule_version_positive')]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding and self.pk:
+            from django.core.exceptions import ValidationError
+            current = type(self).objects.only(
+                'version', 'status', 'rules', 'rules_sha256', 'created_by_id',
+                'published_by_id', 'created_at', 'published_at',
+            ).get(pk=self.pk)
+            if current.status == self.Status.PUBLISHED:
+                tracked = ('version', 'status', 'rules', 'rules_sha256', 'created_by_id',
+                           'published_by_id', 'created_at', 'published_at')
+                if any(getattr(current, field) != getattr(self, field) for field in tracked):
+                    raise ValidationError('已发布的合规规则版本不可修改')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        if self.status == self.Status.PUBLISHED:
+            raise ValidationError('已发布的合规规则版本不可删除')
+        return super().delete(*args, **kwargs)
+
+
+class ComplianceRuleState(DirectoryModel):
+    """Singleton pointer switched while holding its row lock."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    current_version = models.ForeignKey(
+        ComplianceRuleVersion, null=True, blank=True, on_delete=models.PROTECT, related_name='+',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='compliance_rule_state_singleton')]
+
+
+class StoreContentComplianceReceipt(DirectoryModel):
+    """Control-plane evidence for store-owned text; never stores the content."""
+
+    store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='content_compliance_receipts')
+    field_name = models.CharField(max_length=40)
+    content_sha256 = models.CharField(max_length=64)
+    rule_version = models.PositiveIntegerField()
+    rule_set_sha256 = models.CharField(max_length=64)
+    matched_rule_codes = models.JSONField(default=list)
+    exempted_rule_codes = models.JSONField(default=list)
+    actor_type = models.CharField(max_length=32)
+    actor_id = models.CharField(max_length=100, blank=True, default='')
+    actor_label = models.CharField(max_length=150, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['store', '-created_at'])]
+
+
+class StoreGuaranteeContract(DirectoryModel):
+    """Current platform-attested guarantee terms for one store, in CNY fen."""
+
+    store = models.OneToOneField(Store, on_delete=models.PROTECT, related_name='guarantee_contract')
+    source_license_contract = models.ForeignKey(
+        StoreLicenseContract, null=True, blank=True, on_delete=models.PROTECT, related_name='+',
+    )
+    amount_due_fen = models.PositiveBigIntegerField()
+    version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name='+')
+    updated_by = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(version__gt=0), name='guarantee_contract_version_positive'),
+        ]
+
+
+class StoreGuaranteeEventQuerySet(DirectoryQuerySet):
+    """Committed offline evidence is append-only, including through bulk ORM calls."""
+
+    def update(self, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('保证金收退事件不可修改，请登记补偿事件')
+
+    def delete(self):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('保证金收退事件不可删除，请保留原始凭证')
+
+
+class StoreGuaranteeEventManager(DirectoryManager.from_queryset(StoreGuaranteeEventQuerySet)):
+    pass
+
+
+class StoreGuaranteeEvent(DirectoryModel):
+    """One immutable offline collection/refund fact; never a payment-provider result."""
+
+    class Direction(models.TextChoices):
+        RECEIPT = 'RECEIPT', '线下缴纳登记'
+        REFUND = 'REFUND', '线下退还登记'
+
+    objects = StoreGuaranteeEventManager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='guarantee_events')
+    contract = models.ForeignKey(StoreGuaranteeContract, on_delete=models.PROTECT, related_name='events')
+    contract_version = models.PositiveIntegerField()
+    business_key = models.CharField(max_length=80)
+    client_request_id = models.CharField(max_length=64)
+    request_fingerprint = models.CharField(max_length=64)
+    direction = models.CharField(max_length=8, choices=Direction.choices)
+    amount_fen = models.PositiveBigIntegerField()
+    occurred_at = models.DateTimeField()
+    evidence_sha256 = models.CharField(max_length=64)
+    evidence_ref = models.CharField(max_length=200)
+    compensates = models.OneToOneField(
+        'self', null=True, blank=True, on_delete=models.PROTECT, related_name='compensation',
+    )
+    created_by = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['store', 'created_at', 'id']
+        indexes = [models.Index(fields=['store', 'created_at'], name='guarantee_store_time_idx')]
+        constraints = [
+            models.UniqueConstraint(fields=['store', 'business_key'], name='guarantee_store_business_key_unique'),
+            models.UniqueConstraint(fields=['store', 'client_request_id'], name='guarantee_store_request_unique'),
+            models.CheckConstraint(condition=models.Q(direction__in=['RECEIPT', 'REFUND']),
+                                   name='guarantee_event_direction_valid'),
+            models.CheckConstraint(condition=models.Q(amount_fen__gt=0), name='guarantee_event_amount_positive'),
+            models.CheckConstraint(condition=models.Q(contract_version__gt=0),
+                                   name='guarantee_event_contract_version_positive'),
+            models.CheckConstraint(condition=(
+                models.Q(evidence_sha256='', evidence_ref='')
+                | (~models.Q(evidence_sha256='') & ~models.Q(evidence_ref=''))
+            ), name='guarantee_event_evidence_pair'),
+        ]
+
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        if not self._state.adding:
+            raise ValidationError('保证金收退事件不可修改，请登记补偿事件')
+        if self.contract.store_id != self.store_id or self.contract.version != self.contract_version:
+            raise ValidationError('保证金事件与门店合同版本不一致')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('保证金收退事件不可删除，请保留原始凭证')
+
+
+class StoreClosureImmutableQuerySet(DirectoryQuerySet):
+    def update(self, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店公示与到期事件不可修改，请追加后续事实')
+
+    def delete(self):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店公示与到期事件不可删除')
+
+
+class StoreClosureNoticeManager(DirectoryManager.from_queryset(StoreClosureImmutableQuerySet)):
+    pass
+
+
+class StoreClosureEventManager(DirectoryManager.from_queryset(StoreClosureImmutableQuerySet)):
+    pass
+
+
+class StoreClosureNotice(DirectoryModel):
+    """Immutable SA02 application and original 30-day notice terms."""
+
+    class ReasonCategory(models.TextChoices):
+        OPERATOR_REQUEST = 'OPERATOR_REQUEST', '经营主体申请'
+        LICENSE_TERMINATION = 'LICENSE_TERMINATION', '授权终止'
+        PLATFORM_DIRECTED = 'PLATFORM_DIRECTED', '平台要求'
+        OTHER = 'OTHER', '其他'
+
+    objects = StoreClosureNoticeManager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    store = models.OneToOneField(Store, on_delete=models.PROTECT, related_name='closure_notice')
+    reason_category = models.CharField(max_length=32, choices=ReasonCategory.choices)
+    reason = models.CharField(max_length=500)
+    applicant = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name='+')
+    started_at = models.DateTimeField()
+    notice_policy_version = models.CharField(max_length=32)
+    notice_days = models.PositiveSmallIntegerField()
+    earliest_settlement_at = models.DateTimeField()
+    client_request_id = models.CharField(max_length=64)
+    request_fingerprint = models.CharField(max_length=64)
+    clock_source = models.CharField(max_length=64)
+    clock_identity = models.CharField(max_length=80)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['store', 'client_request_id'], name='closure_store_request_unique'),
+            models.CheckConstraint(condition=models.Q(notice_days__gte=30), name='closure_notice_at_least_30_days'),
+            models.CheckConstraint(condition=models.Q(earliest_settlement_at__gt=models.F('started_at')),
+                                   name='closure_deadline_after_start'),
+            models.CheckConstraint(condition=models.Q(reason_category__in=[
+                'OPERATOR_REQUEST', 'LICENSE_TERMINATION', 'PLATFORM_DIRECTED', 'OTHER',
+            ]), name='closure_reason_category_valid'),
+        ]
+
+    def save(self, *args, **kwargs):
+        from datetime import timedelta
+        from django.core.exceptions import ValidationError
+        if not self._state.adding:
+            raise ValidationError('闭店公示申请不可修改或重置倒计时')
+        if self.notice_days < 30 or self.earliest_settlement_at != self.started_at + timedelta(days=self.notice_days):
+            raise ValidationError('闭店公示时长或最早结清时点无效')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店公示申请不可删除')
+
+
+class StoreClosureEvent(DirectoryModel):
+    """Immutable authorized observation that the notice deadline has elapsed."""
+
+    class Kind(models.TextChoices):
+        NOTICE_EXPIRED = 'NOTICE_EXPIRED', '公示到期确认'
+
+    objects = StoreClosureEventManager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='closure_events')
+    notice = models.OneToOneField(StoreClosureNotice, on_delete=models.PROTECT, related_name='expiry_event')
+    kind = models.CharField(max_length=24, choices=Kind.choices, default=Kind.NOTICE_EXPIRED)
+    reason = models.CharField(max_length=500)
+    actor = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name='+')
+    occurred_at = models.DateTimeField()
+    client_request_id = models.CharField(max_length=64)
+    request_fingerprint = models.CharField(max_length=64)
+    clock_source = models.CharField(max_length=64)
+    clock_identity = models.CharField(max_length=80)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['store', 'occurred_at', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['store', 'client_request_id'], name='closure_event_store_request_unique'),
+            models.CheckConstraint(condition=models.Q(kind='NOTICE_EXPIRED'), name='closure_event_kind_valid'),
+        ]
+
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        if not self._state.adding:
+            raise ValidationError('闭店到期事件不可修改')
+        if self.notice.store_id != self.store_id or self.occurred_at < self.notice.earliest_settlement_at:
+            raise ValidationError('闭店到期事件门店或时点无效')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店到期事件不可删除')

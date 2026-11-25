@@ -18,9 +18,9 @@ from club_accounts.tokens import issue_account_tokens
 from console.deposit_clearance import clearance_evidence
 from orders.models import Order, OrderRefund
 from orders.tests.factories import make_completed_order, make_console_user
-from wallet.income import PRIORITY_GIFT_FREEZE_REMARK, release_due_income
+from wallet.income import PRIORITY_GIFT_FREEZE_REMARK
 from wallet.models import IncomeHold, RefundDepositIncomeApplication, Transaction, get_platform_wallet
-from wallet.test_gift_income_clocks import GiftIncomeClocksTest as GiftFixture
+from wallet.test_gift_income_clocks import GiftIncomeClocksTest as GiftFixture, release_due_income
 from stores.context import current_store, resolve_store, store_context
 from stores.db import transaction
 from stores.tests_hosts import xinan_store

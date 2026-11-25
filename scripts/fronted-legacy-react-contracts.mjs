@@ -612,17 +612,17 @@ async function withdrawalReceipts(input) {
   const client = login(input.token);
   const data = await client.get('/wallet/withdraw/');
   const [approved, rejected, pending] = input.withdrawals.map(id => data.requests.find(row => row.id === id));
-  assert.equal(approved.status, 'APPROVED'); assert.equal(approved.actual_amount, 1960); assert.equal(approved.payout_reference, 'ISOLATED-RECEIPT');
+  assert.equal(approved.status, 'PAID'); assert.equal(approved.actual_amount, 1960); assert.equal(approved.payout_reference, 'ISOLATED-RECEIPT');
   assert.equal(rejected.status, 'REJECTED'); assert.equal(rejected.audit_remark, '隔离驳回原因'); assert.equal(pending.status, 'PENDING');
   assert.equal(ui.withdrawalPresentation(approved).payoutText, '已登记打款 ¥19.60');
   assert.equal(ui.withdrawalPresentation(rejected).payoutText, '已退回余额');
   assert.equal(ui.withdrawalPresentation(pending).payoutText, '预计打款 ¥19.60');
   const messages = rows(await client.get('/messages/'));
-  for (const [title, id] of [['提现审核通过', approved.id], ['提现审核未通过', rejected.id]]) {
+  for (const [title, id] of [['提现已登记打款', approved.id], ['提现审核未通过', rejected.id]]) {
     const message = messages.find(row => row.title === title); assert.ok(message);
     assert.equal(ui.providerMessageDestination(message), `/wallet?tab=withdraw&withdraw_id=${id}`);
     const fresh = await client.get('/wallet/withdraw/');
-    assert.equal(fresh.requests.find(row => row.id === id).status, id === approved.id ? 'APPROVED' : 'REJECTED');
+    assert.equal(fresh.requests.find(row => row.id === id).status, id === approved.id ? 'PAID' : 'REJECTED');
   }
 }
 
@@ -707,7 +707,10 @@ async function giftPages(input) {
   assert.equal(newest.gift_records[0].order_no, sent.order_no);
   const all = [...newest.gift_records, ...refreshed.gift_records];
   assert.equal(new Set(all.map(row => row.id)).size, 22);
-  assert.equal((await client.get('/wallet/withdraw/')).balance, before.balance + 1000);
+  const afterGiftWallet = await client.get('/wallet/withdraw/');
+  // D108: a new gift increases frozen income, not immediately withdrawable cash.
+  assert.equal(afterGiftWallet.balance, before.balance);
+  assert.equal(afterGiftWallet.frozen_amount, before.frozen_amount + 1000);
   for (const row of all) assert.equal(ui.giftBenefitPresentation(row).receivedIncome, 1000);
   const afterDispose1 = await ui.loadProviderBenefits('dispose', 1), afterDispose2 = await ui.loadProviderBenefits('dispose', 2);
   assert.equal(new Set([...afterDispose1.dispose_records, ...afterDispose2.dispose_records].map(row => row.id)).size, 30);

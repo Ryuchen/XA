@@ -29,9 +29,13 @@ class StorePresentationTests(TestCase):
         rows = self.directory()
         self.assertEqual({row['name'] for row in rows}, {'声浪电竞'})
         self.assertEqual({row['currency_name'] for row in rows}, {'浪花'})
-        allowed = {'id', 'slug', 'name', 'currency_name', 'entity_prefix', 'provider_name_prefix', 'logo_url', 'status', 'is_active', 'boss_url', 'provider_url', 'admin_url'}
+        allowed = {'id', 'slug', 'name', 'currency_name', 'entity_prefix', 'provider_name_prefix',
+                   'logo_url', 'background_url', 'introduction', 'content_compliance_enabled',
+                   'status', 'is_active', 'boss_url', 'provider_url', 'admin_url'}
         for row in rows:
             self.assertEqual(set(row), allowed)
+            self.assertIsInstance(row['introduction'], str)
+            self.assertIs(type(row['content_compliance_enabled']), bool)
 
     def test_disabled_store_is_not_offered(self):
         self.second.status = Store.Status.DISABLED

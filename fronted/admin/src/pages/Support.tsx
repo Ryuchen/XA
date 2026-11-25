@@ -60,6 +60,7 @@ import {
 } from "@/components/business"
 import PrivateImage from "@/components/PrivateImage"
 import ConsultationAddonCase from "@/components/ConsultationAddonCase"
+import ManualPushCenter from "@/components/ManualPushCenter"
 import { request, requestId } from "@/api/request"
 import { useAdminAuth } from "@/lib/auth"
 import { formatDateTime } from "@/lib/format"
@@ -348,7 +349,6 @@ export function MessagesPage() {
   const [query, setQuery] = useState<Row>({ type: "" })
   const list = useList("messages", query)
   const [detail, setDetail] = useState<Row | null>(null)
-  const [creating, setCreating] = useState(false)
   useLiveReload(list.reload)
   return (
     <DataPageState
@@ -362,14 +362,9 @@ export function MessagesPage() {
         <div className="space-y-4">
           <SupportHeader
             title="站内消息"
-            description="核对通知对象与内容，发送前再次确认接收范围。"
+            description="核对通知记录、群发批次与逐人处理结果；站内创建不等于外部渠道送达。"
           >
             <RefreshButton loading={list.loading} reload={list.reload} />
-            {auth.hasPerm("message:push") && (
-              <Button size="sm" onClick={() => setCreating(true)}>
-                发送站内消息
-              </Button>
-            )}
           </SupportHeader>
           <Feedback message={list.error} retry={list.reload} />
           <DataTable snapshotAvailable={!!list.data}
@@ -465,210 +460,12 @@ export function MessagesPage() {
               )}
             </DialogContent>
           </Dialog>
-          {creating && (
-            <PushMessage
-              onClose={() => setCreating(false)}
-              onSaved={list.reload}
-            />
-          )}
+          <ManualPushCenter canPush={auth.hasPerm("message:push")} onMessagesChanged={list.reload} />
         </div>
       }
     </DataPageState>
   )
 }
-function PushMessage({
-  onClose,
-  onSaved,
-}: {
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const auth = useAdminAuth()
-  const marker = `xa:store:${getStoreSlug()}:xa:fronted:admin:message-pending:${auth.profile?.id}`
-  const [form, setForm] = useState<Row>({
-    audience: "CUSTOM",
-    type: "SYSTEM",
-    title: "",
-    preview: "",
-    detail: "",
-    recipient_account_ids: [],
-  })
-  const [reviewed, setReviewed] = useState(false)
-  const [unknown, setUnknown] = useState(() => !!sessionStorage.getItem(marker))
-  const [clearReviewed, setClearReviewed] = useState(false)
-  return (
-    <MutationDialog
-      contentClassName="sm:max-w-5xl"
-      title="发送站内消息"
-      description="消息会发送到所选真实业务账号。请核对标题、正文与接收范围。"
-      onClose={onClose}
-      submitText="确认发送"
-      disabled={
-        unknown ||
-        !reviewed ||
-        !form.title.trim() ||
-        (form.audience === "CUSTOM" && !form.recipient_account_ids.length)
-      }
-      onSubmit={async () => {
-        sessionStorage.setItem(
-          marker,
-          JSON.stringify({
-            title: form.title,
-            startedAt: new Date().toISOString(),
-          })
-        )
-        try {
-          const result = await request({
-            url: "/messages/push/",
-            method: "POST",
-            data: {
-              broadcast: form.audience === "ALL",
-              audience: form.audience,
-              recipient_account_ids:
-                form.audience === "CUSTOM" ? form.recipient_account_ids : [],
-              type: form.type,
-              title: form.title.trim(),
-              preview: form.preview.trim(),
-              detail: form.detail,
-            },
-          })
-          sessionStorage.removeItem(marker)
-          toast.success(`已创建 ${result.data.count ?? ""} 条站内消息记录`)
-          onSaved()
-        } catch (cause: any) {
-          if (cause.status >= 400 && cause.status < 500 && cause.status !== 409)
-            sessionStorage.removeItem(marker)
-          else setUnknown(true)
-          throw cause
-        }
-      }}
-    >
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_320px]">
-        <FormSection title="接收范围与消息内容">
-          <div className="grid grid-cols-2 gap-4">
-            <Field
-              field={{
-                key: "message-audience",
-                label: "接收范围",
-                type: "select",
-                options: [
-                  ["CUSTOM", "所选业务账号"],
-                  ["CUSTOMER", "启用的旧老板账号"],
-                  ["PROVIDER", "启用的旧陪玩账号"],
-                  ["ALL", "全部启用旧用户（包括后台账号）"],
-                ],
-              }}
-              value={form.audience}
-              onChange={(value) => {
-                setForm((old) => ({ ...old, audience: value }))
-                setReviewed(false)
-              }}
-            />
-            <Field
-              field={{
-                key: "message-kind",
-                label: "消息类型",
-                type: "select",
-                options: [
-                  ["SYSTEM", "系统通知"],
-                  ["ORDER", "订单消息"],
-                  ["SUPPORT", "客服消息"],
-                  ["PROMOTION", "活动通知"],
-                ],
-              }}
-              value={form.type}
-              onChange={(value) => {
-                setForm((old) => ({ ...old, type: value }))
-                setReviewed(false)
-              }}
-            />
-            {form.audience === "CUSTOM" && (
-              <div className="col-span-2">
-                <OptionPicker
-                  resource="message-recipients"
-                  label="接收业务账号"
-                  multiple
-                  value={form.recipient_account_ids}
-                  onChange={(value) => {
-                    setForm((old) => ({ ...old, recipient_account_ids: value }))
-                    setReviewed(false)
-                  }}
-                />
-              </div>
-            )}
-            {[
-              { key: "title", label: "标题", required: true },
-              { key: "preview", label: "摘要" },
-              {
-                key: "detail",
-                label: "详情正文",
-                type: "textarea",
-                full: true,
-              },
-            ].map((field) => (
-              <Field
-                key={field.key}
-                field={field as any}
-                value={form[field.key]}
-                onChange={(value) => {
-                  setForm((old) => ({ ...old, [field.key]: value }))
-                  setReviewed(false)
-                }}
-              />
-            ))}
-          </div>
-        </FormSection>
-        <aside className="rounded-xl border bg-muted/20 p-4 text-sm">
-          <p className="mb-4 text-xs text-muted-foreground">通知预览</p>
-          <p className="font-semibold">{form.title || "尚未填写标题"}</p>
-          <p className="mt-2">{form.preview}</p>
-          <p className="mt-3 text-xs text-muted-foreground">
-            接收范围：
-            {form.audience === "CUSTOM"
-              ? `${form.recipient_account_ids.length} 个所选业务账号`
-              : form.audience}
-          </p>
-        </aside>
-      </div>
-      <label className="flex items-start gap-2 text-sm">
-        <input
-          type="checkbox"
-          className="mt-1 size-4 accent-blue-600"
-          checked={reviewed}
-          onChange={(event) => setReviewed(event.target.checked)}
-        />
-        已核对消息内容与接收范围，确认发送
-      </label>
-      {unknown && (
-        <div className="space-y-3">
-          <Feedback message="有一笔消息发送结果待核对。请关闭并查询消息记录，核对后再决定是否发送，避免重复通知。" />
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1 size-4 accent-blue-600"
-              checked={clearReviewed}
-              onChange={(event) => setClearReviewed(event.target.checked)}
-            />
-            已核对相关消息记录与接收范围；原请求可能仍会完成，解除后将自行判断是否还需发送
-          </label>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!clearReviewed}
-            onClick={() => {
-              sessionStorage.removeItem(marker)
-              setUnknown(false)
-              setClearReviewed(false)
-            }}
-          >
-            已核对，解除限制
-          </Button>
-        </div>
-      )}
-    </MutationDialog>
-  )
-}
-
 export function ChatPage() {
   const [params] = useSearchParams()
   const [keyword, setKeyword] = useState("")

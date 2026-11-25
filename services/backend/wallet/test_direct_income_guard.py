@@ -17,6 +17,7 @@ from orders.models import Order
 from orders.tests.factories import make_order, make_provider, make_user, make_wallet
 from wallet.income import _direct_income_blocked, release_due_income
 from wallet.models import IncomeHold, Transaction
+from wallet.settlement_clocks import trusted_test_clock
 
 
 class DirectHoldFixture:
@@ -48,9 +49,9 @@ class DirectIncomeGuardTest(DirectHoldFixture, TestCase):
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '直付渠道收入释放须可信结算落地（模块自述 holds remain frozen until trusted settlement，18-盘点订单售后资金组合）；最终联调启用')
     def test_paid_direct_hold_cannot_starve_balance_or_orderless_holds(self):
-        self.assertEqual(release_due_income(now=self.now, limit=1), 1)
-        self.assertEqual(release_due_income(now=self.now, limit=1), 1)
-        self.assertEqual(release_due_income(now=self.now, limit=1), 0)
+        self.assertEqual(release_due_income(now=trusted_test_clock(self.now), limit=1), 1)
+        self.assertEqual(release_due_income(now=trusted_test_clock(self.now), limit=1), 1)
+        self.assertEqual(release_due_income(now=trusted_test_clock(self.now), limit=1), 0)
         self.wallet.refresh_from_db()
         self.direct_hold.refresh_from_db()
         self.balance_hold.refresh_from_db()
@@ -64,11 +65,11 @@ class DirectIncomeGuardTest(DirectHoldFixture, TestCase):
     def test_stale_candidate_is_rechecked_for_paid_and_review_intents(self):
         candidate = [(self.direct_hold.pk, self.wallet.pk, self.direct_order.pk)]
         with patch('wallet.income._due_income_candidates', return_value=candidate):
-            self.assertEqual(release_due_income(now=self.now), 0)
+            self.assertEqual(release_due_income(now=trusted_test_clock(self.now)), 0)
             self.intent.status = 'REVIEW'
             self.intent.evidence_risk_at = timezone.now()
             self.intent.save(update_fields=['status', 'evidence_risk_at'])
-            self.assertEqual(release_due_income(now=self.now), 0)
+            self.assertEqual(release_due_income(now=trusted_test_clock(self.now)), 0)
         self.wallet.refresh_from_db()
         self.direct_hold.refresh_from_db()
         self.assertEqual((self.wallet.balance, self.wallet.frozen_amount), (0, 3000))
@@ -98,7 +99,7 @@ class DirectIncomeGuardRaceTest(DirectHoldFixture, TransactionTestCase):
         def scan():
             close_old_connections()
             try:
-                return release_due_income(now=self.now)
+                return release_due_income(now=trusted_test_clock(self.now))
             finally:
                 scan_finished.set()
                 close_old_connections()
@@ -141,7 +142,7 @@ class DirectIncomeGuardRaceTest(DirectHoldFixture, TransactionTestCase):
         def scan():
             close_old_connections()
             try:
-                return release_due_income(now=self.now)
+                return release_due_income(now=trusted_test_clock(self.now))
             finally:
                 close_old_connections()
 

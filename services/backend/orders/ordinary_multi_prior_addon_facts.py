@@ -208,11 +208,12 @@ def verify(order, boundary):
         if OrderPointsFundingAllocation.objects.filter(service_order=order, created_at=refund.created_at).exists():
             raise ValidationError('加购退款与补资分配时序无法区分')
         if run:
-            empty_transfer_version = bool(not allocations and run.allocation_snapshot == []
+            empty_prestart_version = bool(not allocations and run.allocation_snapshot == []
                 and run.allocated_before == 0 and run.released_amount == 0
                 and isinstance(run.ordinary_prestart_snapshot, dict)
-                and run.ordinary_prestart_snapshot.get('kind') == 'ORDINARY_TRANSFER_PRE_MAIN_ADDON_V1')
-            if ((not allocations and not empty_transfer_version) or not run.ordinary_prestart_snapshot or not run.ordinary_prestart_hash
+                and run.ordinary_prestart_snapshot.get('kind') in
+                    ('ORDINARY_PRESTART_ADDON_V1', 'ORDINARY_TRANSFER_PRE_MAIN_ADDON_V1'))
+            if ((not allocations and not empty_prestart_version) or not run.ordinary_prestart_snapshot or not run.ordinary_prestart_hash
                     or run.created_at <= refund.created_at or run.created_at >= boundary
                     or (evidence and evidence.created_at > run.created_at)
                     or refund.participant_zero_wallet_evidence.filter(created_at__gt=run.created_at).exists()

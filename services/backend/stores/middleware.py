@@ -76,7 +76,16 @@ class StoreMiddleware:
             # never merely because a query parameter/header named a store.
             if slug is None:
                 raise StoreNotFound('缺少所属门店，请使用门店入口')
-            store = resolve_store(slug, allow_cached=bool(host_store_slug(request.get_host())))
+            allow_cached = bool(host_store_slug(request.get_host()))
+            try:
+                store = resolve_store(slug, allow_cached=allow_cached)
+            except StoreUnavailable:
+                if (request.method not in ('GET', 'HEAD') or request.path not in (
+                        '/api/stores/current/', '/api/stores/closure/')):
+                    raise
+                store = resolve_store(slug, require_active=False, allow_cached=allow_cached)
+                if store.status != 'DISABLED':
+                    raise
         except StoreNotFound as exc:
             return JsonResponse({'code': 404, 'msg': str(exc)}, status=404)
         except StoreUnavailable as exc:

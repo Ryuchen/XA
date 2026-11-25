@@ -153,11 +153,20 @@ def neutral_admin_request(request, get_response):
         with store_context(None):
             return get_response(request)
     if request.path.startswith('/api/admin/platform/'):
-        if request.headers.get('X-Store-Slug') is not None or 'store' in request.GET:
-            return JsonResponse({'code': 400, 'msg': '平台身份不接受门店路由参数'}, status=400)
+        # The read-only cross-store order list owns a `store` filter. It is
+        # validated against PlatformRoleGrant by the view and never selects a
+        # tenant database. All other platform entry points remain neutral.
+        order_list_filter = path == '/api/admin/platform/orders' and request.method in ('GET', 'HEAD')
+        if request.headers.get('X-Store-Slug') is not None or ('store' in request.GET and not order_list_filter):
+            response = JsonResponse({'code': 400, 'msg': '平台身份不接受门店路由参数'}, status=400)
+            response['Cache-Control'] = 'no-store'
+            return response
         request.store = None
         with store_context(None):
-            return get_response(request)
+            response = get_response(request)
+        if path == '/api/admin/platform/orders' or path.startswith('/api/admin/platform/orders/'):
+            response['Cache-Control'] = 'no-store'
+        return response
     if path in (LOGIN_PATH, PASSWORD_LOGIN_PATH, INITIAL_OTP_PATH):
         if request.headers.get('X-Store-Slug') is not None or 'store' in request.GET:
             return JsonResponse({'code': 400, 'msg': '登录由账号识别门店，请移除门店路由参数'}, status=400)

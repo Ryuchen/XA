@@ -305,6 +305,7 @@ class StoreBusinessBoundaryTest(APITestCase):
             self.assertEqual(ClubAccount.objects.get(username='same-boss').nickname, '声浪电竞老板')
 
     def test_store_management_writes_are_audited_in_the_platform_store(self):
+        from hashlib import sha256
         from console.models import AdminAuditLog
         from console.models import AdminRole
         from stores.models import StorePlatformGrant
@@ -319,7 +320,10 @@ class StoreBusinessBoundaryTest(APITestCase):
                                   {'name': '南岸门店改名'}, format='json'))
         with store_context(self.a):
             record = AdminAuditLog.objects.get(resource='stores', object_id=str(self.b.pk))
-            self.assertEqual(record.request_body['name'], '南岸门店改名')
+            self.assertEqual(record.request_body['name'], {
+                'sha256': sha256('南岸门店改名'.encode('utf-8')).hexdigest(),
+            })
+            self.assertNotIn('南岸门店改名', str(record.request_body))
             self.assertEqual(record.operator_account_id, self.accounts[self.a.slug]['admin'].pk)
         with store_context(self.b):
             self.assertFalse(AdminAuditLog.objects.filter(resource='stores').exists())

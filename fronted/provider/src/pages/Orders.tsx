@@ -1,4 +1,22 @@
-import { coinText, coinUnit, AddonRefundProposals, NegotiationProposalPanel, OrderJourney, OrderSource, OrderSyncBar, orderLifecycle } from "@xa/shared"
+import {
+  coinText,
+  coinUnit,
+  createReservationRequest,
+  executeReservationRequest,
+  NegotiationProposalPanel,
+  OrderJourney,
+  OrderSource,
+  OrderSyncBar,
+  orderLifecycle,
+  readReservationRequest,
+  reservationRequestActionLabel,
+  reservationRequestNotice,
+  reservationRequestStorageKey,
+  type ReservationRequestAction,
+  type ReservationRequestIntent,
+  type ReservationRequestSnapshot,
+} from "@xa/shared"
+import { AddonRefundProposals } from "@/components/AddonRefundProposals"
 import {
   providerOrderActions,
   providerOrderPresentation,
@@ -442,9 +460,13 @@ function SegmentReportPanel({ orderId, segmentId, report, onSaved }: {
 function ProviderOrderDetail({
   orderId,
   onClose,
+  addonPaymentId,
+  addonProposalId,
 }: {
   orderId: number
   onClose: () => void
+  addonPaymentId?: number | null
+  addonProposalId?: number | null
 }) {
   const detail = useLoad(
     () => api<Order>(`/orders/orders/${orderId}/`),
@@ -628,7 +650,7 @@ function ProviderOrderDetail({
             )}
             {presentation.aftersaleOpen && ["IN_SERVICE", "COMPLETED"].includes(order.status) &&
               <NegotiationProposalPanel role="provider" orderId={order.id} />}
-            <AddonRefundProposals role="provider" orderId={order.id} />
+            <AddonRefundProposals role="provider" orderId={order.id} initialPaymentId={addonPaymentId} initialProposalId={addonProposalId} />
             {order.cancel_reason && (
               <p className="rounded-[8px] bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
                 取消/退款原因：{order.cancel_reason}
@@ -793,6 +815,8 @@ export function OrdersPage() {
     [manualRefreshing, setManualRefreshing] = useState(false),
     [detailId, setDetailId] = useState<number | null>(null),
     focus = params.get("order"),
+    addonPaymentId = Number(params.get("addon_payment_id")) || null,
+    addonProposalId = Number(params.get("addon_proposal_id")) || null,
     [action, setAction] = useState<{
       kind: "grab" | "start" | "transfer_start" | "complete" | "confirm_team" | "withdraw"
       order: Order
@@ -1800,9 +1824,11 @@ export function OrdersPage() {
       </SnapshotGate>
       {detailId != null && (
         <ProviderOrderDetail
-          key={detailId}
+          key={`${detailId}:${addonPaymentId || ""}:${addonProposalId || ""}`}
           orderId={detailId}
           onClose={() => setDetailId(null)}
+          addonPaymentId={addonPaymentId}
+          addonProposalId={addonProposalId}
         />
       )}
       <Confirm
@@ -2275,14 +2301,19 @@ type Reservation = {
 type Cursor = { start_time: string; id: number }
 export function ReservationsPage() {
   const guardView = useViewGuard()
+  const session = useSession("provider")
   const [params, setParams] = useSearchParams(),
     id = Number(params.get("id")),
+    requestKey = reservationRequestStorageKey("provider", session.user?.id, id || "create"),
     [cursor, setCursor] = useState<Cursor | null>(null),
     [rows, setRows] = useState<Reservation[]>([]),
     [action, setAction] = useState(""),
     [reason, setReason] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
+    [requestSnapshot, setRequestSnapshot] = useState<ReservationRequestSnapshot>(() =>
+      id && session.user?.id ? readReservationRequest(localStorage, requestKey) : { intent: null, error: "" },
+    ),
     data = useLoad(async () => {
       if (id)
         return {
@@ -2302,7 +2333,8 @@ export function ReservationsPage() {
     setReason("")
     setNotice("")
     setCursor(null)
-  }, [id])
+    setRequestSnapshot(id && session.user?.id ? readReservationRequest(localStorage, requestKey) : { intent: null, error: "" })
+  }, [id, requestKey])
   useEffect(() => {
     if (data.data?.page)
       setRows((old) =>
@@ -2322,35 +2354,54 @@ export function ReservationsPage() {
     }
   }, ["reservation_status_update"])
   const detail = data.data?.detail
-  async function act() {
-    if (
-      !detail ||
-      busy ||
-      data.loading ||
-      data.error ||
-      !detail.allowed_actions.includes(action)
-    )
-      return
+  const pendingRequest = requestSnapshot.intent
+  const requestBlocked = !!requestSnapshot.error || !!pendingRequest?.review || !!pendingRequest?.blocked
+  async function act(original?: ReservationRequestIntent) {
+    const selected = original?.action || action
+    if (!id || busy || !session.user?.id || !["confirm", "reject", "cancel"].includes(selected)) return
+    if (!original && (
+      !detail || data.loading || data.error || requestSnapshot.intent || requestSnapshot.error ||
+      !detail.allowed_actions.includes(selected)
+    )) return
+    if (original && requestSnapshot.intent?.decisionKey !== original.decisionKey) return
     setBusy(true)
+    setNotice("")
     try {
+      const request = original || createReservationRequest({
+        role: "provider",
+        accountId: session.user!.id,
+        action: selected as ReservationRequestAction,
+        reservationId: id,
+        payload: { reason: selected === "confirm" ? "" : reason.trim() },
+      })
       const outcome = await mutateAndReload({
         role: "provider",
         isCurrent: guardView(),
-        mutate: () =>
-          api(`/orders/reservations/${id}/${action}/`, {
-            method: "POST",
-            data: { reason: action === "confirm" ? "" : reason.trim() },
-          }),
+        mutate: () => executeReservationRequest({
+          storage: localStorage,
+          key: requestKey,
+          request,
+          post: (path, payload) => api<Reservation>(path, { method: "POST", data: payload }),
+          acceptsResult: (result) => result?.id === id,
+        }),
         reload: data.reload,
       })
       if (outcome.stale) return
       if (outcome.error) throw outcome.error
-      setNotice("预约已更新")
+      setRequestSnapshot(readReservationRequest(localStorage, requestKey))
+      setNotice(outcome.reloadError
+        ? "预约操作已成功，但最新状态刷新失败，请重新加载核对。"
+        : selected === "confirm"
+          ? "本人确认决定已保存，请核对双方确认进度。"
+          : selected === "reject"
+            ? "本人拒绝决定已保存。"
+            : "预约已取消。")
       setAction("")
+      setReason("")
     } catch (cause) {
-      setNotice(
-        uncertain(cause) ? "预约结果未确认，请核对最新状态。" : message(cause)
-      )
+      const failure = reservationRequestNotice(cause)
+      setRequestSnapshot(readReservationRequest(localStorage, requestKey))
+      setNotice(`${failure.title}：${failure.detail}`)
       setAction("")
     } finally {
       setBusy(false)
@@ -2378,6 +2429,34 @@ export function ReservationsPage() {
         )}
       </PageHeader>
       <Notice>{notice}</Notice>
+      {(pendingRequest || requestSnapshot.error) && (
+        <Notice error={requestBlocked}>
+          <div className="space-y-2">
+            <strong>{requestBlocked ? "预约结果待核对" : "预约结果未知"}</strong>
+            {pendingRequest && <p>原操作：{reservationRequestActionLabel(pendingRequest.action)}；请求编号 {pendingRequest.decisionKey}</p>}
+            <p>{requestSnapshot.error || (requestBlocked
+              ? "原请求已保留，不能换号或修改决定。请刷新预约或联系客服核对。"
+              : "原请求已保留，可同号重试；不要改成其他决定。")}</p>
+            <div className="flex flex-wrap gap-2">
+              {pendingRequest && !requestBlocked && (
+                <Button size="sm" disabled={busy} onClick={() => void act(pendingRequest)}>同号重试原请求</Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  setRequestSnapshot(readReservationRequest(localStorage, requestKey))
+                  void data.reload().catch(() => {})
+                }}
+              >
+                刷新预约
+              </Button>
+              <Button size="sm" variant="ghost" asChild><Link to="/support-chat">联系客服</Link></Button>
+            </div>
+          </div>
+        </Notice>
+      )}
       <LoadState
         hasData={data.data != null}
         loading={data.loading}
@@ -2468,7 +2547,7 @@ export function ReservationsPage() {
                         .map((value) => (
                           <Button
                             key={value}
-                            disabled={busy}
+                            disabled={busy || !!pendingRequest || !!requestSnapshot.error}
                             variant={
                               value === "confirm" ? "default" : "outline"
                             }

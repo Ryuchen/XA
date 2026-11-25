@@ -251,7 +251,11 @@ def _execution_receipt(proposal, refund):
             or refund.payment_id != payment.pk or refund.order_id != intent.order_id
             or proposal.case.order_id != intent.order_id or refund.amount != proposal.amount or refund.amount <= 0
             or intent.buyer_id != intent.order.customer_account_id or credit.wallet.account_id != intent.buyer_id
+            or debit.order_id is not None or debit.wallet.account_id != intent.buyer_id
             or debit.tx_type != 'PAY' or debit.status != 'SUCCESS' or debit.amount != -intent.amount
+            or debit.balance_after != debit.balance_before + debit.amount
+            or debit.reversal_of_id or debit.reversals.exists()
+            or debit.operator_account_id != payment.operator_id
             or credit.wallet_id != debit.wallet_id or credit.order_id is not None
             or credit.tx_type != 'REFUND' or credit.status != 'SUCCESS' or credit.amount != refund.amount
             or credit.balance_after != credit.balance_before + credit.amount
@@ -357,7 +361,8 @@ class StaffAddonRefundProposalView(APIView):
         if 'order:view' not in get_account_permissions(request.account) and 'order:refund' not in get_account_permissions(request.account):
             return Response({'code': 403, 'msg': '无权查看售后方案'}, status=403)
         rows = OrderAddonRefundProposal.objects.select_related(
-            'case', 'payment__intent__order', 'payment__buyer_transaction', 'refund__buyer_transaction__wallet').filter(
+            'case', 'payment__intent__order', 'payment__buyer_transaction__wallet',
+            'refund__buyer_transaction__wallet').filter(
             payment_id=payment_id, payment__intent__order_id=order_id).order_by('-pk')
         return Response({'code': 0, 'data': [
             _data(row, account=request.account, include_execution_receipt=True) for row in rows
@@ -617,6 +622,35 @@ class UserAddonRefundProposalView(APIView):
         from .notifier import notify_order_update
         transaction.on_commit(lambda: notify_order_update(order))
         return Response({'code': 0, 'data': _data(proposal, account=request.account), 'msg': '确认已记录，退款尚未执行'})
+
+
+class StaffAddonRefundExecutionReceiptView(APIView):
+    """Read a stored refund without entering the scope for a new refund."""
+
+    permission_classes = [IsConsoleUser]
+
+    def get(self, request, order_id, payment_id, proposal_id):
+        if {'order:view', 'order:refund'}.isdisjoint(get_account_permissions(request.account)):
+            return Response({'code': 403, 'msg': '无权查看加购退款凭证'}, status=403)
+        proposal = None
+        if all(0 < value <= 9223372036854775807 for value in (order_id, payment_id, proposal_id)):
+            proposal = OrderAddonRefundProposal.objects.select_related(
+                'case', 'payment__intent__order', 'payment__buyer_transaction__wallet',
+                'refund__buyer_transaction__wallet',
+            ).filter(pk=proposal_id, payment_id=payment_id, payment__intent__order_id=order_id).first()
+        if proposal is None:
+            return Response({'code': 404, 'msg': '加购退款方案不存在'}, status=404)
+
+        refund = getattr(proposal, 'refund', None)
+        return Response({'code': 0, 'data': {
+            'order_id': order_id,
+            'payment_id': payment_id,
+            'proposal_id': proposal.pk,
+            'case_id': proposal.case_id,
+            'case_request_id': proposal.case_request_id,
+            'refund_executed': refund is not None,
+            'execution_receipt': _execution_receipt(proposal, refund),
+        }})
 
 
 class StaffAddonRefundExecuteView(APIView):

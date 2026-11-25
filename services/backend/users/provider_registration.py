@@ -21,6 +21,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from club_accounts.models import ClubAccount
+from stores.closure import closure_refusal_response
+from stores.context import current_store
 from users.models import CustomUser, ProviderRegistration
 from wallet.club_rules import deposit_target, deposit_rules
 
@@ -105,6 +107,12 @@ class RegistrationSubmission(RegistrationCredentials):
     id_back = serializers.ImageField(validators=[validate_picture])
     deposit_mode = serializers.ChoiceField(choices=['CASH', 'EARNINGS'], default='CASH')
     deposit_proof = serializers.ImageField(validators=[validate_picture], required=False)
+
+    def validate_display_name(self, value):
+        from common.compliance import check_content
+        result = check_content('PROVIDER_REGISTRATION_DISPLAY_NAME', value)
+        self._compliance_result = result
+        return value
 
     def validate(self, attrs):
         if attrs['deposit_mode'] == 'CASH' and not attrs.get('deposit_proof'):
@@ -197,7 +205,20 @@ class PublicRegistrationView(APIView):
                 if _duplicates(data):
                     return _error('账号、手机号或实名资料已有申请，请查询申请状态或联系客服', 409)
                 _assign(row, data)
+                denied = closure_refusal_response(current_store())
+                if denied is not None:
+                    if denied.status_code == 409:
+                        denied.data['msg'] = '本店处于闭店公示或待结清阶段，暂不接受新陪玩注册'
+                    return denied
                 row.save()
+                from common.compliance import (
+                    PROVIDER_REGISTRATION_DISPLAY_NAME, record_content_receipt,
+                )
+                if serializer._compliance_result is not None:
+                    record_content_receipt(
+                        'provider_registration', row.pk, PROVIDER_REGISTRATION_DISPLAY_NAME,
+                        serializer._compliance_result, actor_label='PUBLIC_REGISTRATION',
+                    )
         except IntegrityError:
             _delete_files(_saved_files(row))
             return _error('该资料已有申请，请查询申请状态或联系客服', 409)
@@ -250,6 +271,14 @@ class RegistrationResubmitView(PublicRegistrationView):
                 row.reviewed_at = None
                 row.submitted_at = timezone.now()
                 row.save()
+                from common.compliance import (
+                    PROVIDER_REGISTRATION_DISPLAY_NAME, record_content_receipt,
+                )
+                if serializer._compliance_result is not None:
+                    record_content_receipt(
+                        'provider_registration', row.pk, PROVIDER_REGISTRATION_DISPLAY_NAME,
+                        serializer._compliance_result, actor_label='PUBLIC_REGISTRATION',
+                    )
                 new_files = _saved_files(row)
                 transaction.on_commit(lambda: _delete_files(old_files))
         except IntegrityError:

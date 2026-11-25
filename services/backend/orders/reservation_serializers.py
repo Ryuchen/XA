@@ -354,3 +354,49 @@ class ReservationCancelSerializer(serializers.Serializer):
     reason = serializers.CharField(
         required=False, allow_blank=True, max_length=255, default='',
     )
+
+
+class ReservationReplacementOriginalProviderSerializer(serializers.Serializer):
+    account_id = serializers.IntegerField(min_value=1)
+    display_name = serializers.CharField(allow_blank=True)
+
+
+class ReservationReplacementCandidateSerializer(serializers.Serializer):
+    """Snake-case card projection compatible with the existing boss picker."""
+
+    id = serializers.IntegerField(min_value=1)
+    account_id = serializers.IntegerField(min_value=1)
+    nickname = serializers.CharField(allow_blank=True)
+    display_name = serializers.CharField(allow_blank=True)
+    store_prefix = serializers.CharField(allow_blank=True)
+    gender = serializers.CharField(allow_blank=True)
+    avatar = serializers.CharField(allow_blank=True)
+    avatar_url = serializers.CharField(allow_blank=True)
+    rank = serializers.CharField(allow_blank=True)
+    level_name = serializers.CharField(allow_blank=True)
+    rating = serializers.FloatField()
+    rating_count = serializers.IntegerField()
+    favorable_rate = serializers.FloatField()
+    order_count = serializers.IntegerField()
+    win_rate = serializers.FloatField()
+    price_per_hour = serializers.IntegerField()
+    qualifications = serializers.ListField(child=serializers.DictField())
+    has_reference_hourly_price = serializers.BooleanField()
+    bio = serializers.CharField(allow_blank=True)
+    city = serializers.CharField(allow_blank=True)
+    status = serializers.CharField()
+    can_order = serializers.BooleanField()
+    is_verified = serializers.BooleanField()
+    voice_card_url = serializers.CharField(allow_blank=True, allow_null=True)
+    game_category_ids = serializers.ListField(child=serializers.IntegerField())
+    game_category_names = serializers.ListField(child=serializers.CharField())
+    service_item_ids = serializers.ListField(child=serializers.IntegerField())
+
+
+class ReservationReplacementCandidatesSerializer(serializers.Serializer):
+    seat_number = serializers.IntegerField(min_value=1, max_value=2)
+    service_id = serializers.IntegerField(min_value=1)
+    start_time = serializers.DateTimeField()
+    end_time = serializers.DateTimeField()
+    original_provider = ReservationReplacementOriginalProviderSerializer(allow_null=True)
+    list = ReservationReplacementCandidateSerializer(many=True)

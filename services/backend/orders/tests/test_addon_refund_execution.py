@@ -1,13 +1,15 @@
 import os
 from unittest import skipUnless
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from unittest.mock import patch
 from rest_framework.exceptions import ValidationError
 
 from orders.models import OrderAddonRefund
 from orders.tests import test_addon_refund_flow
 from orders.tests.test_addon_configuration import staff_client
-from wallet.models import RefundDepositDeficit, Transaction, get_platform_wallet
+from wallet.models import RefundDepositDeficit, Transaction, Wallet, get_platform_wallet
 from wallet.services import get_wallet
 
 
@@ -100,6 +102,117 @@ class AddonRefundExecutionTests(TestCase):
         self.assertTrue(proposal['refund_executed'])
         self.assertFalse(proposal['execution_available'])
         self.assertIsNone(proposal['execution_receipt'])
+
+        exact = self.fixture.staff.get(execute_url.removesuffix('execute/') + 'execution-receipt/')
+        self.assertEqual(exact.status_code, 200, exact.data)
+        self.assertTrue(exact.data['data']['refund_executed'])
+        self.assertIsNone(exact.data['data']['execution_receipt'])
+
+    def test_original_payment_debit_corruption_keeps_execution_receipt_unknown(self):
+        execute_url = self.approve('refund-source-review', 500)
+        posted = self.fixture.staff.post(execute_url, {}, format='json')
+        self.assertEqual(posted.status_code, 200, posted.data)
+        refund = OrderAddonRefund.objects.get()
+        debit = self.fixture.payment.buyer_transaction
+        receipt_url = execute_url.removesuffix('execute/') + 'execution-receipt/'
+        foreign_wallet = Wallet.objects.create(account=self.fixture.fixture.other)
+        unrelated_transaction = Transaction.objects.create(
+            wallet=debit.wallet,
+            amount=1,
+            tx_type=Transaction.TxType.ADJUST,
+            balance_before=0,
+            balance_after=1,
+        )
+        original = {
+            'wallet_id': debit.wallet_id,
+            'order_id': debit.order_id,
+            'amount': debit.amount,
+            'balance_before': debit.balance_before,
+            'balance_after': debit.balance_after,
+            'reversal_of_id': debit.reversal_of_id,
+            'operator_account_id': debit.operator_account_id,
+        }
+
+        def assert_receipt_unknown():
+            listed = self.fixture.staff.get(self.fixture.staff_url)
+            self.assertEqual(listed.status_code, 200, listed.data)
+            self.assertIsNone(listed.data['data'][0]['execution_receipt'])
+            exact = self.fixture.staff.get(receipt_url)
+            self.assertEqual(exact.status_code, 200, exact.data)
+            self.assertTrue(exact.data['data']['refund_executed'])
+            self.assertIsNone(exact.data['data']['execution_receipt'])
+
+        mutations = (
+            ('balance_arithmetic', {'balance_after': debit.balance_after + 1}),
+            ('amount', {'amount': debit.amount - 1, 'balance_after': debit.balance_after + 1}),
+            ('wallet_owner', {'wallet_id': foreign_wallet.pk}),
+            ('order_link', {'order_id': self.fixture.fixture.order.pk}),
+            ('reversal_of', {'reversal_of_id': unrelated_transaction.pk}),
+            ('operator', {'operator_account_id': self.fixture.fixture.other.pk}),
+        )
+        for name, changes in mutations:
+            with self.subTest(name=name):
+                Transaction.objects.filter(pk=debit.pk).update(**changes)
+                try:
+                    assert_receipt_unknown()
+                finally:
+                    Transaction.objects.filter(pk=debit.pk).update(**original)
+
+        reversal = Transaction.objects.create(
+            wallet=debit.wallet,
+            amount=-debit.amount,
+            tx_type=debit.tx_type,
+            balance_before=0,
+            balance_after=-debit.amount,
+            reversal_of=debit,
+        )
+        try:
+            assert_receipt_unknown()
+        finally:
+            reversal.delete()
+            unrelated_transaction.delete()
+
+    def test_exact_execution_receipt_checks_staff_and_never_writes_to_the_ledger(self):
+        execute_url = self.approve('refund-for-readback', 500)
+        receipt_url = execute_url.removesuffix('execute/') + 'execution-receipt/'
+        reader = staff_client(['order:view'])
+        before = reader.get(receipt_url)
+        self.assertEqual(before.status_code, 200, before.data)
+        self.assertFalse(before.data['data']['refund_executed'])
+        self.assertIsNone(before.data['data']['execution_receipt'])
+
+        posted = self.fixture.staff.post(execute_url, {}, format='json')
+        self.assertEqual(posted.status_code, 200, posted.data)
+        proposal = posted.data['data']
+        expected = {
+            'order_id': self.fixture.fixture.order.pk,
+            'payment_id': self.fixture.payment.pk,
+            'proposal_id': proposal['id'],
+            'case_id': self.fixture.case.pk,
+            'case_request_id': self.fixture.case.client_request_id,
+            'refund_executed': True,
+            'execution_receipt': proposal['execution_receipt'],
+        }
+        with CaptureQueriesContext(connection) as queries:
+            for _ in range(2):
+                shown = reader.get(receipt_url)
+                self.assertEqual(shown.status_code, 200, shown.data)
+                self.assertEqual(shown.data['data'], expected)
+        writes = [row['sql'] for row in queries if row['sql'].split()[0].upper() in {'INSERT', 'UPDATE', 'DELETE', 'REPLACE'}]
+        self.assertEqual(writes, [])
+        self.assertEqual(self.fixture.staff.get(receipt_url).data['data'], expected)
+        self.assertEqual(staff_client(['service:view']).get(receipt_url).status_code, 403)
+        for client in (self.fixture.fixture.client, self.fixture.fixture.provider_client):
+            self.assertEqual(client.get(receipt_url).status_code, 403)
+        self.assertEqual(reader.get(receipt_url.replace(f"/payments/{self.fixture.payment.pk}/",
+            f"/payments/{self.fixture.payment.pk + 1}/")).status_code, 404)
+        self.assertEqual(reader.get(receipt_url.replace(f"/orders/{expected['order_id']}/",
+            f"/orders/{expected['order_id'] + 1}/")).status_code, 404)
+        self.assertEqual(reader.get(receipt_url.replace(f"/refund-proposals/{proposal['id']}/",
+            f"/refund-proposals/{proposal['id'] + 1}/")).status_code, 404)
+        self.fixture.wallet.refresh_from_db()
+        self.assertEqual(self.fixture.wallet.balance, 2000)
+        self.assertEqual(Transaction.objects.filter(wallet=self.fixture.wallet, tx_type='REFUND').count(), 1)
 
     def test_unconfirmed_proposal_and_unprivileged_operator_do_not_refund(self):
         proposal = self.fixture.staff.post(self.fixture.staff_url, self.fixture.body, format='json')

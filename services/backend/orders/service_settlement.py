@@ -7,12 +7,14 @@ inviter and shop portions are posted once in the same final transaction.
 from datetime import timedelta
 
 from django.db.models import F
-from django.utils import timezone
 
 from club_accounts.models import LegacyAccountMap
 from users.models import EscortProfile
 from wallet.models import ProviderReport, Transaction
 from wallet.services import get_wallet
+from wallet.settlement_clocks import (
+    ClockConflict, receipt as clock_receipt, require_clock, validate_receipt,
+)
 from .settlement import SettlementError, assert_order_conserved
 
 
@@ -29,6 +31,126 @@ def supports_partial_service_settlement(order):
     return True
 
 
+def legacy_report_clock_chain_enabled(order):
+    """Only the ordinary versioned service path uses legacy report receipts."""
+    if (not supports_partial_service_settlement(order) or order.funding_terms is not None
+            or order.source_order_id or order.refund_records.exists()):
+        return False
+    from .models import OrderOriginalShareTransfer, OrderPlatformSubsidy, OrderSegmentSettlementManifest
+    if (OrderPlatformSubsidy.objects.filter(order=order).exists()
+            or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
+            or OrderSegmentSettlementManifest.objects.filter(order=order).exists()):
+        return False
+    from .points_service_payment import needs_integrated_processing
+    if needs_integrated_processing(order):
+        return False
+    from .direct_payment_models import DirectPaymentIntent
+    return not DirectPaymentIntent.objects.filter(order=order).exists()
+
+
+# The receipt key is global across tables. Encode the report and review round
+# instead of colliding with raw segment-submission IDs. Rejected reviews use a
+# separate outcome namespace, so flipping status cannot invent an approval.
+_LEGACY_REPORT_BASE = 1 << 62
+_LEGACY_REPORT_REJECT_OFFSET = 1 << 61
+_LEGACY_REPORT_ROUND_STRIDE = 1024
+_LEGACY_REPORT_MAX_ID = (1 << 63) - 1
+
+
+def _legacy_report_bounds(report_id):
+    if type(report_id) is not int or report_id < 1:
+        raise ClockConflict('旧报单时钟主体编号无效')
+    start = _LEGACY_REPORT_BASE + report_id * _LEGACY_REPORT_ROUND_STRIDE
+    if start + _LEGACY_REPORT_ROUND_STRIDE - 1 + _LEGACY_REPORT_REJECT_OFFSET > _LEGACY_REPORT_MAX_ID:
+        raise ClockConflict('旧报单时钟主体编号超出可核对范围')
+    return start
+
+
+def _legacy_report_subject_id(report_id, round_id):
+    start = _legacy_report_bounds(report_id)
+    if type(round_id) is not int or not 1 <= round_id < _LEGACY_REPORT_ROUND_STRIDE:
+        raise ClockConflict('旧报单轮次超出可核对范围')
+    return start + round_id
+
+
+def _legacy_report_latest_receipt(order, report_id, operation):
+    from wallet.models import SettlementClockEvidence
+    start = _legacy_report_bounds(report_id)
+    return SettlementClockEvidence.objects.filter(
+        order=order, subject_type='SUBMISSION', operation=operation,
+        subject_id__gt=start, subject_id__lt=start + _LEGACY_REPORT_ROUND_STRIDE,
+    ).order_by('-subject_id').first()
+
+
+def legacy_report_next_subject_id(order, report_id):
+    latest = _legacy_report_latest_receipt(order, report_id, 'SUBMIT')
+    start = _legacy_report_bounds(report_id)
+    round_id = 0 if latest is None else latest.subject_id - start
+    return _legacy_report_subject_id(report_id, round_id + 1)
+
+
+def verify_legacy_report_submission(order, report, clock):
+    clock = require_clock(clock)
+    latest = _legacy_report_latest_receipt(order, report.pk, 'SUBMIT')
+    if (report.order_id != order.pk or not report.submitted_at or latest is None
+            or latest.observed_at != report.submitted_at):
+        raise ClockConflict('旧报单原提交回执缺失或时间已变化')
+    validate_receipt(latest.clock_evidence, latest.observed_at, clock)
+    return latest.subject_id
+
+
+def legacy_report_review_subject_id(order, report, clock, *, approved):
+    subject_id = verify_legacy_report_submission(order, report, clock)
+    return subject_id if approved else subject_id + _LEGACY_REPORT_REJECT_OFFSET
+
+
+def _verify_legacy_report_review(order, report, clock):
+    subject_id = verify_legacy_report_submission(order, report, clock)
+    if (report.status != ProviderReport.Status.APPROVED or not report.audited_at
+            or not (report.auditor_id or report.auditor_account_id)
+            or report.audited_at < report.submitted_at):
+        raise ClockConflict('旧报单原审核事实不完整')
+    review = clock_receipt(order, 'SUBMISSION', subject_id, 'REVIEW')
+    if review is None or review.observed_at != report.audited_at:
+        raise ClockConflict('旧报单原审核通过回执缺失或时间已变化')
+    validate_receipt(review.clock_evidence, review.observed_at, clock)
+
+
+def verify_legacy_service_reports(order, clock, *, require_approved):
+    """Verify current report rounds and their original provider economics."""
+    if not legacy_report_clock_chain_enabled(order):
+        return
+    clock = require_clock(clock)
+    from .services import required_report_providers
+    required = required_report_providers(order)
+    reports = list(order.provider_reports.filter(provider_id__in=required).order_by('pk'))
+    by_provider = {}
+    for report in reports:
+        if report.provider_id in by_provider:
+            raise SettlementError('旧报单陪玩身份重复，需人工核对')
+        by_provider[report.provider_id] = report
+    assignments = {row.provider_id: row for row in order.providers.all()}
+    settled_ids = set(order.providers.filter(settled_at__isnull=False).values_list('provider_id', flat=True))
+    for user_id in required:
+        report = by_provider.get(user_id)
+        if report is None or report.status != ProviderReport.Status.APPROVED:
+            if require_approved or user_id in settled_ids:
+                raise SettlementError('旧报单审核状态与原结算事实不一致')
+            continue
+        _verify_legacy_report_review(order, report, clock)
+        assignment = assignments.get(user_id)
+        if assignment is not None:
+            expected = (assignment.provider_account_id, assignment.settlement_base,
+                        assignment.provider_income, assignment.commission_rate)
+        elif not assignments and order.provider_id == user_id and order.required_provider_count == 1:
+            expected = (order.provider_account_id, order.amount, order.provider_income, order.commission_rate)
+        else:
+            raise SettlementError('旧报单陪玩不属于本订单')
+        actual = (report.provider_account_id, report.amount, report.payout_amount, report.commission_rate)
+        if report.order_id != order.pk or actual != expected:
+            raise SettlementError('旧报单订单、陪玩或金额与原份额不一致')
+
+
 def settle_due_service_shares(order, *, operator=None, operator_account=None, trace_id=None):
     from .points_service_payment import needs_integrated_processing
     if needs_integrated_processing(order):
@@ -43,7 +165,10 @@ def settle_due_service_shares(order, *, operator=None, operator_account=None, tr
     from .services import _credit_wallet, missing_report_evidence, refresh_escort_status
     from common.logging_utils import new_trace_id, log_money_event
 
-    if order.settled_at or not aftersale_wait_elapsed(order):
+    if order.settled_at:
+        return []
+    clock = require_clock()
+    if not aftersale_wait_elapsed(order, clock=clock):
         return []
     if order.status != order.Status.COMPLETED or order.payment_status != order.PaymentStatus.PAID:
         return []
@@ -82,9 +207,10 @@ def settle_due_service_shares(order, *, operator=None, operator_account=None, tr
         raise SettlementError('订单分账与实付不一致，请先核对')
     reports = {report.provider_id: report for report in order.provider_reports.filter(
         provider_id__in=[item[1] for item in participants])}
+    verify_legacy_service_reports(order, clock, require_approved=False)
     from .aftersale_scope import applies_to
     open_cases = list(order.aftersales.filter(status='OPEN'))
-    now = timezone.now()
+    now = clock.at
     eligible = []
     for row, user_id, account_id, amount in participants:
         report = reports.get(user_id)
@@ -134,7 +260,7 @@ def settle_due_service_shares(order, *, operator=None, operator_account=None, tr
             row.save(update_fields=['settled_at'])
             if not amount:
                 from wallet.refund_recovery_order import close_for_zero_service
-                close_for_zero_service(profiles.get(user_id), row)
+                close_for_zero_service(profiles.get(user_id), row, now=clock)
         settled_users.append(user_id)
         if account_id:
             settled_accounts.append(account_id)

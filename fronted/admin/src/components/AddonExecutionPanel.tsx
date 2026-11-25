@@ -4,13 +4,68 @@ import { errorMessage, request } from "@/api/request"
 import { Feedback, type Row } from "@/components/business"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { useAdminAuth } from "@/lib/auth"
 import { amountToXaCoin, formatDateTime } from "@/lib/format"
 import type { AddonProposalTarget } from "@/lib/addon-first-proposal"
-import { captureAddonExecution, checkAddonExecution, executeAddonExecution, parseAddonExecution, type AddonExecutionIntent } from "@/lib/addon-execution"
+import { captureAddonExecution, checkExactAddonExecution, executeAddonExecution, lookupExactAddonReceipt, parseAddonExecution, resumeAddonExecution, type AddonExecutionIntent } from "@/lib/addon-execution"
+import { positiveId } from "@/lib/addon-first-proposal"
 
-export default function AddonExecutionPanel({ target, proposals, loading, readError, blocked, onLoaded }: {
-  target: AddonProposalTarget; proposals: Row[] | null; loading: boolean; readError?: string; blocked: boolean; onLoaded: (rows: Row[]) => void
+type ExactReceiptState = "idle" | "loading" | "empty" | "not-executed" | "unknown" | "verified"
+
+const exactReceiptText: Record<ExactReceiptState, string> = {
+  idle: "",
+  loading: "正在只读查询原退款凭证…",
+  empty: "空：未读到退款凭证，无法判断是否已退款，也不能据此执行。",
+  "not-executed": "未执行：服务端确认尚未记录原方案退款。此查询结果不表示当前可以执行。",
+  unknown: "未知：已有退款记录，但返款流水凭证待核对；不能按已退款展示，也不能据此执行。",
+  verified: "已验证：退款、金额与老板返款流水已按原订单、付款、方案及工单核对。",
+}
+
+function ExactReceiptReadout({ state }: { state: ExactReceiptState }) {
+  if (state === "idle") return null
+  return <p role="status" className={`rounded-md border p-3 text-sm ${state === "unknown" || state === "empty" ? "border-border bg-muted/50" : "bg-muted/30"}`}>{exactReceiptText[state]}</p>
+}
+
+function AddonExactReceiptLookup({ target, history }: { target: AddonProposalTarget; history: unknown }) {
+  const auth = useAdminAuth()
+  const id = useId()
+  const [number, setNumber] = useState("")
+  const [busy, setBusy] = useState(false)
+  const inFlight = useRef(false)
+  const [error, setError] = useState("")
+  const [readState, setReadState] = useState<ExactReceiptState>("idle")
+  const [receipt, setReceipt] = useState<Row | null>(null)
+  if (!auth.hasPerm("order:view") && !auth.hasPerm("order:refund")) return null
+  async function lookup() {
+    if (inFlight.current) return
+    const proposalId = Number(number)
+    if (!/^[1-9]\d*$/.test(number) || !positiveId(proposalId)) { setError("请输入已知的正整数原方案编号。"); setReadState("idle"); return }
+    inFlight.current = true; setBusy(true); setError(""); setReadState("loading"); setReceipt(null)
+    try {
+      const data = (await request({ url: `/orders/${target.orderId}/addons/payments/${target.paymentId}/refund-proposals/${proposalId}/execution-receipt/` })).data
+      if (data == null) { setReadState("empty"); return }
+      const outcome = lookupExactAddonReceipt(data, proposalId, target, history)
+      setReadState(outcome.status)
+      if (outcome.status === "verified") setReceipt(outcome.receipt)
+    } catch (cause) { setReadState("idle"); setError((cause as { body?: { msg?: string } } | null)?.body?.msg || errorMessage(cause)) }
+    finally { inFlight.current = false; setBusy(false) }
+  }
+  return <section className="space-y-3 rounded-lg border p-4 text-sm">
+    <h3 id={`${id}-title`} className="font-medium">按已知原方案号只读核对退款</h3>
+    <p id={`${id}-hint`} className="text-xs text-muted-foreground">固定本工单的订单 #{target.orderId}、付款 #{target.paymentId}。列表无法读取时仍可核对已知原方案号；这里只查询退款凭证，不会执行退款。</p>
+    <form aria-labelledby={`${id}-title`} className="flex flex-wrap items-end gap-2" onSubmit={event => { event.preventDefault(); void lookup() }}>
+      <div className="space-y-2"><Label htmlFor={`${id}-number`}>已知原方案编号</Label><Input id={`${id}-number`} name="proposal_id" inputMode="numeric" required pattern="[1-9][0-9]*" maxLength={16} value={number} disabled={busy} aria-describedby={`${id}-hint`} onChange={event => { setNumber(event.target.value); setReceipt(null); setReadState("idle"); setError("") }} /></div>
+      <Button type="submit" variant="outline" disabled={busy}>{busy ? "正在查询…" : "只读查询原退款"}</Button>
+    </form>
+    <Feedback message={error} />
+    <ExactReceiptReadout state={readState} />
+    {receipt && <div role="status" className="space-y-1"><p>方案 #{receipt.id} · 退款 #{receipt.execution_receipt.refund_id} · 老板返款流水 #{receipt.execution_receipt.buyer_transaction_id}</p><p>服务端凭证实退金额 {amountToXaCoin(receipt.execution_receipt.amount_raw)} {coinUnit()} · {formatDateTime(receipt.execution_receipt.executed_at)}</p></div>}
+  </section>
+}
+
+export default function AddonExecutionPanel({ target, history, proposals, loading, readError, blocked, onLoaded }: {
+  target: AddonProposalTarget; history?: unknown; proposals: Row[] | null; loading: boolean; readError?: string; blocked: boolean; onLoaded: (rows: Row[]) => void
 }) {
   const auth = useAdminAuth()
   const key = `xa:store:${getStoreSlug()}:admin:addon-execute:${auth.profile.id}:${target.orderId}:${target.paymentId}:${target.caseId}`
@@ -25,6 +80,7 @@ export default function AddonExecutionPanel({ target, proposals, loading, readEr
   const inFlight = useRef(false)
   const [error, setError] = useState(restored.error)
   const [receipt, setReceipt] = useState<Row | null>(null)
+  const [readState, setReadState] = useState<ExactReceiptState>("idle")
   const formId = useId()
   const current = pending || selected
   const canRefund = auth.hasPerm("order:refund")
@@ -32,7 +88,7 @@ export default function AddonExecutionPanel({ target, proposals, loading, readEr
   function clear() { sessionStorage.removeItem(key); setPending(null) }
   function select(proposal: Row) {
     if (busy || blocked || loading || readError || pending || restored.error || !canRefund) return
-    try { setSelected(captureAddonExecution(proposal, target)); setConfirmed(false); setError(""); setReceipt(null) }
+    try { setSelected(captureAddonExecution(proposal, target)); setConfirmed(false); setError(""); setReceipt(null); setReadState("idle") }
     catch (cause) { setError(errorMessage(cause)) }
   }
   async function run(checkOnly = false) {
@@ -44,34 +100,45 @@ export default function AddonExecutionPanel({ target, proposals, loading, readEr
     inFlight.current = true
     setBusy(true)
     setError("")
+    setReadState(pending || checkOnly ? "loading" : "idle")
     const endpoint = `/orders/${current.target.orderId}/addons/payments/${current.target.paymentId}/refund-proposals/`
     const read = async () => {
       const rows = (await request({ url: endpoint })).data
       if (Array.isArray(rows)) onLoaded(rows)
       return rows
     }
+    const readExact = async () => (await request({ url: `${endpoint}${current.proposalId}/execution-receipt/` })).data
     try {
-      const value = checkOnly
-        ? await checkAddonExecution(current, { read, clear })
-        : await executeAddonExecution(current, {
-          read, clear,
-          save: value => { try { sessionStorage.setItem(key, JSON.stringify(value)) } catch { throw new Error("无法保存原方案执行凭证，请检查浏览器存储后重试。") }; setPending(value) },
-          send: async value => (await request({ url: `${endpoint}${value.proposalId}/execute/`, method: "POST", data: {} })).data,
-        }, !!pending)
+      const io = { read, readExact, clear,
+        save: (value: AddonExecutionIntent) => { try { sessionStorage.setItem(key, JSON.stringify(value)) } catch { throw new Error("无法保存原方案执行凭证，请检查浏览器存储后重试。") }; setPending(value) },
+        send: async (value: AddonExecutionIntent) => (await request({ url: `${endpoint}${value.proposalId}/execute/`, method: "POST", data: {} })).data }
+      let value: Row
+      if (checkOnly || pending) {
+        const outcome = checkOnly ? await checkExactAddonExecution(current, io) : await resumeAddonExecution(current, io)
+        if (outcome.status !== "verified") { setReadState(outcome.status); setConfirmed(false); return }
+        value = outcome.receipt
+      } else value = await executeAddonExecution(current, io)
+      setReadState("verified")
       setReceipt(value)
       setSelected(null)
       setConfirmed(false)
-      try { await read() } catch { /* The matching refund receipt remains known even if list refresh fails. */ }
+      if (!checkOnly && !pending) {
+        try { await read() } catch { /* The matching refund receipt remains known even if list refresh fails. */ }
+      }
     } catch (cause) {
+      setReadState("idle")
       setError((cause as { body?: { msg?: string } } | null)?.body?.msg || errorMessage(cause))
       setConfirmed(false)
     } finally { inFlight.current = false; setBusy(false) }
   }
 
-  if (!candidates.length && !current && !receipt && !restored.error) return null
-  return <section className="space-y-3 rounded-lg border p-4 text-sm">
+  const showExecution = candidates.length > 0 || !!current || !!receipt || !!restored.error
+  return <>
+    <AddonExactReceiptLookup target={target} history={history} />
+    {showExecution && <section className="space-y-3 rounded-lg border p-4 text-sm">
     <h3 className="font-medium">执行指定已签加购方案</h3>
     <Feedback message={error} />
+    <ExactReceiptReadout state={readState} />
     {receipt && <div role="status" className="space-y-1">
       <p>已核对方案 #{receipt.id} 的退款：{amountToXaCoin(receipt.execution_receipt.amount_raw)} {coinUnit()}。</p>
       <p>退款 #{receipt.execution_receipt.refund_id} · 老板返款流水 #{receipt.execution_receipt.buyer_transaction_id} · {formatDateTime(receipt.execution_receipt.executed_at)}</p>
@@ -89,5 +156,6 @@ export default function AddonExecutionPanel({ target, proposals, loading, readEr
         <Button type="submit" disabled={busy || !canRefund || !pending && (blocked || loading || !!readError)}>{busy ? "正在核对…" : `${pending ? "按原方案重试" : "执行方案"} #${current.proposalId} · ${amountToXaCoin(current.amountRaw)} ${coinUnit()}`}</Button>
       </div>
     </form>}
-  </section>
+  </section>}
+  </>
 }

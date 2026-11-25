@@ -3,24 +3,34 @@ import logging
 
 from stores.db import transaction
 from django.db.models import Q
-from django.utils import timezone
 
 from .models import Reservation
 from .reservation_notifier import notify_reservation_after_commit
 from .reservation_state_machine import transition_reservation
 
 
-def expire_locked_reservation(reservation):
+def expire_locked_reservation(reservation, *, now=None, decision_key=None, recovery_scan=False):
     """The caller holds the reservation row lock until commit."""
-    from .reservation_deadlines import due
+    from .reservation_clock import (
+        assert_clock_clear, record_after, sample, same_connection,
+    )
+    from .reservation_deadlines import due, saved_deadline
+    assert_clock_clear(reservation, allow_review_expiration=recovery_scan)
+    observed = None
+    if now is None:
+        observed = sample()
+        if not same_connection(observed):
+            from .reservation_clock import ClockUnavailable
+            raise ClockUnavailable('预约到期复检期间数据库连接发生变化')
+        now = observed.instant
     from django.conf import settings
     recovery = (getattr(settings, 'RESERVATION_EXPIRY_NOTICE_RECOVERY_ENABLED', False)
                 and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False))
-    if not due(reservation, now=timezone.now()):
+    if not due(reservation, now=now):
         return False
     if reservation.required_provider_count == 2 and reservation.status == Reservation.Status.PENDING:
         from .reservation_team import refresh_pending
-        expired = refresh_pending(reservation, now=timezone.now())
+        expired = refresh_pending(reservation, now=now, observed=observed)
         reservation.refresh_from_db()
         notify_reservation_after_commit(reservation)
         if not expired:
@@ -39,7 +49,16 @@ def expire_locked_reservation(reservation):
     reason = ('预约确认超时' if reservation.status == Reservation.Status.PENDING and reservation.confirmation_deadline
               else '预约付款超时' if reservation.status == Reservation.Status.CONFIRMED and reservation.payment_deadline
               else '预约结束时间已过')
-    expired = transition_reservation(reservation.pk, Reservation.Status.EXPIRED, reason=reason)
+    deadline = saved_deadline(reservation)
+    if deadline is None:
+        return False
+    record_after(
+        reservation=reservation, action='EXPIRE', deadline=deadline,
+        decision_key=decision_key, state_before=reservation.status, observed=observed or sample(),
+    )
+    expired = transition_reservation(
+        reservation.pk, Reservation.Status.EXPIRED, reason=reason, now=now,
+    )
     notify_reservation_after_commit(expired)
     # Use the same recipient-specific persistent notice as other transitions.
     if not recovery:
@@ -86,18 +105,26 @@ def expire_reservation(reservation_id):
                 return False  # a concurrent replacement won; retry on the next scan
         elif reservation and reservation.provider_account_id != info['provider_account_id']:
             return False
-        return bool(reservation and expire_locked_reservation(reservation))
+        return bool(reservation and expire_locked_reservation(reservation, recovery_scan=True))
 
 
 def expire_due_reservations(queryset=None):
     """Scan candidates; each lock rechecks both the deadline and status."""
-    now = timezone.now()
+    from .reservation_clock import recover_receipts, sample, same_connection, ClockUnavailable
+    observed = sample()
+    if not same_connection(observed):
+        raise ClockUnavailable('预约到期扫描期间数据库连接发生变化')
+    now = observed.instant
+    try:
+        recover_receipts()
+    except ClockUnavailable:
+        logging.getLogger(__name__).exception('预约时钟回执恢复失败，继续逐条到期复检')
     candidates = (queryset if queryset is not None else Reservation.objects.all()).filter(
         Q(status=Reservation.Status.PENDING, confirmation_deadline__lte=now)
         | Q(status=Reservation.Status.PENDING, confirmation_deadline__isnull=True, end_time__lte=now)
         | Q(status=Reservation.Status.CONFIRMED, payment_deadline__lte=now)
         | Q(status=Reservation.Status.CONFIRMED, payment_deadline__isnull=True, end_time__lte=now)
-    ).values_list('pk', flat=True)
+    ).order_by('id').values_list('pk', flat=True)
     count = 0
     for reservation_id in list(candidates):
         try:

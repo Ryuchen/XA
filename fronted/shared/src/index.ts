@@ -18,6 +18,7 @@ export * from "./negotiation-proposal";
 export * from "./addon-refund-proposals";
 export * from "./order-lifecycle";
 export * from "./order-journey";
+export * from "./reservation-requests";
 export * from "./saas";
 export * from "@xa/money";
 export { formatXaCoin as formatMoney } from "@xa/money";

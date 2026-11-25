@@ -36,6 +36,7 @@ export const pageIntroductions: Record<string, { title: string; description: str
   banners: { title: "首页轮播", description: "维护首页轮播图片、跳转目标与展示顺序，核对启用和公开展示状态。" },
   announcements: { title: "公告管理", description: "发布本店业务公告，维护正文、置顶顺序与公开状态。" },
   "club-content": { title: "运营内容管理", description: "维护活动海报、会员权益与业务规范，核对上架时间和公开状态。" },
+  "h5-pages": { title: "H5 内容发布", description: "预览并发布本店价目表、下单须知和门店介绍，核对公开链接、撤回状态与只读历史版本。" },
   chat: { title: "会话接待", description: "从本店共享咨询池领取并接待会话，按授权转交或分配处理人员。" },
   "support-cards": { title: "客服名片", description: "维护老板端客服联系入口与员工绑定，核对名片展示状态和服务信息。" },
   messages: { title: "站内消息", description: "查看通知记录并维护消息内容，发送前核对接收对象与范围。" },

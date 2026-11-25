@@ -23,7 +23,8 @@ from .mixins import EnvelopeViewSetMixin
 from .permissions import IsConsoleUser, get_account_permissions
 from .pagination import ConsolePagination
 from .payroll_calculation import (aftersale_cycles, calculate_payroll, eligible_recharges, fingerprint, month_bounds, name_of, operating_roi,
-                                  parse_month, plan_snapshot, raw_to_fen, refund_accounting_enabled, round_ratio)
+                                  parse_month, plan_snapshot, raw_to_fen, recharge_source_amount_fen,
+                                  refund_accounting_enabled, round_ratio)
 from .payroll_models import (OperatingCost, PayrollConfig, PayrollLock, PayrollRun,
                             SalaryActivity, SalaryAssignment, SalaryPlan)
 
@@ -365,7 +366,7 @@ class SalaryActivitySerializer(EntityNumberModelSerializer):
             row = Order.objects.filter(pk=obj.order_id, payment_status__in=(*PAID_STATES, 'REFUNDED')).first()
             return dispatch_source_amount_fen(row) if row else None
         if obj.kind == 'RECHARGE':
-            return raw_to_fen(obj.recharge.amount)
+            return recharge_source_amount_fen(obj)
         return None
 
     def validate(self, attrs):

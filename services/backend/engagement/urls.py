@@ -2,8 +2,10 @@ from django.urls import path
 from .views import (MemberView, HomeFeedView, ContentView, PointsView, RewardsView,
     RedeemView, ClaimsView, LotteryView, OpenLotteryCampaignsView)
 from .kook_views import KookBindingView
+from .h5_public import PublicH5PageView
 
 urlpatterns = [
+    path('h5-pages/<uuid:token>/', PublicH5PageView.as_view()),
     path('me/', MemberView.as_view()),
     path('feed/', HomeFeedView.as_view()),
     path('content/', ContentView.as_view()),

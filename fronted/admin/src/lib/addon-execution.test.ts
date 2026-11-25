@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import test from "node:test"
 import assert from "node:assert/strict"
-import { captureAddonExecution, checkAddonExecution, executeAddonExecution, readAddonReceiptTarget, readExecutedAddonProposal, sameSignedProposal, parseAddonExecution, verifiedAddonExecution, type AddonExecutionIntent } from "./addon-execution.ts"
+import { captureAddonExecution, checkAddonExecution, checkExactAddonExecution, executeAddonExecution, inspectExactAddonExecution, lookupExactAddonReceipt, readAddonReceiptTarget, readExecutedAddonProposal, resumeAddonExecution, sameSignedProposal, parseAddonExecution, verifiedAddonExecution, type AddonExecutionIntent } from "./addon-execution.ts"
 
 const target = { orderId: 3, paymentId: 8, caseId: 12, caseRequestId: "case-cycle-1", accounts: [20], segments: [32] }
 const signed = { id: 50, payment_id: 8, case_id: 12, case_request_id: "case-cycle-1", status: "ACCEPTED", amount_raw: 500, explanation: "核对原付款", accepted_at: "2026-11-24T12:00:00Z", participants: [{ account_id: 20, share_plan: [{ segment_id: 32 }] }], decisions: [{ role: "BOSS", account_id: 10, accepted: true, decided_at: "2026-11-24T11:00:00Z" }, { role: "PROVIDER", account_id: 20, accepted: true, decided_at: "2026-11-24T12:00:00Z" }], refund_executed: false, execution_available: true }
@@ -94,4 +94,68 @@ test("当前新轮次仍使用当前工单范围，旧历史不会授予旧方�
   assert.throws(() => readAddonReceiptTarget({ ...current, participants: signed.participants }, reopenedTarget, [originalOpening]))
   readAddonReceiptTarget(executed, reopenedTarget, [originalOpening])
   assert.throws(() => captureAddonExecution(signed, reopenedTarget))
+})
+
+const exactReceipt = { order_id: 3, payment_id: 8, proposal_id: 50, case_id: 12, case_request_id: "case-cycle-1", refund_executed: true, execution_receipt: executed.execution_receipt }
+test("精确只读凭证按保存原范围及金额核对，验证后清恢复且不需要列表或POST", async () => {
+  const intent = captureAddonExecution(signed, target)
+  let gets = 0, clears = 0
+  const outcome = await checkExactAddonExecution(intent, { readExact: async () => { ++gets; return exactReceipt }, clear: () => { ++clears } })
+  assert.equal(outcome.status, "verified")
+  if (outcome.status === "verified") assert.equal(outcome.receipt.id, 50)
+  assert.equal(gets, 1); assert.equal(clears, 1)
+})
+test("精确GET未执行与已有退款但凭证待核对都不清原键，不从回执授予执行资格", async () => {
+  const intent = captureAddonExecution(signed, target)
+  for (const [refund_executed, status] of [[false, "not-executed"], [true, "unknown"]] as const) {
+    let cleared = false
+    const outcome = await checkExactAddonExecution(intent, { readExact: async () => ({ ...exactReceipt, refund_executed, execution_receipt: null }), clear: () => { cleared = true } })
+    assert.equal(outcome.status, status)
+    assert.equal(cleared, false)
+    assert.equal("execution_available" in outcome, false)
+  }
+})
+test("精确回执订单/付款/方案/工单/轮次/金额/流水任一不符时不清恢复", async () => {
+  const intent = captureAddonExecution(signed, target)
+  for (const changed of [{ order_id: 4 }, { payment_id: 9 }, { proposal_id: 51 }, { case_id: 13 }, { case_request_id: "other" }, { execution_receipt: { ...executed.execution_receipt, amount_raw: 600 } }, { execution_receipt: { ...executed.execution_receipt, buyer_transaction_id: 0 } }]) {
+    let cleared = false
+    await assert.rejects(checkExactAddonExecution(intent, { readExact: async () => ({ ...exactReceipt, ...changed }), clear: () => { cleared = true } }))
+    assert.equal(cleared, false)
+  }
+  assert.throws(() => inspectExactAddonExecution({ ...exactReceipt, refund_executed: undefined }, intent))
+})
+test("精确只读的403、404和会话变化均保留原自然键，不回退执行", async () => {
+  const intent = captureAddonExecution(signed, target)
+  for (const error of [{ status: 403 }, { status: 404 }, { code: "SESSION_CHANGED" }]) {
+    let cleared = false
+    await assert.rejects(checkExactAddonExecution(intent, { readExact: async () => { throw error }, clear: () => { cleared = true } }))
+    assert.equal(cleared, false)
+  }
+})
+test("无本地意图且列表不可读时，可用已知原方案号和授权当前/历史工单范围只读核对", () => {
+  assert.equal(lookupExactAddonReceipt(exactReceipt, 50, target, undefined).status, "verified")
+  assert.equal(lookupExactAddonReceipt(exactReceipt, 50, reopenedTarget, [originalOpening]).status, "verified")
+  for (const history of [undefined, [], [originalOpening, originalOpening], [{ ...originalOpening, addon_payment_id: 9 }], [{ ...originalOpening, affected_segment_ids: null }]]) assert.throws(() => lookupExactAddonReceipt(exactReceipt, 50, reopenedTarget, history))
+  for (const changed of [{ order_id: 9 }, { payment_id: 9 }, { case_id: 9 }, { proposal_id: 9 }]) assert.throws(() => lookupExactAddonReceipt({ ...exactReceipt, ...changed }, 50, target, undefined))
+})
+test("原键恢复已核实时不读旧列表也不再POST，未知证据同样不执行", async () => {
+  const intent = captureAddonExecution(signed, target)
+  for (const data of [exactReceipt, { ...exactReceipt, execution_receipt: null }]) {
+    let reads = 0, posts = 0, clears = 0
+    const outcome = await resumeAddonExecution(intent, { readExact: async () => data, read: async () => { ++reads; throw { status: 400 } }, save: () => {}, send: async () => { ++posts; return executed }, clear: () => { ++clears } })
+    assert.equal(reads, 0); assert.equal(posts, 0)
+    assert.equal(outcome.status, data.execution_receipt ? "verified" : "unknown")
+    assert.equal(clears, data.execution_receipt ? 1 : 0)
+  }
+})
+test("原键显式重试未执行记录仍须标准列表确认资格，历史列表400不能转为POST", async () => {
+  const intent = captureAddonExecution(signed, target)
+  const unexecuted = { ...exactReceipt, refund_executed: false, execution_receipt: null }
+  let posts = 0
+  const io = { readExact: async () => unexecuted, save: () => {}, send: async () => { ++posts; return executed }, clear: () => {} }
+  await assert.rejects(resumeAddonExecution(intent, { ...io, read: async () => { throw { status: 400 } } }))
+  await assert.rejects(resumeAddonExecution(intent, { ...io, read: async () => [{ ...signed, execution_available: false }] }))
+  assert.equal(posts, 0)
+  assert.equal((await resumeAddonExecution(intent, { ...io, read: async () => [signed] })).status, "verified")
+  assert.equal(posts, 1)
 })

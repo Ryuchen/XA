@@ -1,13 +1,27 @@
-import { coinText, coinUnit, useCurrentStore } from "@xa/shared"
+import {
+  coinText,
+  coinUnit,
+  createReservationRequest,
+  discardReservationRequest,
+  executeReservationRequest,
+  getSession,
+  getStoreSlug,
+  readReservationRequest,
+  reservationRebookTarget,
+  reservationRequestActionLabel,
+  reservationRequestNotice,
+  reservationRequestStorageKey,
+  useCurrentStore,
+  type ReservationRequestIntent,
+  type ReservationRequestSnapshot,
+} from "@xa/shared"
 import { formatProviderName, ProviderName } from "./provider-name"
-import { reservationRebookTarget } from "@xa/shared"
+import { ReservationReplacementPanel } from "./reservation-replacement"
 import { requiredAccountFields, validateAccountFields } from "./account-fields"
-import { getStoreSlug } from "@xa/shared"
 import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { toast } from "sonner"
 import { CalendarClock, ChevronRight, Gamepad2, WalletCards, ShieldCheck, Check, Copy, CalendarCheck2 } from "lucide-react"
-import { getSession } from "@xa/shared"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ArrowRight, Clock3, CheckCircle2, XCircle } from "lucide-react"
@@ -33,7 +47,6 @@ import {
   storeIntent,
   submitIntent,
   Title,
-  uncertain,
   useAction,
   useConfirm,
   useLoad,
@@ -44,6 +57,43 @@ import {
 
 const reservationStatus = (value: string) =>
   value === "PENDING" ? "待陪玩确认" : label(value)
+
+function ReservationRequestRecovery({
+  snapshot,
+  busy,
+  summary,
+  retry,
+  refresh,
+  discard,
+}: {
+  snapshot: ReservationRequestSnapshot
+  busy: boolean
+  summary?: string
+  retry?: () => void
+  refresh?: () => void
+  discard?: () => void
+}) {
+  const original = snapshot.intent
+  if (!original && !snapshot.error) return null
+  const blocked = !!snapshot.error || !!original?.review || !!original?.blocked
+  return (
+    <div className="boss-feedback" role="alert">
+      <strong>{blocked ? "预约结果待核对" : "预约结果未知"}</strong>
+      {original && <p>原操作：{reservationRequestActionLabel(original.action)}；请求编号 {original.decisionKey}</p>}
+      {summary && <p>{summary}</p>}
+      <p>{snapshot.error || (blocked
+        ? "原请求已保留，不能换号或修改决定。请刷新预约记录或联系客服核对。"
+        : "原请求已保留，可同号重试；刷新或回包丢失不会改变原决定。")}</p>
+      <div className="boss-actions">
+        {original && !blocked && retry && <Button disabled={busy} onClick={retry}>同号重试原请求</Button>}
+        {refresh && <Button variant="outline" disabled={busy} onClick={refresh}>刷新预约记录</Button>}
+        <Button asChild variant="outline"><Link to="/reservations">核对预约列表</Link></Button>
+        {discard && !original?.review && <Button variant="ghost" disabled={busy} onClick={discard}>已核对，继续填写</Button>}
+        <Button asChild variant="ghost"><Link to="/support">联系客服</Link></Button>
+      </div>
+    </div>
+  )
+}
 
 export function ReservationsPage() {
   const store = useCurrentStore()
@@ -98,7 +148,10 @@ export function ReservationPage() {
   const store = useCurrentStore()
   const query = useQuery(),
     id = query.get("id"),
+    reservationId = Number(id),
+    owner = getSession("boss").user?.id,
     navigate = useNavigate(),
+    cancelRequestKey = reservationRequestStorageKey("boss", owner, reservationId || "create"),
     load = useLoad(() => {
       if (!id) throw new Error("缺少预约编号，请返回预约列表")
       return api.get<any>(`/orders/reservations/${id}/`)
@@ -115,12 +168,22 @@ export function ReservationPage() {
     [intent, setIntent] = useState<Intent | null>(() =>
       readIntent("reservation-convert-" + id),
     ),
+    [cancelSnapshot, setCancelSnapshot] = useState<ReservationRequestSnapshot>(() =>
+      owner && reservationId ? readReservationRequest(localStorage, cancelRequestKey) : { intent: null, error: "" },
+    ),
+    [operationNotice, setOperationNotice] = useState(""),
     { busy, run } = useAction(),
     { confirm, dialog } = useConfirm()
   const reservation = load.data,
-    allowed = reservation?.allowed_actions || []
+    allowed = reservation?.allowed_actions || [],
+    operationPending = !!intent || !!cancelSnapshot.intent || !!cancelSnapshot.error
   quoteScope.current = id
-  useEffect(() => { setQuote(null); setQuoteLoading(false); setFundingEnabled(false); setDiscountOptions([]); setDiscountSelection(""); setGiftBalance(""); setCompensationBalance("") }, [id])
+  useEffect(() => {
+    setQuote(null); setQuoteLoading(false); setFundingEnabled(false); setDiscountOptions([]); setDiscountSelection(""); setGiftBalance(""); setCompensationBalance("")
+    setIntent(readIntent("reservation-convert-" + id))
+    setCancelSnapshot(owner && reservationId ? readReservationRequest(localStorage, cancelRequestKey) : { intent: null, error: "" })
+    setOperationNotice("")
+  }, [id, cancelRequestKey])
   function fundingSelection() {
     const values = [giftBalance, compensationBalance]
     if (values.some(value => !/^\d*$/.test(value) || !Number.isSafeInteger(Number(value || 0) * 10) || Number(value || 0) * 10 > 2147483647))
@@ -161,15 +224,65 @@ export function ReservationPage() {
     } finally { if (quoteScope.current === id) setQuoteLoading(false) }
   }
   async function convert(original: Intent) {
+    const originalWithDecision = {
+      ...original,
+      payload: {
+        ...original.payload,
+        decision_key: typeof original.payload.decision_key === "string"
+          ? original.payload.decision_key
+          : original.id,
+      },
+    }
     try {
-      const result = await submitIntent("reservation-convert-" + id, original)
+      const result = await submitIntent("reservation-convert-" + id, originalWithDecision)
+      setOperationNotice("")
       if (result.order?.id) navigate("/order-detail?id=" + result.order.id)
       else load.reload()
+    } catch (error) {
+      const notice = reservationRequestNotice(error)
+      if (notice.kind === "expired") storeIntent("reservation-convert-" + id, null)
+      setOperationNotice(`${notice.title}：${notice.detail}`)
+      throw error
     } finally {
       setIntent(readIntent("reservation-convert-" + id))
       setQuote(null)
       load.reload()
     }
+  }
+  async function cancelReservation(original?: ReservationRequestIntent) {
+    if (!owner || !reservationId) throw new Error("请先登录并重新读取预约")
+    const request = original || createReservationRequest({
+      role: "boss",
+      accountId: owner,
+      action: "cancel",
+      reservationId,
+      payload: { reason: reason.trim() },
+    })
+    try {
+      await executeReservationRequest({
+        storage: localStorage,
+        key: cancelRequestKey,
+        request,
+        post: (path, payload) => api.post<Row>(path, payload),
+        acceptsResult: (result) => result?.id === reservationId,
+      })
+      setOperationNotice("预约已取消。")
+      setReason("")
+    } catch (error) {
+      const notice = reservationRequestNotice(error)
+      setOperationNotice(`${notice.title}：${notice.detail}`)
+      throw error
+    } finally {
+      setCancelSnapshot(readReservationRequest(localStorage, cancelRequestKey))
+      setQuote(null)
+      load.reload()
+    }
+  }
+  async function refreshReservation() {
+    if (!id) return null
+    const latest = await api.get<Row>(`/orders/reservations/${id}/`)
+    load.setData(latest)
+    return latest
   }
   function prepareConvert() {
     if (!quote || !reservation) return
@@ -202,12 +315,14 @@ export function ReservationPage() {
           setQuote(null)
           throw new Error("预约报价或套餐内容已变化，请重新获取报价")
         }
+        const originalId = requestId("reservation")
         const original = {
-          id: requestId("reservation"),
+          id: originalId,
           path: `/orders/reservations/${id}/convert/`,
           payload: {
             expected_amount: approved.amount,
             expected_service: approved.service,
+            decision_key: originalId,
             ...(approved.discount_selection_enabled ? {discount_selection_token: approved.discount_selection_token} : {}),
             ...(approved.funding_selection_enabled ? approved.selected : {}),
           },
@@ -231,6 +346,32 @@ export function ReservationPage() {
         retry={() => {
           if (intent) void run(() => convert(intent), "").catch(() => {})
         }}
+      />
+      {operationNotice && <div className="boss-feedback" role={/^(预约已取消|已邀请)/.test(operationNotice) ? "status" : "alert"}><p>{operationNotice}</p></div>}
+      {cancelSnapshot.intent?.action !== "replace_provider" && <ReservationRequestRecovery
+        snapshot={cancelSnapshot}
+        busy={busy}
+        retry={() => {
+          if (cancelSnapshot.intent?.action === "cancel") void run(() => cancelReservation(cancelSnapshot.intent!), "").catch(() => {})
+        }}
+        refresh={() => {
+          setCancelSnapshot(readReservationRequest(localStorage, cancelRequestKey))
+          load.reload()
+        }}
+      />}
+      <ReservationReplacementPanel
+        key={cancelRequestKey}
+        reservation={reservation}
+        requestKey={cancelRequestKey}
+        owner={owner}
+        snapshot={cancelSnapshot}
+        busy={busy}
+        operationPending={operationPending}
+        storePrefix={store.provider_name_prefix}
+        run={run}
+        onSnapshot={setCancelSnapshot}
+        onNotice={setOperationNotice}
+        onRefresh={refreshReservation}
       />
       <State {...load}>
         {reservation && (
@@ -266,7 +407,7 @@ export function ReservationPage() {
                 {allowed.includes("cancel") && (
                   <Button
                     variant="destructive"
-                    disabled={busy || load.loading || !!load.error}
+                    disabled={busy || load.loading || !!load.error || operationPending}
                     onClick={() =>
                       confirm({
                         title: "取消预约",
@@ -275,17 +416,7 @@ export function ReservationPage() {
                           (reason.trim() ? `取消原因：${reason.trim()}` : ""),
                         confirm: "确认取消预约",
                         variant: "destructive",
-                        action: async () => {
-                          try {
-                            await api.post(
-                              `/orders/reservations/${id}/cancel/`,
-                              { reason: reason.trim() },
-                            )
-                          } finally {
-                            setQuote(null)
-                            load.reload()
-                          }
-                        },
+                        action: () => cancelReservation(),
                       })
                     }
                   >
@@ -309,6 +440,7 @@ export function ReservationPage() {
                     label="取消原因（选填）"
                     value={reason}
                     onChange={setReason}
+                    disabled={operationPending}
                     multiline
                     maxLength={255}
                   />
@@ -337,7 +469,7 @@ export function ReservationPage() {
                 <Button
                   variant={quote ? "ghost" : "default"}
                   style={{ marginTop: 16 }}
-                  disabled={busy || load.loading || !!load.error || !!intent}
+                  disabled={busy || load.loading || !!load.error || operationPending}
                   onClick={() => void run(readQuote, "").catch(() => {})}
                 >
                   获取最新报价
@@ -373,7 +505,7 @@ export function ReservationPage() {
                       </p>
                     )}
                     <Button
-                      disabled={busy || !quote.balance_sufficient || !!intent}
+                      disabled={busy || !quote.balance_sufficient || operationPending}
                       onClick={prepareConvert}
                     >
                       确认成单
@@ -400,9 +532,14 @@ export function ReservationCreatePage() {
     serviceId = query.get("service_id"),
     owner = getSession("boss").user?.id,
     pendingKey = `xa:store:${getStoreSlug()}:xa:boss:web:reservation-pending:${owner}`,
+    requestKey = reservationRequestStorageKey("boss", owner, "create"),
     [pending, setPending] = useState(
       () => sessionStorage.getItem(pendingKey) || "",
     ),
+    [requestSnapshot, setRequestSnapshot] = useState<ReservationRequestSnapshot>(() =>
+      owner ? readReservationRequest(localStorage, requestKey) : { intent: null, error: "" },
+    ),
+    [requestNotice, setRequestNotice] = useState(""),
     [start, setStart] = useState(""),
     [duration, setDuration] = useState("60"),
     [form, setForm] = useState<Row>({
@@ -414,6 +551,12 @@ export function ReservationCreatePage() {
     }),
     { busy, run } = useAction(),
     { confirm, dialog } = useConfirm()
+  const hasPending = !!pending || !!requestSnapshot.intent || !!requestSnapshot.error
+  useEffect(() => {
+    setPending(sessionStorage.getItem(pendingKey) || "")
+    setRequestSnapshot(owner ? readReservationRequest(localStorage, requestKey) : { intent: null, error: "" })
+    setRequestNotice("")
+  }, [pendingKey, requestKey])
   const load = useLoad(
     async () => {
       if (!serviceId || !providerId)
@@ -428,8 +571,57 @@ export function ReservationCreatePage() {
     [serviceId, providerId],
     false,
   )
+  function createSummary(intent: ReservationRequestIntent) {
+    const from = Date.parse(String(intent.payload.start_time || ""))
+    const to = Date.parse(String(intent.payload.end_time || ""))
+    return Number.isFinite(from) && Number.isFinite(to) && to > from
+      ? `${date(new Date(from).toISOString())}，${Math.round((to - from) / 60000)} 分钟`
+      : "原预约时段无法读取，请先核对预约记录"
+  }
+  async function sendCreate(request: ReservationRequestIntent, summary: string) {
+    sessionStorage.setItem(pendingKey, summary)
+    setPending(summary)
+    try {
+      const result = await executeReservationRequest({
+        storage: localStorage,
+        key: requestKey,
+        request,
+        post: (path, body) => api.post<Row>(path, body),
+        acceptsResult: (value) => Number.isSafeInteger(value?.id) && value.id > 0,
+      })
+      sessionStorage.removeItem(pendingKey)
+      setPending("")
+      setRequestSnapshot(readReservationRequest(localStorage, requestKey))
+      setRequestNotice("")
+      navigate("/reservation-detail?id=" + result.id, { replace: true })
+    } catch (error) {
+      const latest = readReservationRequest(localStorage, requestKey)
+      setRequestSnapshot(latest)
+      if (!latest.intent && !latest.error) {
+        sessionStorage.removeItem(pendingKey)
+        setPending("")
+      }
+      const notice = reservationRequestNotice(error)
+      setRequestNotice(`${notice.title}：${notice.detail}`)
+      throw error
+    }
+  }
+  function confirmDiscardPending() {
+    confirm({
+      title: "确认已核对上次预约",
+      description: "请确认已查看预约列表并与客服核对，上次预约不存在后再提交新的预约。",
+      confirm: "已核对，继续填写",
+      action: async () => {
+        discardReservationRequest(localStorage, requestKey)
+        sessionStorage.removeItem(pendingKey)
+        setPending("")
+        setRequestSnapshot({ intent: null, error: "" })
+        setRequestNotice("")
+      },
+    })
+  }
   async function submit() {
-    if (!load.data) return
+    if (!load.data || hasPending) return
     validateAccountFields(load.data.service, { game_region: String(form.region), game_nickname: String(form.nickname), game_uid: String(form.uid) })
     const dateValue = new Date(start + ":00+08:00"),
       roundsValue = Number(form.rounds)
@@ -468,20 +660,15 @@ export function ReservationCreatePage() {
         </>
       ),
       action: async () => {
-        sessionStorage.setItem(pendingKey, summary)
-        setPending(summary)
-        try {
-          const result = await api.post<any>("/orders/reservations/", payload)
-          sessionStorage.removeItem(pendingKey)
-          setPending("")
-          navigate("/reservation-detail?id=" + result.id, { replace: true })
-        } catch (error) {
-          if (!uncertain(error)) {
-            sessionStorage.removeItem(pendingKey)
-            setPending("")
-          }
-          throw error
-        }
+        if (!owner) throw new Error("请先登录后再提交预约")
+        const request = createReservationRequest({
+          role: "boss",
+          accountId: owner,
+          action: "create",
+          targetProviderAccountId: Number(providerId),
+          payload,
+        })
+        await sendCreate(request, summary)
       },
     })
   }
@@ -492,31 +679,24 @@ export function ReservationCreatePage() {
     <>
       <BackLink to="/companions">陪玩列表</BackLink>
       <Title title="预约陪玩" description="先锁定时间，陪玩确认后再核对价格。" /><nav className="boss-reservation-steps" aria-label="预约流程：选择时间、等待确认、转成订单">{["选择时间", "等待确认", "转成订单"].map((text, index) => <div key={text} aria-current={index === 0 ? "step" : undefined}><span>{index === 0 ? <Check size={14} /> : index + 1}</span>{text}</div>)}</nav>
-      {pending && (
+      {requestNotice && <div className="boss-feedback" role="alert"><p>{requestNotice}</p></div>}
+      <ReservationRequestRecovery
+        snapshot={requestSnapshot}
+        busy={busy}
+        summary={requestSnapshot.intent ? createSummary(requestSnapshot.intent) : pending}
+        retry={() => {
+          const original = requestSnapshot.intent
+          if (original) void run(() => sendCreate(original, createSummary(original)), "").catch(() => {})
+        }}
+        discard={confirmDiscardPending}
+      />
+      {pending && !requestSnapshot.intent && !requestSnapshot.error && (
         <div className="boss-feedback" role="alert">
           <strong>上次预约结果待确认</strong>
           <p>{pending}。请先查看预约列表，避免重复提交。</p>
           <div className="boss-actions">
-            <Button asChild>
-              <Link to="/reservations">核对预约列表</Link>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                confirm({
-                  title: "确认已核对上次预约",
-                  description:
-                    "请确认已查看预约列表并与客服核对，上次预约不存在后再提交新的预约。",
-                  confirm: "已核对，继续填写",
-                  action: async () => {
-                    sessionStorage.removeItem(pendingKey)
-                    setPending("")
-                  },
-                })
-              }
-            >
-              我已完成核对
-            </Button>
+            <Button asChild><Link to="/reservations">核对预约列表</Link></Button>
+            <Button variant="outline" onClick={confirmDiscardPending}>我已完成核对</Button>
           </div>
         </div>
       )}
@@ -534,7 +714,7 @@ export function ReservationCreatePage() {
               <section className="boss-reservation-context"><Image src={load.data.provider.avatar} alt={load.data.provider.nickname} className="boss-avatar" /><div><p>本次预约</p><h2>{load.data.service.name}</h2><p><ProviderName value={load.data.provider.nickname} /> · {money(load.data.service.price)} {coinUnit()} / {load.data.service.price_unit || "份"}</p></div><StatusBadge status="PENDING">待提交</StatusBadge></section>
               <div><Panel icon={CalendarClock} number="01" title="选择时间" note="按你的方便时间安排">
               <div className="boss-form-grid">
-                <Field disabled={busy || !!pending}
+                <Field disabled={busy || hasPending}
                   label="开始时间（北京时间）"
                   type="datetime-local"
                   value={start}
@@ -543,7 +723,7 @@ export function ReservationCreatePage() {
                   required
                   hint="按 15 分钟选择，可预约未来 30 天内的时段"
                 />
-                <Choice disabled={busy || !!pending}
+                <Choice disabled={busy || hasPending}
                   label="预约时长"
                   value={duration}
                   onChange={setDuration}
@@ -556,7 +736,7 @@ export function ReservationCreatePage() {
                   }))}
                 />
 
-              </div><div className="boss-reservation-time-preview"><p>预计时段 · 北京时间</p><strong>{scheduleText}</strong><small>共 {duration} 分钟，{form.rounds || "0"} 份服务</small></div></Panel><Panel icon={Gamepad2} number="02" title="游戏资料" note="帮助陪玩提前做好准备">                <Field disabled={busy || !!pending}
+              </div><div className="boss-reservation-time-preview"><p>预计时段 · 北京时间</p><strong>{scheduleText}</strong><small>共 {duration} 分钟，{form.rounds || "0"} 份服务</small></div></Panel><Panel icon={Gamepad2} number="02" title="游戏资料" note="帮助陪玩提前做好准备">                <Field disabled={busy || hasPending}
                   label="服务数量"
                   type="number"
                   value={form.rounds}
@@ -566,7 +746,7 @@ export function ReservationCreatePage() {
                   min={1}
                   required
                 /><div className="boss-form-grid">
-                <Field disabled={busy || !!pending}
+                <Field disabled={busy || hasPending}
                   label="游戏大区"
                   required={requiredAccountFields(load.data.service)?.includes("game_region") === true}
                   value={form.region}
@@ -575,7 +755,7 @@ export function ReservationCreatePage() {
                   }
                   maxLength={50}
                 />
-                <Field disabled={busy || !!pending}
+                <Field disabled={busy || hasPending}
                   label="游戏昵称"
                   required={requiredAccountFields(load.data.service)?.includes("game_nickname") === true}
                   value={form.nickname}
@@ -584,7 +764,7 @@ export function ReservationCreatePage() {
                   }
                   maxLength={50}
                 />
-                <Field disabled={busy || !!pending}
+                <Field disabled={busy || hasPending}
                   label="游戏 UID"
                   required={requiredAccountFields(load.data.service)?.includes("game_uid") === true}
                   value={form.uid}
@@ -594,7 +774,7 @@ export function ReservationCreatePage() {
                   maxLength={50}
                 />
               </div>
-              <Field disabled={busy || !!pending}
+              <Field disabled={busy || hasPending}
                 label="预约备注"
                 value={form.remark}
                 onChange={(value) =>
@@ -604,7 +784,7 @@ export function ReservationCreatePage() {
                 maxLength={255}
               />
               </Panel></div><aside><Panel title="提交前确认" icon={ShieldCheck}><Info entries={[["服务", load.data.service.name], ["陪玩", formatProviderName(load.data.provider.nickname, store.provider_name_prefix)], ["时长", duration + " 分钟"], ["数量", form.rounds + " 份服务"]]} /><div className="boss-reservation-time-preview"><p>预约时段</p><strong>{scheduleText}</strong></div><p className="boss-muted">提交预约不会扣款。陪玩确认后，可查看实时报价并决定是否成单。</p><div className="boss-reservation-submit">              <Button
-                disabled={busy || load.loading || !!load.error || !!pending}
+                disabled={busy || load.loading || !!load.error || hasPending}
               >
                 <CalendarCheck2 size={16} />{busy ? "正在提交…" : "核对并提交预约"}
               </Button>
@@ -612,7 +792,7 @@ export function ReservationCreatePage() {
             </form>
         )}
       </State>
-      {load.data && !load.loading && !load.error && !pending && <div className="boss-reservation-mobile-submit"><LinkButton variant="outline" disabled={busy} to="/reservations">我的预约</LinkButton><Button type="submit" form="boss-reservation-create-form" disabled={busy || !!pending}><CalendarCheck2 size={16} />{busy ? "正在提交…" : "提交预约"}</Button></div>}
+      {load.data && !load.loading && !load.error && !hasPending && <div className="boss-reservation-mobile-submit"><LinkButton variant="outline" disabled={busy} to="/reservations">我的预约</LinkButton><Button type="submit" form="boss-reservation-create-form" disabled={busy || hasPending}><CalendarCheck2 size={16} />{busy ? "正在提交…" : "提交预约"}</Button></div>}
       {dialog}
     </>
   )

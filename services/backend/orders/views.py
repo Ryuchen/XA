@@ -586,6 +586,12 @@ class CreateOrderView(APIView):
     @recover_fund_result('order.create')
     def post(self, request):
         from club_accounts.provider_lifecycle import ProviderLifecycleError
+        from stores.closure import closure_refusal_response
+        from stores.context import current_store
+        if request.account.account_type in (ClubAccount.AccountType.BOSS, ClubAccount.AccountType.STAFF):
+            denied = closure_refusal_response(current_store())
+            if denied is not None:
+                return denied
         # The ordinary route remains unchanged. A formal points attempt binds
         # this buyer and service across quote verification and the existing
         # atomic debit/receipt writer; downstream lifecycle gates still apply.
@@ -1431,6 +1437,12 @@ class TipOrderView(APIView):
         denied = self._admission_refusal()
         if denied is not None:
             return denied
+        if order_id is None and request.account.account_type == ClubAccount.AccountType.BOSS:
+            from stores.closure import closure_refusal_response
+            from stores.context import current_store
+            closure_denied = closure_refusal_response(current_store())
+            if closure_denied is not None:
+                return closure_denied
         if 'items' in request.data:
             from .gift_basket import send_basket
             return send_basket(self, request, order_id=order_id)

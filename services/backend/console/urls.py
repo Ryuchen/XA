@@ -18,6 +18,9 @@ from stores.platform_points_funding import (PlatformOrderFundingQueueView, Platf
 from stores.platform_pass_repayment_read import PlatformPassRepaymentReconciliationView
 from stores.platform_pass_repayment_recovery import PlatformPassRepaymentRecoveryView, PlatformPassRepaymentVoidView
 from stores.platform_store_management import PlatformStoreManagementView, PlatformStoreManagementDetailView, PlatformStoreManagementResumeView
+from stores.platform_compliance import (PlatformComplianceRulesView, PlatformComplianceRuleDetailView,
+                                        PlatformComplianceRulePublishView, PlatformStoreContentComplianceReceiptsView)
+from .content_compliance import ContentComplianceReceiptsView
 from stores.platform_media import PlatformStoreBackgroundUploadView, PlatformStoreLogoUploadView
 from stores.business_certificates import PlatformBusinessCertificateDocumentView, PlatformBusinessCertificatesView
 from stores.platform_domains import PlatformStoreDomainsView
@@ -48,6 +51,7 @@ from stores.platform_license_gift_vip import PlatformGiftVipReviewView, Platform
 from stores.platform_license_achievement import PlatformAchievementReviewView, PlatformAchievementResolutionView
 from club_accounts.otp_views import OtpSetupView
 from stores.platform_views import PlatformPasswordLoginView, PlatformRefreshView, PlatformProfileView, PlatformStoresView, PlatformDashboardView, PlatformOtpSetupView, PlatformAccountsView, PlatformAccountDetailView, PlatformAccountAuditView, PlatformPassRefundShortfallsView, PlatformPassRefundShortfallDetailView
+from stores.platform_orders import PlatformOrdersView, PlatformOrderDetailView
 from users.h5_login import ConsoleH5StartView, ConsoleH5CallbackView, ConsoleH5StatusView
 from .deposit_rules import DepositRulesView, DepositTargetsView
 from .settlement_clocks import SettlementClocksView
@@ -63,7 +67,11 @@ from .game_commission import GameCommissionCatalogView, GameCommissionConfigView
 from .addon_configuration import ServiceAddonConfigurationView, ServiceAddonPriceOptionsView
 from orders.room_objections import RoomObjectionQueueView, RoomObjectionResolveView
 from orders.addon_intents import StaffOrderAddonIntentView, StaffOrderAddonPaymentView
-from orders.addon_refund import StaffAddonRefundProposalView, StaffAddonRefundExecuteView
+from orders.addon_refund import (
+    StaffAddonRefundExecuteView,
+    StaffAddonRefundExecutionReceiptView,
+    StaffAddonRefundProposalView,
+)
 from orders.addon_handover import StaffAddonHandoverView
 from orders.addon_completion import StaffAddonCompletionView
 from orders.legacy_room_completion import LegacyRoomCompletionView
@@ -146,6 +154,8 @@ router.register('aftersales', AfterSaleViewSet, basename='aftersale')
 router.register('provider-registrations', ProviderRegistrationViewSet, basename='provider-registration')
 from engagement.console import (RewardViewSet, ClaimViewSet, BroadcastRuleViewSet, BroadcastViewSet, ProviderNamingViewSet,
     ContentViewSet, TierViewSet, PackageViewSet, CampaignViewSet, OperationConfigView, VipResumePreviewView, VipUpgradeReviewViewSet, ExternalPointsView, ContentImageUploadView, GiftBenefitViewSet)
+from engagement.h5_console import H5PageViewSet
+router.register('h5-pages', H5PageViewSet, basename='h5-page')
 router.register('gift-benefits', GiftBenefitViewSet, basename='gift-benefits')
 router.register('club-rewards', RewardViewSet, basename='club-reward')
 router.register('vip-upgrade-reviews', VipUpgradeReviewViewSet, basename='vip-upgrade-review')
@@ -196,12 +206,15 @@ from orders.traffic_views import TrafficConfigView
 from orders.timeout_views import OrderTimeoutConfigView, OrderTimeoutConfigHistoryView
 from orders.payment_fee_policy_views import PaymentFeePolicyView, PaymentFeePolicyHistoryView, PaymentFeePolicyPreviewView
 from .referral_config import ReferralConfigView
+from .order_export_view import StaffOrderExportView
+from .order_settlement_breakdown import StaffOrderSettlementBreakdownView
 
 urlpatterns = [
     path('config/referral-draft/', ReferralConfigView.as_view()),
     path('providers/<int:account_id>/retirement/', ProviderRetirementView.as_view()),
     path('continuations/', ContinuationReviewView.as_view()),
     path('orders/<int:order_id>/continuation/', StaffContinuationClaimView.as_view()),
+    path('orders/<int:order_id>/settlement-breakdown/', StaffOrderSettlementBreakdownView.as_view()),
     path('continuations/<int:claim_id>/', ContinuationReviewView.as_view()),
     path('continuations/<int:claim_id>/retry/', ContinuationRetryView.as_view()),
     path('notice-reviews/', NoticeReviewListView.as_view()),
@@ -212,6 +225,8 @@ urlpatterns = [
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/handovers/', StaffAddonHandoverView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/completion/', StaffAddonCompletionView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/refund-proposals/<int:proposal_id>/execute/', StaffAddonRefundExecuteView.as_view()),
+    path('orders/<int:order_id>/addons/payments/<int:payment_id>/refund-proposals/<int:proposal_id>/execution-receipt/',
+         StaffAddonRefundExecutionReceiptView.as_view()),
     path('dictionaries/', DictionaryCatalogView.as_view()),
     path('dictionaries/setup-confirmation/<str:key>/', SetupEvidenceConfirmationView.as_view()),
     path('dictionary-options/', DictionaryOptionsView.as_view()),
@@ -270,6 +285,11 @@ urlpatterns = [
     path('platform/ledger', PlatformLedgerView.as_view()),
     path('platform/store-management', PlatformStoreManagementView.as_view()),
     path('platform/store-management/<int:pk>', PlatformStoreManagementDetailView.as_view()),
+    path('platform/store-management/<int:pk>/content-compliance-receipts', PlatformStoreContentComplianceReceiptsView.as_view()),
+    path('platform/compliance-rules', PlatformComplianceRulesView.as_view()),
+    path('platform/compliance-rules/<int:version>', PlatformComplianceRuleDetailView.as_view()),
+    path('platform/compliance-rules/<int:version>/publish', PlatformComplianceRulePublishView.as_view()),
+    path('content-compliance-receipts/', ContentComplianceReceiptsView.as_view()),
     path('platform/store-management/<int:pk>/background-upload', PlatformStoreBackgroundUploadView.as_view()),
     path('platform/store-management/<int:pk>/business-certificates', PlatformBusinessCertificatesView.as_view()),
     path('platform/store-management/<int:pk>/business-certificates/<int:certificate_id>/document',
@@ -327,6 +347,8 @@ urlpatterns = [
     path('platform/store-payroll/<slug:slug>/<str:resource>', StorePayrollView.as_view()),
     path('platform/store-payroll/<slug:slug>/<str:resource>/<int:plan_id>', StorePayrollView.as_view()),
     path('platform/dashboard', PlatformDashboardView.as_view()),
+    path('platform/orders', PlatformOrdersView.as_view()),
+    path('platform/orders/<slug:slug>/<int:order_id>', PlatformOrderDetailView.as_view()),
     path('platform/withdrawals', PlatformWithdrawalStoresView.as_view()),
     path('platform/withdrawals/<slug:slug>', PlatformWithdrawalListView.as_view()),
     path('platform/withdrawals/<slug:slug>/<int:pk>/<str:action>', PlatformWithdrawalActionView.as_view()),
@@ -397,5 +419,6 @@ urlpatterns = [
     path('deposit-applications/<int:pk>/process/', StaffDepositApplicationProcessView.as_view()),
     path('deposit-applications/<int:pk>/reject/', StaffDepositApplicationRejectView.as_view()),
     path('deposit-applications/<int:pk>/remind/', StaffDepositApplicationRemindView.as_view()),
+    path('orders/export/', StaffOrderExportView.as_view()),
     path('', include(router.urls)),
 ]

@@ -5,7 +5,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.utils import timezone
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -16,6 +15,8 @@ from club_accounts.permissions import IsClubAccountAuthenticated
 from console.permissions import get_account_permissions, is_console_account
 from stores.db import transaction
 from wallet.report_lifecycle import provider_report_operation
+from wallet.settlement_clocks import (ClockConflict, ClockUnavailable, record,
+                                      require_clock, verify)
 from .models import (Order, OrderParticipationSegment, OrderSegmentReport, OrderSegmentReportImage,
                      OrderSegmentReportSubmission, OrderSegmentSubmissionImage)
 from .order_operation_receipts import order_receipt
@@ -199,6 +200,13 @@ def _person_freeze_until(segment):
         if (not report or report.status not in ('PENDING', 'APPROVED') or not latest
                 or latest.version != report.version or latest.status != report.status):
             return None
+        try:
+            clock = require_clock()
+            verify(order, 'SUBMISSION', latest.pk, 'SUBMIT', latest.submitted_at, clock)
+            if latest.status == 'APPROVED':
+                verify(order, 'SUBMISSION', latest.pk, 'REVIEW', latest.reviewed_at, clock)
+        except (ClockConflict, ClockUnavailable):
+            return None
         timestamps.append(latest.submitted_at)
     return max(timestamps) + timedelta(hours=order.service_freeze_hours) if timestamps else None
 
@@ -321,9 +329,14 @@ class SegmentReportActionView(APIView):
                 images = list(report.draft_images.filter(active=True).order_by('pk'))
                 if not segment.entry_image or not segment.completion_image or not images:
                     return Response({'code':400, 'msg':'请补齐本次入队、结单及战绩截图'})
+                try:
+                    clock = require_clock()
+                except ClockUnavailable:
+                    return Response({'code':503, 'msg':'门店数据库时钟不可用，报单未提交'}, status=503)
                 submission = OrderSegmentReportSubmission.objects.create(report=report, version=report.version + 1,
                     status='PENDING', entry_image=segment.entry_image.name, completion_image=segment.completion_image.name,
-                    submitted_at=timezone.now())
+                    submitted_at=clock.at)
+                record(order, 'SUBMISSION', submission.pk, 'SUBMIT', clock)
                 OrderSegmentSubmissionImage.objects.bulk_create([OrderSegmentSubmissionImage(submission=submission,
                     image=image.image.name) for image in images])
                 report.version = submission.version; report.status = 'PENDING'
@@ -400,9 +413,19 @@ class SegmentReportReviewView(APIView):
             if (not report or report.status != 'PENDING' or report.version != version
                     or not latest or latest.version != version or latest.status != 'PENDING'):
                 return Response({'code':409, 'msg':'报单状态已变化，请刷新核对'}, status=409)
+            try:
+                clock = require_clock()
+                verify(order, 'SUBMISSION', latest.pk, 'SUBMIT', latest.submitted_at, clock)
+                if clock.at < latest.submitted_at:
+                    raise ClockConflict('报单提交时间晚于当前数据库时间，需核对')
+            except ClockUnavailable:
+                return Response({'code':503, 'msg':'门店数据库时钟不可用，审核未记录'}, status=503)
+            except ClockConflict:
+                return Response({'code':409, 'msg':'原报单时钟证据待核对，不能审核'}, status=409)
             latest.status = 'APPROVED' if action == 'approve' else 'REJECTED'
-            latest.reviewed_at = timezone.now(); latest.reviewer = request.account; latest.review_remark = remark.strip()
+            latest.reviewed_at = clock.at; latest.reviewer = request.account; latest.review_remark = remark.strip()
             latest.save(update_fields=['status','reviewed_at','reviewer','review_remark'])
+            record(order, 'SUBMISSION', latest.pk, 'REVIEW', clock)
             report.status = latest.status; report.save(update_fields=['status','updated_at'])
             from .notifier import notify_order_update
             transaction.on_commit(lambda: notify_order_update(order))

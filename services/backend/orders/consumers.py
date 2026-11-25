@@ -63,11 +63,14 @@ def current_chat_payload(account, data, *, message=False):
     else:
         if account.account_type == ClubAccount.AccountType.STAFF:
             from console.serializers import AdminChatSessionSerializer
-            payload['session'] = AdminChatSessionSerializer(
+            session_payload = AdminChatSessionSerializer(
                 session, context={'request': SimpleNamespace(account=account)},
             ).data
         else:
-            payload['session'] = ChatSessionSerializer(session).data
+            session_payload = ChatSessionSerializer(session).data
+        # Refresh events carry metadata only; message bodies use chat_message.
+        session_payload.pop('last_message', None)
+        payload['session'] = session_payload
     return payload
 
 

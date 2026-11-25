@@ -16,6 +16,8 @@ from rest_framework.views import APIView
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from club_accounts.tokens import issue_account_tokens
+from stores.closure import closure_refusal_response
+from stores.context import current_store
 from stores.db import transaction
 from wallet.models import Wallet
 
@@ -59,6 +61,14 @@ class BossRegistrationSmsView(APIView):
             if _phone_taken(phone):
                 return _fail('该手机号已关联老板账号，请登录或联系客服', 409, 'PHONE_IN_USE')
             row = BossRegistrationChallenge.objects.select_for_update().filter(phone=phone).first()
+            if row is None:
+                # No account has been submitted yet: this is a new registration
+                # intent, not recovery of an already started verification flow.
+                denied = closure_refusal_response(current_store())
+                if denied is not None:
+                    if denied.status_code == 409:
+                        denied.data['msg'] = '本店处于闭店公示或待结清阶段，暂不接受新老板注册'
+                    return denied
             now = timezone.now()
             if row and row.sent_at + timedelta(seconds=60) > now:
                 return _fail('验证码已发送，请稍后再试', 429, 'SMS_RATE_LIMITED')
@@ -124,6 +134,13 @@ class BossRegistrationView(APIView):
                 boss_type = default_boss_type()
                 if not boss_type.is_active:
                     return _fail('默认老板类型暂不可用，请联系客服', 503, 'DEFAULT_BOSS_TYPE_UNAVAILABLE')
+                # A previously issued SMS challenge only restores verification;
+                # this write is the actual new-account action and must recheck.
+                denied = closure_refusal_response(current_store())
+                if denied is not None:
+                    if denied.status_code == 409:
+                        denied.data['msg'] = '本店处于闭店公示或待结清阶段，暂不接受新老板注册'
+                    return denied
                 display_name = nickname.strip() or username
                 account = ClubAccount.objects.create_account(username=username, password=password,
                     account_type='BOSS', phone=phone, is_phone_verified=True, nickname=display_name, boss_type=boss_type)

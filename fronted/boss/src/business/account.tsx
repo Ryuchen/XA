@@ -87,6 +87,7 @@ import {
 import { WechatBindingButton } from "./wechat-binding"
 import { OtpSetupPanel } from "@xa/shared"
 import { PasswordSecurityForm } from "./password-security"
+import { StoreGuaranteeCard } from "./guarantee-card"
 
 export function LoginPage() {
   const store = useCurrentStore()
@@ -487,6 +488,7 @@ export function MinePage() {
               <strong>{guest ? "—" : <>{money(data.wallet.balance)}<small>{coinUnit()}</small></>}</strong>
               <span className="boss-wallet-foot">{guest ? "登录后核对充值、支付与退款明细" : "充值、支付与退款明细均在本店钱包核对"}</span>
             </Link>
+            <StoreGuaranteeCard />
           </aside>
           <div className="boss-mine-main">
             <Panel className="boss-mine-orders">

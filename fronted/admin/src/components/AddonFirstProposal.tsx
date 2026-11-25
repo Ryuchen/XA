@@ -135,7 +135,7 @@ export default function AddonFirstProposal({ orderId, ticket }: { orderId: numbe
           {Array.isArray(proposal.participants) && <ul className="space-y-1">{proposal.participants.map((person: Row) => <li key={person.account_id}>陪玩账号 #{person.account_id} · 责任段 {Array.isArray(person.share_plan) ? person.share_plan.map((share: Row) => `#${share.segment_id}`).join("、") : "待核对"} · 拟承担 {money(person.burden_raw)}</li>)}</ul>}
           {Array.isArray(proposal.decisions) && <ul className="space-y-1" aria-label={`方案 ${proposal.id} 各方签字`}>{proposal.decisions.map((decision: Row) => <li key={`${decision.role}:${decision.account_id}`}>{decision.role === "BOSS" ? "老板" : "陪玩"}账号 #{decision.account_id}：{decision.accepted === true ? "已同意" : decision.accepted === false ? "有异议" : decision.accepted === null ? "等待确认" : "待核对"}</li>)}</ul>}
         </article>)}
-        <AddonExecutionPanel target={target} proposals={result.data} loading={result.loading} readError={result.error} blocked={busy || !!pending || !!restored.error} onLoaded={result.setData} />
+        <AddonExecutionPanel target={target} history={ticket.history} proposals={result.data} loading={result.loading} readError={result.error} blocked={busy || !!pending || !!restored.error} onLoaded={result.setData} />
       </DialogContent>
     </Dialog>
   </>

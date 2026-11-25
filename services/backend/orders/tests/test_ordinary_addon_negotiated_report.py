@@ -109,11 +109,13 @@ class OrdinaryAddonNegotiatedReportTest(APITestCase):
         second_account = get_or_create_account_for_legacy_user(second)
         self.accounts[second.pk] = second_account
         second.escort_profile.account = second_account
-        second.escort_profile.save(update_fields=['account'])
+        second.escort_profile.deposit_business_cycle = second_account.business_cycle
+        second.escort_profile.save(update_fields=['account', 'deposit_business_cycle'])
         game = GameCategory.objects.create(name='双陪退款报单测试')
         self.service.game_category = game
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['game_category', 'billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['game_category', 'billing_provider_count', 'fulfillment_provider_count'])
         for player in (self.provider, second):
             player.escort_profile.service_items.add(self.service)
         addon = make_service(name='双陪加购', game_category=game, is_addon=True)

@@ -8,6 +8,7 @@ from stores.db import transaction
 
 from .models import RefundDepositDeficit, RefundDepositRecoveryPermit
 from .refund_deposit import enabled as deficit_enabled
+from .settlement_clocks import require_clock
 
 
 @dataclass(frozen=True)
@@ -167,7 +168,7 @@ def reserve_many(profiles, order, *, allow_in_service=False):
     return [reserve(profile, order) for profile in profiles]
 
 
-def close_for_income(profile, application):
+def close_for_income(profile, application, now=None):
     """Called under profile lock after the real income and paired repayments post."""
     _atomic()
     if not tracking_enabled():
@@ -182,13 +183,13 @@ def close_for_income(profile, application):
     no_gap = not _remaining(profile)
     if not no_gap and permit.order_id != application.source_transaction.order_id:
         return
-    permit.closed_at = timezone.now()
+    permit.closed_at = require_clock(now).at
     permit.close_reason = 'GAP_PAID' if no_gap else 'INCOME_SETTLED'
     permit.income_application = application
     permit.save(update_fields=['closed_at', 'close_reason', 'income_application'])
 
 
-def close_for_zero_settlement(profile, settlement):
+def close_for_zero_settlement(profile, settlement, now=None):
     """A verified zero-income person settlement still consumes the one order."""
     _atomic()
     if not tracking_enabled():
@@ -203,12 +204,13 @@ def close_for_zero_settlement(profile, settlement):
     if not permits or permits[0].order_id != settlement.manifest.order_id:
         return
     permit = permits[0]
-    permit.closed_at = timezone.now(); permit.close_reason = 'ZERO_INCOME_SETTLED'
+    permit.closed_at = require_clock(now).at
+    permit.close_reason = 'ZERO_INCOME_SETTLED'
     permit.zero_income_settlement = settlement
     permit.save(update_fields=['closed_at', 'close_reason', 'zero_income_settlement'])
 
 
-def close_for_zero_service(profile, assignment):
+def close_for_zero_service(profile, assignment, now=None):
     """Consume the opportunity only after the person's real service settlement."""
     _atomic()
     if not tracking_enabled():
@@ -240,7 +242,7 @@ def close_for_zero_service(profile, assignment):
                 remark=f'订单收入：{order.order_no}').exists()):
         raise ValueError('普通订单零收益结算凭证与陪玩不匹配')
     permit = permits[0]
-    permit.closed_at = timezone.now()
+    permit.closed_at = require_clock(now).at
     permit.close_reason = 'ZERO_SERVICE_SETTLED'
     permit.zero_service_assignment = assignment
     permit.save(update_fields=['closed_at', 'close_reason', 'zero_service_assignment'])
@@ -387,7 +389,17 @@ def close_for_zero_ordinary_addon(profile, person):
     permit.save(update_fields=['closed_at', 'close_reason', 'zero_ordinary_addon_person'])
 
 
-def cancel_unstarted(order, *, account_ids=None, reason='CANCELLED_UNSTARTED'):
+def sample_unstarted_clock(order, *, account_ids=None):
+    """Sample only when this unstarted transition has a live permit to consider."""
+    if not tracking_enabled() or order.in_service_at:
+        return None
+    active = RefundDepositRecoveryPermit.objects.filter(order=order, closed_at__isnull=True)
+    if account_ids is not None:
+        active = active.filter(account_id__in=list(account_ids))
+    return require_clock() if active.exists() else None
+
+
+def cancel_unstarted(order, *, account_ids=None, reason='CANCELLED_UNSTARTED', now=None):
     """An unstarted cancelled/repooled order returns its unused permit."""
     _atomic()
     if not tracking_enabled() or order.in_service_at:
@@ -401,6 +413,7 @@ def cancel_unstarted(order, *, account_ids=None, reason='CANCELLED_UNSTARTED'):
     if account_ids is not None:
         active = active.filter(account_id__in=list(account_ids))
     ids = list(active.values_list('profile_id', flat=True))
+    clock = now
     for profile_id in sorted(ids):
         profile = EscortProfile.objects.select_for_update().get(pk=profile_id)
         permit = RefundDepositRecoveryPermit.objects.select_for_update().filter(
@@ -416,5 +429,7 @@ def cancel_unstarted(order, *, account_ids=None, reason='CANCELLED_UNSTARTED'):
                            provider_account_id=profile.account_id, started_at__isnull=False).exists())
             if started:
                 continue
-            permit.closed_at = timezone.now(); permit.close_reason = reason
+            clock = require_clock(clock)
+            permit.closed_at = clock.at
+            permit.close_reason = reason
             permit.save(update_fields=['closed_at', 'close_reason'])

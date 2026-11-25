@@ -176,7 +176,11 @@ class BoundStoreHttpTest(TestCase):
     def test_disabled_bound_store_does_not_fall_back_to_default(self):
         self.second.status = Store.Status.DISABLED
         self.second.save(update_fields=['status'])
-        self.assertEqual(self.client.get('/api/stores/current/', HTTP_HOST='xa.esports.club').status_code, 403)
+        disabled = self.client.get('/api/stores/current/', HTTP_HOST='xa.esports.club')
+        self.assertEqual(disabled.status_code, 200)
+        self.assertEqual(disabled.data['data']['slug'], 'xinan')
+        self.assertEqual(disabled.data['data']['status'], Store.Status.DISABLED)
+        self.assertFalse(disabled.data['data']['is_active'])
         self.assertEqual(self.client.get('/api/stores/current/', HTTP_HOST='sl.esports.club').status_code, 200)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',

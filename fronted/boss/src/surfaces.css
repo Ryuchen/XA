@@ -1079,7 +1079,7 @@
 
 /* MinePage: account card, card-external shortcuts heading and stacked MenuGroups. */
 .boss-mine-account, .boss-mine-main { display: grid; min-width: 0; gap: 24px; }
-.boss-mine-account > .boss-profile-card, .boss-mine-account > .boss-wallet-summary, .boss-mine-main > .boss-panel { margin: 0; }
+.boss-mine-account > .boss-profile-card, .boss-mine-account > .boss-wallet-summary, .boss-mine-account > .boss-guarantee-card, .boss-mine-main > .boss-panel { margin: 0; }
 .boss-mine-profile-link { display: flex; align-items: center; gap: 12px; min-height: 104px; padding: 16px; transition: background-color 150ms; }
 .boss-mine-profile-link:hover { background: color-mix(in oklab, var(--accent) 40%, transparent); }
 .boss-mine-profile-link > div { min-width: 0; flex: 1; }

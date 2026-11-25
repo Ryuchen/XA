@@ -18,9 +18,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from club_accounts.license_quota import LicenseClosureRestricted, LicenseClosureUnavailable
 from club_accounts.models import ClubAccount, LegacyAccountMap, WechatIdentity
 from club_accounts.tokens import issue_account_tokens
 from common.catalog_images import bounded_public_image_url
+from stores.closure import closure_refusal_response
 from stores.conf import settings
 from stores.context import current_store, store_context
 from stores.db import transaction
@@ -37,6 +39,14 @@ H5_CHANNEL = 'OFFICIAL_H5'
 
 def fail(message, status=400, code='WECHAT_H5_INVALID'):
     return Response({'code': status, 'errorCode': code, 'msg': message}, status=status)
+
+
+class H5ClosureRefusal(RuntimeError):
+    """Keep closure HTTP semantics out of the ordinary OAuth error-page fallback."""
+
+    def __init__(self, response):
+        super().__init__(response.data.get('msg', '本店闭店状态不允许新建账号'))
+        self.response = response
 
 
 def configured():
@@ -282,6 +292,13 @@ def new_h5_boss(proof):
         boss_type = default_boss_type()
         if not boss_type.is_active:
             raise ValueError('默认老板类型暂不可用，请联系门店客服')
+        # Existing identities never enter this function. Recheck immediately
+        # before the account write, after any default-type or lock wait.
+        denied = closure_refusal_response(current_store())
+        if denied is not None:
+            if denied.status_code == 409:
+                denied.data['msg'] = '本店处于闭店公示或待结清阶段，暂不接受微信新老板注册'
+            raise H5ClosureRefusal(denied)
         account = ClubAccount.objects.create_account(username='wx_' + uuid.uuid4().hex,
             password=None, account_type=ClubAccount.AccountType.BOSS, nickname='微信用户',
             boss_type=boss_type, is_openid_bound=True)
@@ -382,6 +399,8 @@ class H5LoginCallbackView(APIView):
                 session.confirmed_at = timezone.now()
                 session.save(update_fields=['wechat_openid', 'confirmed_account', 'confirmed_at'])
             return callback_page(origin, True, '')
+        except H5ClosureRefusal as error:
+            return error.response
         except (ValueError, TypeError, WebLoginSession.DoesNotExist, ClubAccount.DoesNotExist, IntegrityError) as error:
             return callback_page(origin, False, str(error) or '微信授权暂不可用，请稍后重试')
         except (OSError, DatabaseError):
@@ -424,6 +443,9 @@ class H5LoginStatusView(APIView):
                     'avatar': bounded_public_image_url(account.avatar_url or ''),
                     'phone': account.phone or '', 'isWechatBound': True,
                     'isPhoneVerified': account.is_phone_verified}}})
+        except (LicenseClosureRestricted, LicenseClosureUnavailable):
+            # Do not turn a new-cycle closure refusal into the ordinary H5 400.
+            raise
         except (ValueError, TypeError, WebLoginSession.DoesNotExist, WechatIdentity.DoesNotExist) as error:
             return fail(str(error) or '登录请求无效，请重新授权')
 

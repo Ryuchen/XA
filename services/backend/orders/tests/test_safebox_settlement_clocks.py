@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db import close_old_connections
 from django.test import TestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from orders.models import AfterSale, Order, OrderPlatformSubsidy, OrderPlatformSubsidyShare, OrderProvider
@@ -312,8 +312,11 @@ class SafeBoxSettlementStoresTest(TestCase):
 
 @override_settings(VIP_SAFE_BOX_SUBSIDY_ENABLED=True, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True, LEGACY_FORCE_AUTH_COMPAT=False,
-                   KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
-class SafeBoxSettlementApiTest(APITestCase):
+                   KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
+                   REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED=True)
+class SafeBoxSettlementApiTest(APITransactionTestCase):
     from coupons.test_coupon_availability_workflow import CouponAvailabilityWorkflowTest as _flow
     setUp = _flow.setUp
     client_for = staticmethod(_flow.client_for)
@@ -325,25 +328,45 @@ class SafeBoxSettlementApiTest(APITestCase):
         from engagement.models import VipTier
         from engagement.tasks import retry_completion_subsidies
         from orders.tests.factories import make_boss_type
+        from console.capacity_config import save_capacity
+        from console.grab_config import save_grab_window
+        from wallet.models import SystemConfig
+        save_grab_window(1, 1, lambda *args: None)
+        save_capacity(3, 0, lambda *args: None)
+        for pass_tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
+            SystemConfig.objects.update_or_create(key=f'provider_pass_delay_seconds_{pass_tier}',
+                                                  defaults={'value': '0'})
         service=make_service(name='安全箱时钟', price=10000, benefit_kind='SAFEBOX_33',
                              platform='PC', commission_rate=20)
         tier=make_boss_type(name='安全箱会员', discount_rate=90)
-        VipTier.objects.create(boss_type=tier, level=6, recharge_threshold=0, safe_box_service_ids=[service.pk])
+        VipTier.objects.create(boss_type=tier, level=6, recharge_threshold=0, season_discount=0,
+                               safe_box_service_ids=[service.pk])
         self.account.boss_type=tier; self.account.save(update_fields=['boss_type']); grant_periodic(self.account)
         voucher=UserCoupon.objects.get(account=self.account, coupon__scope='SAFE_BOX')
         staff=make_console_user(['order:view', 'order:dispatch', 'report:view', 'report:audit'])
         staff_account=get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account=staff_account; staff.admin_membership.save(update_fields=['account'])
-        player=make_provider(deposit_mode='CASH', deposit_paid=40000)
+        player=make_provider(deposit_mode='CASH', deposit_paid=40000,
+                             wechat_avatar_verified_at=timezone.now())
         account=get_or_create_account_for_legacy_user(player)
+        account.openid='safebox-clock-provider'; account.is_openid_bound=True
+        account.save(update_fields=['openid', 'is_openid_bound'])
         player.escort_profile.account=account; player.escort_profile.save(update_fields=['account'])
         player.escort_profile.service_items.add(service)
         platform=get_platform_wallet(); platform.balance=10000; platform.save(update_fields=['balance'])
         created=self.ok(self.boss.post('/api/orders/create/', {'service_id':service.pk, 'user_coupon_id':voucher.pk,
             'dispatch_route':'STAFF', 'client_request_id':'safebox-clock-api'}, format='json'))
         operator=self.client_for(staff_account)
-        self.ok(operator.post(f"/api/admin/orders/{created['id']}/assign/", {'provider_id':account.pk}, format='json'))
         provider=self.client_for(account)
+        self.ok(provider.post('/api/users/escorts/status/', {'status':'AVAILABLE'}, format='json'))
+        # SQLite cannot take the production MySQL lifecycle row lock. Keep
+        # the real pool, eligibility, receipt and order writes in this test.
+        with patch('club_accounts.provider_lifecycle.lock_provider_operations'):
+            self.ok(provider.post(f"/api/orders/orders/{created['id']}/grab/", {}, format='json'))
+        import time
+        time.sleep(1.05)
+        from orders.grab_single_flow import resolve
+        self.assertEqual(resolve(created['id']), 'ASSIGNED')
         self.ok(provider.post(f"/api/orders/orders/{created['id']}/start/", {'entry_image':screenshot()}, format='multipart'))
         self.ok(provider.post(f"/api/orders/orders/{created['id']}/complete/", {'completion_image':screenshot()}, format='multipart'))
         order=Order.objects.get(pk=created['id'])

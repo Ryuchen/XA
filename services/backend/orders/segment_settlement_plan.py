@@ -10,7 +10,6 @@ from dataclasses import asdict
 from datetime import timedelta
 
 from django.conf import settings
-from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from .models import (OrderOriginalAttribution, OrderOriginalShareTransfer,
@@ -25,6 +24,8 @@ from rest_framework.views import APIView
 from club_accounts.permissions import IsClubAccountAuthenticated
 from console.permissions import get_account_permissions, is_console_account
 from stores.db import transaction
+from wallet.settlement_clocks import (ClockConflict, ClockUnavailable, clock_scope,
+                                      require_clock, verify)
 
 
 @dataclass(frozen=True)
@@ -111,7 +112,8 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
         if not has_agreement:
             _fail('退款后的履约段核算须先锁定并核验原协商')
 
-    now = now or timezone.now()
+    clock = require_clock(now)
+    now = clock.at
     attribution = OrderOriginalAttribution.objects.filter(order=order, status='ACTIVE').first()
     coverage = OrderSegmentFinancialCoverage.objects.filter(attribution=attribution).first() if attribution else None
     points_internal = False
@@ -336,6 +338,11 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
                     or submission.entry_image.name != segment.entry_image.name
                     or submission.completion_image.name != segment.completion_image.name):
                 blockers.append('本人履约报单未全部通过审核'); break
+            try:
+                verify(order, 'SUBMISSION', submission.pk, 'SUBMIT', submission.submitted_at, clock)
+                verify(order, 'SUBMISSION', submission.pk, 'REVIEW', submission.reviewed_at, clock)
+            except ClockConflict:
+                blockers.append('本人履约报单时钟证据待核对'); break
             timestamps.append(submission.submitted_at)
         freeze_until = max(timestamps) + timedelta(hours=order.service_freeze_hours) if len(timestamps) == len(ids) else None
         if freeze_until and now < freeze_until:
@@ -366,35 +373,38 @@ class SegmentSettlementPlanView(APIView):
             if not order:
                 return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
             try:
-                from .segment_settlement import _ordinary_transfer_refund
-                if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
-                        and order.status in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
-                        and needs_integrated_processing(order)
-                        and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
-                    from .addon_settlement import has_paid_addons
-                    from .points_transfer_funding import plan_points_transfer
-                    from .points_transfer_refund_access import after_transfer
-                    refunds = order.refund_records.count()
-                    if (refunds > 1 or has_paid_addons(order)
-                            or (not refunds and order.payment_status != Order.PaymentStatus.PAID)):
-                        raise SettlementError('积分转单的付款、退款或加购须先核对，不能生成逐段收益')
-                    with after_transfer(order.pk, phase='report', read_only=True) as locked:
-                        if refunds:
-                            from .points_transfer_refunded_plan import preview_first_main_refund
-                            plan = preview_first_main_refund(locked)
-                        else:
-                            plan = plan_points_transfer(order.pk, read_only=True).segments
-                elif not supports(order):
-                    return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
-                elif _ordinary_transfer_refund(order):
-                    from .negotiation_transfer_settlement import build_locked
-                    plan, _ = build_locked(order)
-                else:
-                    plan = build_segment_settlement_plan(order)
+                with clock_scope(require_clock()):
+                    from .segment_settlement import _ordinary_transfer_refund
+                    if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+                            and order.status in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
+                            and needs_integrated_processing(order)
+                            and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+                        from .addon_settlement import has_paid_addons
+                        from .points_transfer_funding import plan_points_transfer
+                        from .points_transfer_refund_access import after_transfer
+                        refunds = order.refund_records.count()
+                        if (refunds > 1 or has_paid_addons(order)
+                                or (not refunds and order.payment_status != Order.PaymentStatus.PAID)):
+                            raise SettlementError('积分转单的付款、退款或加购须先核对，不能生成逐段收益')
+                        with after_transfer(order.pk, phase='report', read_only=True) as locked:
+                            if refunds:
+                                from .points_transfer_refunded_plan import preview_first_main_refund
+                                plan = preview_first_main_refund(locked)
+                            else:
+                                plan = plan_points_transfer(order.pk, read_only=True).segments
+                    elif not supports(order):
+                        return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
+                    elif _ordinary_transfer_refund(order):
+                        from .negotiation_transfer_settlement import build_locked
+                        plan, _ = build_locked(order)
+                    else:
+                        plan = build_segment_settlement_plan(order)
             except ValidationError as exc:
                 detail = exc.detail
                 message = str(detail[0]) if isinstance(detail, list) and len(detail) == 1 else '积分转单凭证待核对'
                 return Response({'code':409, 'msg':message}, status=409)
+            except ClockUnavailable as exc:
+                return Response({'code':503, 'msg':str(exc)}, status=503)
             except (SettlementError, PointsFundingPlanError) as exc:
                 return Response({'code':409, 'msg':str(exc)}, status=409)
             return Response({'code':0, 'data':asdict(plan)})

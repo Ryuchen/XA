@@ -49,9 +49,9 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
         from django.utils import timezone
         from engagement.achievement_metrics import confirmed_service_metrics
         from console.payroll_refund_performance import monthly_performance_bases
-        self.assertEqual(confirmed_service_metrics(self.accounts[self.boss.pk]), {'amount': 19500, 'count': 1})
+        self.assertEqual(confirmed_service_metrics(self.accounts[self.boss.pk]), {'amount': 19400, 'count': 1})
         now = timezone.localdate()
-        self.assertEqual(monthly_performance_bases(date(now.year, now.month, 1))['store_fen'], 19500)
+        self.assertEqual(monthly_performance_bases(date(now.year, now.month, 1))['store_fen'], 19400)
 
     def test_unaffected_addon_partial_refund_after_main_in_xinan(self):
         from stores.context import store_context
@@ -333,16 +333,19 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
             second_account = get_or_create_account_for_legacy_user(second)
             self.accounts[second.pk] = second_account
             second.escort_profile.account = second_account
-            second.escort_profile.save(update_fields=['account'])
+            second.escort_profile.deposit_business_cycle = second_account.business_cycle
+            second.escort_profile.save(update_fields=['account', 'deposit_business_cycle'])
         else:
             second_account = self.accounts[self.provider.pk]
         players = (self.provider, second) if second else (self.provider,)
         self.service.billing_provider_count = len(players)
+        self.service.fulfillment_provider_count = len(players)
         if deposit_case:
             self.service.commission_rate = 95
         game = GameCategory.objects.create(name='普通加购资金')
         self.service.game_category = game
-        self.service.save(update_fields=['billing_provider_count', 'game_category', 'commission_rate'])
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count',
+                                         'game_category', 'commission_rate'])
         for player in players:
             player.escort_profile.service_items.add(self.service)
         extra = make_service(name='普通加购', game_category=game, is_addon=True,
@@ -409,6 +412,7 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
                 {'request_id': str(uuid4()), 'order_id': order_id, 'amount': 300 if gift_funded == 'mixed' else 800}, format='json',
                 HTTP_AUTHORIZATION='Bearer ' + finance.token)
             self.assertEqual(funded.status_code, 200, funded.data)
+        total_addon_refund = addon_refund
         if addon_refund:
             from orders.models import OrderAddonRefund, OrderAddonFundingAllocation
             role = self.admin.admin_membership.roles.first()
@@ -419,6 +423,19 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
                 'affected_provider_account_ids': [second_account.pk], 'reason': '加购未完成',
                 'client_request_id': 'addon-only-case'}, format='json'))
             admin_url = f'/api/admin/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/'
+            before_balance = get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance
+            if deposit_case:
+                denied = self.client.post(admin_url, {'request_id': 'addon-only-refund', 'amount_raw': addon_refund,
+                    'case_id': case['id'], 'explanation': '加购未完成部分退款'}, format='json')
+                self.assertNotEqual(denied.status_code, 200, denied.data)
+                self.assertEqual(denied.data['msg'], '陪玩待结算收益、钱包及押金不足，请先补足后退款')
+                self.assertFalse(OrderAddonRefund.objects.filter(payment_id=payment_id).exists())
+                self.assertEqual(get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance, before_balance)
+                self.ok(self.client.put('/api/admin/config/deposit-targets', {
+                    'cash_target': 450, 'earnings_target': 950, 'expected_version': 1}, format='json'))
+                self.ok(self.client.post(f'/api/admin/escorts/{profile.pk}/deposit-topups/', {
+                    'amount': 250, 'reason': '隔离押金补足', 'reference': 'addon-deposit-second',
+                    'client_request_id': 'addon-deposit-second'}, format='multipart'))
             proposal = self.ok(self.client.post(admin_url, {'request_id': 'addon-only-refund', 'amount_raw': addon_refund,
                 'case_id': case['id'], 'explanation': '加购未完成部分退款'}, format='json'))
             execute = admin_url + str(proposal['id']) + '/execute/'
@@ -437,16 +454,6 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
             self.login(self.admin)
             if deposit_case:
                 from wallet.models import RefundDepositDeficit
-                from wallet.services import get_wallet
-                before_balance = get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance
-                self.assertNotEqual(self.client.post(execute, {}, format='json').status_code, 200)
-                self.assertFalse(OrderAddonRefund.objects.filter(payment_id=payment_id).exists())
-                self.assertEqual(get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance, before_balance)
-                self.ok(self.client.put('/api/admin/config/deposit-targets', {
-                    'cash_target': 450, 'earnings_target': 950, 'expected_version': 1}, format='json'))
-                self.ok(self.client.post(f'/api/admin/escorts/{profile.pk}/deposit-topups/', {
-                    'amount': 250, 'reason': '隔离押金补足', 'reference': 'addon-deposit-second',
-                    'client_request_id': 'addon-deposit-second'}, format='multipart'))
                 with patch('wallet.refund_deposit.RefundDepositDeficit.objects.create', side_effect=RuntimeError('deposit write failed')):
                     with self.assertRaisesMessage(RuntimeError, 'deposit write failed'):
                         self.client.post(execute, {}, format='json')
@@ -562,23 +569,33 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
             self.ok(self.client.post(execute, {}, format='json'))
             self.assertEqual(OrderAddonRefund.objects.filter(payment_id=payment_id).count(), 1)
             refund = OrderAddonRefund.objects.get(payment_id=payment_id)
+            total_addon_refund = addon_refund
             if second and addon_refund < 1000:
-                extra_proposal = self.client.post(admin_url, {'request_id': 'second-addon-refund', 'amount_raw': 100,
-                    'case_id': case['id'], 'explanation': '追加退款不开放'}, format='json')
-                if extra_proposal.status_code == 200 and extra_proposal.data.get('code') == 0:
-                    extra_id = extra_proposal.data['data']['id']
-                    for user in (self.boss, second):
-                        self.login(user)
-                        self.ok(self.client.post(f'/api/orders/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/{extra_id}/',
-                                                 {'accepted': True}, format='json'))
-                    self.login(self.admin)
-                    denied = self.client.post(admin_url + str(extra_id) + '/execute/', {}, format='json')
-                    self.assertNotEqual(denied.status_code, 200, denied.data)
+                total_addon_refund += 100
+                buyer_before_second = get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance
+                extra_proposal = self.ok(self.client.post(admin_url, {'request_id': 'second-addon-refund', 'amount_raw': 100,
+                    'case_id': case['id'], 'explanation': '追加退款已开放'}, format='json'))
+                extra_id = extra_proposal['id']
+                extra_execute = admin_url + str(extra_id) + '/execute/'
+                self.assertNotEqual(self.client.post(extra_execute, {}, format='json').status_code, 200)
                 self.assertEqual(OrderAddonRefund.objects.filter(payment_id=payment_id).count(), 1)
+                self.assertEqual(get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance, buyer_before_second)
+                for user in (self.boss, second):
+                    self.login(user)
+                    self.ok(self.client.post(f'/api/orders/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/{extra_id}/',
+                                             {'accepted': True}, format='json'))
+                self.login(self.admin)
+                extra_result = self.ok(self.client.post(extra_execute, {}, format='json'))
+                self.assertEqual(self.ok(self.client.post(extra_execute, {}, format='json')), extra_result)
+                refunds = list(OrderAddonRefund.objects.filter(payment_id=payment_id))
+                self.assertEqual(len(refunds), 2)
+                self.assertEqual(sum(row.amount for row in refunds), total_addon_refund)
+                self.assertEqual(get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance,
+                                 buyer_before_second + 100)
             self.assertEqual((refund.amount, refund.addon_pending_deduction, refund.main_pending_deduction),
                              (addon_refund, min(addon_refund, 800), max(addon_refund - 800, 0)))
-            expected_sources = ({'PREPAID': 500, 'GIFT': 500} if gift_funded == 'mixed' else
-                                {'PREPAID' if prefunded and not gift_funded else 'GIFT': addon_refund})
+            expected_sources = ({'PREPAID': 500, 'GIFT': 500 + (total_addon_refund - addon_refund)} if gift_funded == 'mixed' else
+                                {'PREPAID' if prefunded and not gift_funded else 'GIFT': total_addon_refund})
             self.assertEqual(dict(OrderAddonFundingAllocation.objects.filter(payment_id=payment_id)
                                   .values_list('kind', 'refunded_amount')), expected_sources)
             if gift_funded:
@@ -588,29 +605,37 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
                 self.assertEqual((release.allocated_before, release.required_amount, release.released_amount), (allocated, 0, allocated))
             self.ok(self.client.post(f'/api/admin/aftersales/{case["id"]}/resolve/',
                                      {'resolution': '加购退款完成'}, format='json'))
-            # The follow-up main refund is outside this first production slice.
+            # A separate main-order case may follow the add-on refund.
             from stores.db import transaction
             with transaction.atomic():
                 reopened = self.client.post('/api/admin/aftersales/open-negotiation/', {'order_id': order_id,
                     'affected_provider_account_ids': [second_account.pk], 'reason': '主单后续退款',
                     'client_request_id': 'after-addon-main-case'}, format='json')
-                if reopened.status_code == 200 and reopened.data.get('code') == 0:
-                    main_case = reopened.data['data']
-                    main_proposal = self.client.post(f'/api/admin/aftersales/{main_case["id"]}/negotiation-proposal/', {
-                        'request_id': 'after-addon-main-plan', 'expected_version': 0, 'refund_units': 1000,
-                        'provider_terms': [{'account_id': second_account.pk, 'retained_units': 7000}],
-                        'explanation': '主单追加退款'}, format='json')
-                    if main_proposal.status_code == 200 and main_proposal.data.get('code') == 0:
-                        main_id = main_proposal.data['data']['id']
-                        for user in (self.boss, second or self.provider):
-                            self.login(user)
-                            self.ok(self.client.post(f'/api/orders/orders/{order_id}/negotiation-proposal/',
-                                {'proposal_id': main_id, 'accepted': True}, format='json'))
-                        self.login(self.admin)
-                        blocked = self.client.post(f'/api/admin/aftersales/{main_case["id"]}/negotiation-execution/',
-                            {'proposal_id': main_id, 'client_request_id': 'after-addon-main-execute'}, format='json')
-                        self.assertNotEqual(blocked.status_code, 200, blocked.data)
+                main_case = self.ok(reopened)
+                preview = self.ok(self.client.get(f'/api/admin/aftersales/{main_case["id"]}/negotiation-preview/',
+                                                  {'refund_units': 1000}))
+                buyer_before_main = get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance
                 self.assertFalse(Order.objects.get(pk=order_id).refund_records.exists())
+                main_proposal = self.ok(self.client.post(f'/api/admin/aftersales/{main_case["id"]}/negotiation-proposal/', {
+                    'request_id': 'after-addon-main-plan', 'expected_version': 0, 'refund_units': 1000,
+                    'provider_terms': [{'account_id': row['account_id'], 'retained_units': row['retained_units']}
+                                       for row in preview['provider_terms']],
+                    'explanation': '主单追加退款'}, format='json'))
+                main_id = main_proposal['id']
+                for user in (self.boss, second or self.provider):
+                    self.login(user)
+                    self.ok(self.client.post(f'/api/orders/orders/{order_id}/negotiation-proposal/',
+                        {'proposal_id': main_id, 'accepted': True}, format='json'))
+                self.login(self.admin)
+                execution_url = f'/api/admin/aftersales/{main_case["id"]}/negotiation-execution/'
+                payload = {'proposal_id': main_id, 'client_request_id': 'after-addon-main-execute'}
+                main_result = self.ok(self.client.post(execution_url, payload, format='json'))
+                self.assertEqual(self.ok(self.client.post(execution_url, payload, format='json')), main_result)
+                order = Order.objects.get(pk=order_id)
+                self.assertEqual(order.refund_records.count(), 1)
+                self.assertEqual(order.refund_records.get().amount, 1000)
+                self.assertEqual(get_wallet(user=self.boss, account=self.accounts[self.boss.pk]).balance,
+                                 buyer_before_main + 1000)
                 transaction.set_rollback(True)
         for player in players:
             self.login(player)
@@ -633,21 +658,21 @@ class OrdinaryAddonProductionRefundTest(APITestCase):
             process_order(order_id)
         self.assertIsNotNone(Order.objects.get(pk=order_id).settled_at)
         self.assertEqual(get_wallet(user=self.provider, account=self.accounts[self.provider.pk]).balance,
-                         8000 if second else 8800 - addon_refund)
+                         8000 if second else 8800 - total_addon_refund)
         if second:
-            self.assertEqual(get_wallet(user=second, account=second_account).balance, 8800 - addon_refund)
+            self.assertEqual(get_wallet(user=second, account=second_account).balance, 8800 - total_addon_refund)
         consumption = OrderAddonConsumption.objects.get(payment_id=payment_id)
-        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, addon_refund))
+        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, total_addon_refund))
         if prefunded:
             self.assertEqual(get_wallet(user=inviter_user, account=inviter).balance, 4000 if second else 2000)
         if addon_refund:
             from datetime import date
             from console.payroll_refund_performance import monthly_performance_bases
             from engagement.achievement_metrics import confirmed_service_metrics
-            self.assertEqual(confirmed_service_metrics(self.accounts[self.boss.pk]), {'amount': (21000 if second else 11000) - addon_refund, 'count': 1})
+            self.assertEqual(confirmed_service_metrics(self.accounts[self.boss.pk]), {'amount': (21000 if second else 11000) - total_addon_refund, 'count': 1})
             now = timezone.localdate()
             monthly = monthly_performance_bases(date(now.year, now.month, 1))
-            self.assertEqual(monthly['store_fen'], (21000 if second else 11000) - addon_refund)
+            self.assertEqual(monthly['store_fen'], (21000 if second else 11000) - total_addon_refund)
 
     @override_settings(ORDINARY_SERVICE_FUNDING_ENABLED=True, SERVICE_POINTS_CHECKOUT_TESTING=False,
         SERVICE_ORDINARY_FUNDING_TESTING=False, SERVICE_POINTS_FUNDING_TESTING=False,

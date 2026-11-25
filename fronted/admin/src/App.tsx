@@ -91,6 +91,7 @@ import {
 } from "@/pages/Payroll"
 import OperatingCostsPage from "@/pages/OperatingCosts"
 import RoiPage from "@/pages/Roi"
+import H5PagesPage from "@/pages/H5Pages"
 import PendingReviews from "@/components/PendingReviews"
 import Notifications from "@/components/Notifications"
 import { Toaster } from "@/components/ui/sonner"
@@ -129,6 +130,7 @@ const pages: Record<string, ComponentType> = {
   promotions: PromotionsPage,
   coupons: CouponsPage,
   banners: BannersPage,
+  "h5-pages": H5PagesPage,
   evaluations: EvaluationsPage,
   chat: ChatPage,
   messages: MessagesPage,
@@ -181,6 +183,7 @@ const permissions: Record<string, string | string[]> = {
   transactions: "transaction:view",
   promotions: "promotion:view",
   coupons: "coupon:view",
+  "h5-pages": "engagement:view",
   "club-operations": [
     "engagement:view",
     "engagement:fulfill",

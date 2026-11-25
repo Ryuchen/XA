@@ -26,6 +26,9 @@ def console_exception_handler(exc, context):
         'msg': msg,
         'errors': detail,
     }
+    closure_code = getattr(exc, 'default_code', None)
+    if closure_code in ('STORE_CLOSURE_RESTRICTED', 'STORE_CLOSURE_STATUS_UNAVAILABLE'):
+        response.data['errorCode'] = closure_code
     if response.status_code == 409 and getattr(exc, 'default_code', None) == 'REFUND_REQUEST_CONFLICT':
         response.data['errorCode'] = exc.default_code
     if response.status_code == 429:

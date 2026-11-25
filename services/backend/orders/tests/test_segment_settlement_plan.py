@@ -10,6 +10,7 @@ from orders.settlement import SettlementError
 from orders.tests import test_release_flow as flow
 from orders.tests import test_segment_reports as reports_fixture
 from wallet.models import Transaction
+from wallet.settlement_clocks import trusted_test_clock
 
 
 @override_settings(ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,
@@ -54,7 +55,7 @@ class SegmentSettlementPlanTest(APITransactionTestCase):
         order, replacement, old, current = self.finished_order()
         self.submit_and_approve(order, old, self.provider)
         self.submit_and_approve(order, current, replacement)
-        future = timezone.now() + timedelta(hours=100)
+        future = trusted_test_clock(timezone.now() + timedelta(hours=100))
         plan = build_segment_settlement_plan(order, now=future)
         self.assertEqual([(line.basis, line.fee, line.income) for line in plan.segments],
                          [(4000, 800, 3200), (6000, 1200, 4800)])
@@ -129,7 +130,7 @@ class SegmentSettlementPlanTest(APITransactionTestCase):
         self.submit_and_approve(order, returned, self.provider)
         from orders.models import OrderSegmentReportSubmission
         submissions = list(OrderSegmentReportSubmission.objects.filter(report__segment_id__in=[old.pk, returned.pk]))
-        plan = build_segment_settlement_plan(order, now=timezone.now() + timedelta(hours=100))
+        plan = build_segment_settlement_plan(order, now=trusted_test_clock(timezone.now() + timedelta(hours=100)))
         people = {p.account_id: p for p in plan.persons}
         first = people[self.accounts[self.provider.pk].pk]
         self.assertEqual(first.freeze_until, max(s.submitted_at for s in submissions) + timedelta(hours=72))
@@ -138,7 +139,7 @@ class SegmentSettlementPlanTest(APITransactionTestCase):
         latest = next(s for s in submissions if s.report.segment_id == returned.pk)
         latest.completion_image.name = 'reports/participation/wrong.png'
         latest.save(update_fields=['completion_image'])
-        plan = build_segment_settlement_plan(order, now=timezone.now() + timedelta(hours=100))
+        plan = build_segment_settlement_plan(order, now=trusted_test_clock(timezone.now() + timedelta(hours=100)))
         self.assertIn('本人履约报单未全部通过审核',
                       next(p.blockers for p in plan.persons if p.account_id == self.accounts[self.provider.pk].pk))
         self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())

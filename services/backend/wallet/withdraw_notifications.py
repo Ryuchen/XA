@@ -1,7 +1,7 @@
 """Project committed withdrawal facts into tenant-local messages."""
 import logging
 
-from django.conf import settings
+from django.utils.dateparse import parse_datetime
 from stores.db import transaction
 
 log = logging.getLogger(__name__)
@@ -22,77 +22,120 @@ PLATFORM_EVENTS = {'approve': 'platform_approved', 'mark-unknown': 'payment_unkn
 OWNER_REVIEW_REASON = '提现原始申请或解冻凭证待核对'
 
 
-def _verify_owner_fact(row, event):
-    """Verify the original withdrawal and, for cancellation, its release."""
-    from .models import Transaction, WithdrawalRelease
+def _verify_message_fact(row, event, platform_event=None):
+    """Verify the original debit and the money fact asserted by the notice."""
+    from .models import Transaction, WithdrawalPlatformEvent, WithdrawalRelease, WithdrawRequest
     debit = Transaction.objects.select_related('wallet').filter(pk=row.transaction_id).first()
     if (row.workflow_version != 2 or not row.account_id or not row.account_business_cycle or not debit
             or debit.wallet.account_id != row.account_id or (row.user_id and debit.wallet.user_id != row.user_id)
             or debit.tx_type != Transaction.TxType.WITHDRAW or debit.amount != -row.amount
             or debit.balance_after != debit.balance_before + debit.amount or debit.reversal_of_id
-            or debit.reversals.exists()):
+            or debit.reversals.exists()
+            or WithdrawRequest.objects.filter(transaction_id=debit.pk).exclude(pk=row.pk).exists()):
         return False
     if event == 'submitted':
         return True
+    if event == 'store_approved':
+        if not row.audited_at or not row.auditor_id or not row.auditor_account_id:
+            return False
+        release = WithdrawalRelease.objects.filter(withdrawal=row).first()
+        if row.status in (row.Status.REJECTED, row.Status.CANCELLED):
+            approval = WithdrawalPlatformEvent.objects.filter(withdrawal=row, action='approve').first()
+            return bool(release and release.actor_kind == 'PLATFORM' and approval
+                and _verify_message_fact(row, 'platform_approved', approval))
+        return bool(row.status in (row.Status.STORE_APPROVED, row.Status.PLATFORM_APPROVED,
+                                   row.Status.PAYMENT_UNKNOWN, row.Status.PAID)
+            and not release and debit.status != Transaction.Status.FAILED)
+    if platform_event is not None:
+        action = platform_event.action
+        transitions = {
+            'approve': (row.Status.STORE_APPROVED, row.Status.PLATFORM_APPROVED),
+            'mark-unknown': (row.Status.PLATFORM_APPROVED, row.Status.PAYMENT_UNKNOWN),
+            'reject': ((row.Status.STORE_APPROVED, row.Status.PLATFORM_APPROVED, row.Status.PAYMENT_UNKNOWN),
+                       row.Status.REJECTED),
+            'cancel': ((row.Status.STORE_APPROVED, row.Status.PLATFORM_APPROVED, row.Status.PAYMENT_UNKNOWN),
+                       row.Status.CANCELLED),
+            'paid': ((row.Status.PLATFORM_APPROVED, row.Status.PAYMENT_UNKNOWN), row.Status.PAID),
+        }
+        transition = transitions.get(action)
+        expected_from, expected_to = transition if transition else (None, None)
+        from_valid = (platform_event.from_status in expected_from if isinstance(expected_from, tuple)
+                      else platform_event.from_status == expected_from)
+        detail = platform_event.detail if isinstance(platform_event.detail, dict) else {}
+        if (platform_event.withdrawal_id != row.pk or PLATFORM_EVENTS.get(action) != event or not row.audited_at
+                or not from_valid or platform_event.to_status != expected_to
+                or WithdrawalPlatformEvent.objects.filter(withdrawal=row, action=action).exclude(
+                    pk=platform_event.pk).exists()):
+            return False
+        if action == 'approve':
+            return bool(row.platform_reviewer_id == platform_event.platform_actor_id
+                and row.platform_reviewed_at and row.status not in (row.Status.PENDING, row.Status.STORE_APPROVED))
+        if action == 'mark-unknown':
+            reason = detail.get('reason')
+            mismatch = (detail.get('source_action') == 'paid'
+                and type(detail.get('reported_paid_amount_fen')) is int
+                and detail.get('expected_amount_fen') == row.actual_amount
+                and isinstance(detail.get('reported_payout_reference'), str)
+                and bool(detail['reported_payout_reference']))
+            try:
+                reported_at = parse_datetime(detail.get('reported_paid_at'))
+            except (TypeError, ValueError):
+                reported_at = None
+            return bool(row.platform_reviewed_at
+                and row.status in (row.Status.PAYMENT_UNKNOWN, row.Status.PAID, row.Status.REJECTED, row.Status.CANCELLED)
+                and ((isinstance(reason, str) and bool(reason.strip())) or (mismatch and reported_at is not None)))
+        if action == 'paid':
+            try:
+                paid_at = parse_datetime(detail.get('paid_at'))
+            except (TypeError, ValueError):
+                paid_at = None
+            receipt_valid = bool(paid_at and paid_at.utcoffset() is not None and row.paid_at == paid_at
+                and row.created_at <= paid_at
+                and row.platform_reviewed_at and row.platform_reviewed_at <= paid_at
+                and row.payout_recorded_at and paid_at <= row.payout_recorded_at
+                and row.platform_payer_id == platform_event.platform_actor_id
+                and isinstance(detail.get('payout_reference'), str)
+                and bool(detail['payout_reference'].strip())
+                and row.payout_reference == detail['payout_reference'].strip()
+                and row.actual_amount > 0 and type(detail.get('paid_amount_fen')) is int
+                and detail.get('paid_amount_fen') > 0
+                and detail.get('paid_amount_fen') == row.actual_amount)
+            return bool(receipt_valid and row.status == row.Status.PAID
+                and debit.status == Transaction.Status.SUCCESS
+                and not WithdrawalRelease.objects.filter(withdrawal=row).exists())
+        release = WithdrawalRelease.objects.filter(withdrawal=row).first()
+        reason = detail.get('reason')
+        return bool(row.status == expected_to and release and detail.get('confirmed_unpaid') is True
+            and type(detail.get('release_id')) is int and detail.get('release_id') == release.pk
+            and isinstance(reason, str) and bool(reason.strip())
+            and release.wallet_id == debit.wallet_id and release.original_transaction_id == debit.pk
+            and release.amount == row.amount and release.balance_after == release.balance_before + row.amount
+            and release.frozen_before == release.frozen_after + row.amount
+            and debit.status == Transaction.Status.FAILED and release.actor_kind == 'PLATFORM'
+            and not release.actor_account_id and release.platform_actor_id == platform_event.platform_actor_id
+            and not WithdrawalPlatformEvent.objects.filter(withdrawal=row, action='paid').exists())
+    if event not in ('owner_cancelled', 'store_rejected'):
+        return False
     release = WithdrawalRelease.objects.filter(withdrawal=row).first()
-    return bool(row.status == row.Status.CANCELLED and release and release.actor_kind == 'OWNER'
-        and release.actor_account_id == row.account_id and not release.platform_actor_id
-        and release.wallet_id == debit.wallet_id and release.original_transaction_id == debit.pk
-        and release.amount == row.amount and release.balance_after == release.balance_before + row.amount
-        and release.frozen_before == release.frozen_after + row.amount
-        and debit.status == Transaction.Status.FAILED)
+    if (not release or release.wallet_id != debit.wallet_id or release.original_transaction_id != debit.pk
+            or release.amount != row.amount or release.balance_after != release.balance_before + row.amount
+            or release.frozen_before != release.frozen_after + row.amount
+            or debit.status != Transaction.Status.FAILED):
+        return False
+    if event == 'owner_cancelled':
+        return bool(row.status == row.Status.CANCELLED and release.actor_kind == 'OWNER'
+            and release.actor_account_id == row.account_id and not release.platform_actor_id
+            and not WithdrawalPlatformEvent.objects.filter(withdrawal=row).exists())
+    return bool(row.status == row.Status.REJECTED and release.actor_kind == 'STORE'
+        and release.actor_account_id == row.auditor_account_id and not release.platform_actor_id)
 
 
-def _existing_message(row, event, reason):
-    """Keep the current development path usable until the outbox is migrated."""
-    try:
-        with transaction.atomic():
-            from site_messages.models import Message
-            from site_messages.notifier import notify_messages_after_commit
-            from .notifier import owner_account_id
-            title, detail = MESSAGES[event]
-            if reason:
-                detail += f' 原因：{reason}'
-            account_id = owner_account_id(row)
-            from club_accounts.models import ClubAccount
-            if (not account_id or account_id != row.account_id or not row.account_business_cycle
-                    or not ClubAccount.objects.filter(pk=account_id, account_type='PROVIDER',
-                        business_cycle=row.account_business_cycle, license_membership_active=True).exists()):
-                log.warning('提现站内消息未投递，收件账号或原周期待核对: withdraw_id=%s event=%s', row.pk, event)
-                return None
-            message = Message.objects.create(recipient_id=row.user_id, recipient_account_id=account_id,
-                recipient_business_cycle=row.account_business_cycle,
-                title=title, preview=detail[:255], detail=detail,
-                action_url=f'/pages/wallet/index?withdraw_id={row.pk}')
-            notify_messages_after_commit(message.recipient_account_id, business_cycle=message.recipient_business_cycle)
-            return message
-    except Exception:
-        log.exception('提现站内消息未能写入: withdraw_id=%s event=%s', row.pk, event)
-        return None
-
-
-def withdrawal_message(row, event, *, reason='', platform_event=None, retry_owner_review=False):
+def withdrawal_message(row, event, *, reason='', platform_event=None, retry_source_review=False):
     """Create once per real fact; a failed projection is recovered by the scan.
 
     Call while the withdrawal is locked. A savepoint prevents an unavailable
     notification from rolling back the already authorized financial change.
     """
-    if event in ('submitted', 'owner_cancelled'):
-        try:
-            with transaction.atomic():
-                if not _verify_owner_fact(row, event):
-                    log.warning('提现通知来源待核对: withdraw_id=%s event=%s', row.pk, event)
-                    if getattr(settings, 'WITHDRAWAL_NOTICE_RECOVERY_ENABLED', False):
-                        from site_messages.models import WithdrawalNoticeDelivery
-                        WithdrawalNoticeDelivery.objects.get_or_create(
-                            event_key=f'owner:{row.pk}:{event}',
-                            defaults={'withdrawal': row, 'skipped_reason': OWNER_REVIEW_REASON})
-                    return None
-        except Exception:
-            log.exception('提现通知来源暂不可核验: withdraw_id=%s event=%s', row.pk, event)
-            return None
-    if not getattr(settings, 'WITHDRAWAL_NOTICE_RECOVERY_ENABLED', False):
-        return _existing_message(row, event, reason)
     try:
         if event not in MESSAGES:
             raise ValueError('提现消息事件无效')
@@ -121,9 +164,14 @@ def withdrawal_message(row, event, *, reason='', platform_event=None, retry_owne
                 if (delivery.withdrawal_id != row.pk
                         or delivery.platform_event_id != getattr(platform_event, 'pk', None)):
                     raise ValueError('提现消息记录与原事件不一致')
-                if not (retry_owner_review and event in ('submitted', 'owner_cancelled')
-                        and not delivery.message_id and delivery.skipped_reason == OWNER_REVIEW_REASON):
+                if not (retry_source_review and not delivery.message_id
+                        and delivery.skipped_reason == OWNER_REVIEW_REASON):
                     return delivery
+            if not _verify_message_fact(row, event, platform_event):
+                delivery.skipped_reason = OWNER_REVIEW_REASON
+                delivery.save(update_fields=['skipped_reason'])
+                log.warning('提现通知来源待核对: withdraw_id=%s event=%s', row.pk, event)
+                return delivery
             account = ClubAccount.objects.filter(pk=row.account_id, account_type='PROVIDER',
                 business_cycle=row.account_business_cycle, license_membership_active=True).first()
             if not account or not row.account_business_cycle:

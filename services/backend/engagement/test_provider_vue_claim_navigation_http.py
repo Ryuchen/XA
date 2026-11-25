@@ -43,8 +43,11 @@ class ProviderVueClaimNavigationHTTPTest(LiveServerTestCase):
         ok(clients[2].post('/api/admin/external-points/', {'account_id':accounts[0].pk, 'kind':'KOOK_CHECKIN',
             'day':timezone.localdate().isoformat(), 'source_id':'claim-route-boss'}, format='json'))
         now = timezone.now()
-        KookPointsConfig.objects.create(pk=1, enabled=True, guild_id='isolated-guild',
-            checkin_channel_id='isolated-hall', voice_channel_ids=[], started_at=now-timedelta(days=1))
+        KookPointsConfig.objects.update_or_create(pk=1, defaults={
+            'enabled': True, 'guild_id': 'isolated-guild',
+            'checkin_channel_id': 'isolated-hall', 'voice_channel_ids': [],
+            'started_at': now-timedelta(days=1),
+        })
         code = ok(clients[1].post('/api/club/kook-binding/', {}, format='json'))['code']
         def event(content, event_id):
             return {'type':1, 'channel_type':'GROUP', 'target_id':'isolated-hall', 'author_id':'isolated-provider',

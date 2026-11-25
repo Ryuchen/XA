@@ -18,19 +18,29 @@ def schedule_chat_message(session, message, *, owner_snapshot=None):
     """Call inside the message transaction; delivery happens only after commit."""
     if not transaction.get_connection().in_atomic_block:
         raise RuntimeError('咨询消息通知意图须与消息同事务保存')
-    from .models import ChatNotificationOutbox
     owner_id, cycle = owner_snapshot or (None, None)
+    if not getattr(settings, 'CHAT_NOTIFICATION_OUTBOX_ENABLED', False):
+        transaction.on_commit(lambda: _deliver_legacy_safely(session, message, owner_snapshot))
+        return
+    from .models import ChatNotificationOutbox
     message.notification_intent = True
     message.notification_recipient_id = owner_id
     message.notification_recipient_cycle = cycle
     message.save(update_fields=['notification_intent', 'notification_recipient_id', 'notification_recipient_cycle'])
+    # An outbox write is part of the business transaction. Swallowing a
+    # database error here would commit a message that can never be recovered.
+    row = ChatNotificationOutbox.objects.create(message=message, next_attempt_at=timezone.now(),
+        recipient_account_id_snapshot=owner_id, recipient_business_cycle=cycle)
+    transaction.on_commit(lambda: _deliver_safely(row.pk))
+
+
+def _deliver_legacy_safely(session, message, owner_snapshot):
     try:
-        with transaction.atomic():
-            row = ChatNotificationOutbox.objects.create(message=message, next_attempt_at=timezone.now(),
-                recipient_account_id_snapshot=owner_id, recipient_business_cycle=cycle)
-            transaction.on_commit(lambda: _deliver_safely(row.pk))
+        notify_chat_message(session, message, owner_snapshot=owner_snapshot)
     except Exception:
-        logger.exception('Chat message outbox pending recovery for message %s', message.pk)
+        # Legacy delivery is best-effort after commit; the conversation is
+        # already durable and a channel failure must not become a send error.
+        logger.exception('Chat message notification unavailable for message %s', message.pk)
 
 
 def _deliver_safely(outbox_id):
@@ -99,7 +109,8 @@ def _account_allowed(account_id, snapshot):
         return False
     from club_accounts.models import ClubAccount
     return ClubAccount.objects.filter(pk=account_id, license_membership_active=True,
-        business_cycle=snapshot[1], account_type__in=('BOSS', 'PROVIDER')).exists()
+        is_active=True, can_login=True, business_cycle=snapshot[1],
+        account_type__in=('BOSS', 'PROVIDER')).exists()
 
 
 def _deliver_session_safely(outbox_id):

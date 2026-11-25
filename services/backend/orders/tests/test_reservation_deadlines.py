@@ -102,7 +102,7 @@ class ReservationDeadlineWorkflowTest(ReservationApiTestBase):
         booking.refresh_from_db()
         self.assertEqual(booking.status, 'EXPIRED')
 
-    def test_confirmation_crossing_cutoff_before_status_write_does_not_confirm(self):
+    def test_confirmation_crossing_cutoff_preserves_review_then_expires_with_new_evidence(self):
         self.configure()
         with patch('django.utils.timezone.now', return_value=self.start_clock):
             result = self.create()
@@ -119,7 +119,14 @@ class ReservationDeadlineWorkflowTest(ReservationApiTestBase):
                 return actual_transition(*args, **kwargs)
             with patch('orders.reservation_views.transition_reservation', side_effect=transition_after_deadline):
                 response = self.client.post(f'/api/orders/reservations/{booking.pk}/confirm/', {}, format='json')
-        self.assertNotEqual(response.data['code'], 0)
+        self.assertEqual(response.status_code, 409, response.data)
+        booking.refresh_from_db()
+        self.assertEqual((booking.status, booking.confirmed_at, booking.payment_deadline), ('PENDING', None, None))
+        receipt = booking.clock_receipts.get(action='CONFIRM')
+        self.assertEqual((receipt.state, receipt.review_reason), ('REVIEW', 'MONOTONIC_INCONSISTENT'))
+        self.assertTrue(booking.status_logs.filter(action='CONFIRM').exists())
+        with patch('django.utils.timezone.now', return_value=booking.confirmation_deadline+timedelta(seconds=1)):
+            self.assertEqual(expire_due_reservations(), 1)
         booking.refresh_from_db()
         self.assertEqual((booking.status, booking.confirmed_at, booking.payment_deadline), ('EXPIRED', None, None))
 

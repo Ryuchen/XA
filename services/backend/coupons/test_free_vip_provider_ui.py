@@ -17,22 +17,40 @@ from wallet.models import Transaction, Wallet
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
-                   CELERY_TASK_ALWAYS_EAGER=False, VIP_SAFE_BOX_SUBSIDY_ENABLED=False)
+                   CELERY_TASK_ALWAYS_EAGER=False, VIP_SAFE_BOX_SUBSIDY_ENABLED=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
+                   REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED=True)
 class FreeVipProviderUITest(LiveServerTestCase):
     def test_zero_income_is_explicit_before_starting(self):
         fronted_root('provider')
-        boss, provider, staff = make_user(), make_provider(), make_console_user(['order:view','order:dispatch'])
+        boss = make_user()
+        provider = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
+        staff = make_console_user(['order:view','order:dispatch'])
         accounts = [get_or_create_account_for_legacy_user(user) for user in (boss,provider,staff)]
         link_legacy_relations(boss,accounts[0]); link_legacy_relations(provider,accounts[1])
+        accounts[1].openid = 'free-vip-isolated-provider'
+        accounts[1].is_openid_bound = True
+        accounts[1].save(update_fields=['openid', 'is_openid_bound'])
         provider.escort_profile.account=accounts[1]; provider.escort_profile.save(update_fields=['account'])
         staff.admin_membership.account=accounts[2]; staff.admin_membership.save(update_fields=['account'])
         service=make_service(price=10000,benefit_kind='SAFEBOX_33',platform='PC')
+        from console.grab_config import save_grab_window
+        save_grab_window(1, 0, lambda *args: None)
+        from console.capacity_config import save_capacity
+        save_capacity(3, 0, lambda *args: None)
+        from wallet.models import SystemConfig
+        for pass_tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
+            SystemConfig.objects.update_or_create(key=f'provider_pass_delay_seconds_{pass_tier}',
+                                                  defaults={'value': '0'})
         provider.escort_profile.service_items.add(service)
         tier=make_boss_type(name='免费券验收会员',discount_rate=90)
-        VipTier.objects.create(boss_type=tier,level=6,recharge_threshold=0,safe_box_service_ids=[service.pk])
+        VipTier.objects.create(boss_type=tier,level=6,recharge_threshold=0,season_discount=0,
+                               safe_box_service_ids=[service.pk])
         accounts[0].boss_type=tier; accounts[0].save(update_fields=['boss_type'])
         make_wallet(boss,balance=10000); grant_periodic(accounts[0])
         voucher=UserCoupon.objects.get(account=accounts[0],coupon__scope='SAFE_BOX')
+        self.assertEqual(voucher.coupon.discount_rate, 0)
         clients=[]
         for account in accounts:
             client=APIClient(); client.credentials(HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(account)[0]); clients.append(client)
@@ -40,8 +58,21 @@ class FreeVipProviderUITest(LiveServerTestCase):
             'dispatch_route':'STAFF','client_request_id':'free-vip-income-display'}, format='json').data
         self.assertEqual(order['code'],0,order); self.assertEqual(order['data']['amount'],0)
         oid=order['data']['id']
-        assigned=clients[2].post(f'/api/admin/orders/{oid}/assign/', {'provider_id':accounts[1].pk}, format='json').data
-        self.assertEqual(assigned['code'],0,assigned)
+        available = clients[1].post('/api/users/escorts/status/', {'status': 'AVAILABLE'}, format='json').data
+        self.assertEqual(available['code'], 0, available)
+        # SQLite cannot take the production MySQL lifecycle row lock. Keep
+        # the real pool, eligibility, receipt and order writes in this test.
+        from unittest.mock import patch
+        with patch('club_accounts.provider_lifecycle.lock_provider_operations'):
+            grabbed=clients[1].post(f'/api/orders/orders/{oid}/grab/', {}, format='json').data
+        self.assertEqual(grabbed['code'],0,grabbed)
+        import time
+        time.sleep(1.05)
+        from orders.grab_single_flow import resolve
+        self.assertEqual(resolve(oid), 'ASSIGNED')
+        persisted = Order.objects.get(pk=oid)
+        self.assertEqual(persisted.provider_account_id, accounts[1].pk)
+        self.assertEqual((persisted.commission_allocation_pending, persisted.provider_income), (False, 0))
         self.assertEqual(clients[1].get(f'/api/orders/orders/{oid}/').data['data']['expected_income'],0)
         repo=Path(settings.BASE_DIR).parent.parent
         result=subprocess.run(['node',str(repo/'scripts/scenarios/provider-zero-income-live.cjs')],cwd=repo,

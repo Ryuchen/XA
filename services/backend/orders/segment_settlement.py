@@ -5,13 +5,14 @@ from dataclasses import asdict
 
 from django.conf import settings
 from django.db.models import F, Q, Sum
-from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from stores.db import transaction
 
 from .models import OrderSegmentPersonSettlement, OrderSegmentSettlementManifest, RefundRecoveryLine
 from .segment_settlement_plan import build_segment_settlement_plan
 from .settlement import SettlementError
+from wallet.settlement_clocks import (clock_scope, receipt, record, require_clock,
+                                      validate_receipt, verify as verify_clock)
 
 
 def enabled(order=None):
@@ -485,8 +486,9 @@ def _addon_contribution(terms):
                - addon.get('provider_units', 0) - addon.get('inviter_units', 0))
 
 
-def _report_versions(person):
+def _report_versions(person, *, clock=None):
     from .models import OrderSegmentReport
+    clock = require_clock(clock)
     rows = list(OrderSegmentReport.objects.filter(segment_id__in=person.segment_ids).select_related('segment').order_by('segment_id'))
     if len(rows) != len(person.segment_ids):
         raise SettlementError('本人报单版本缺失')
@@ -498,6 +500,9 @@ def _report_versions(person):
                 or submission.entry_image.name != row.segment.entry_image.name
                 or submission.completion_image.name != row.segment.completion_image.name):
             raise SettlementError('本人已审核的报单版本缺失')
+        order = row.segment.attribution.order
+        verify_clock(order, 'SUBMISSION', submission.pk, 'SUBMIT', submission.submitted_at, clock)
+        verify_clock(order, 'SUBMISSION', submission.pk, 'REVIEW', submission.reviewed_at, clock)
         evidence = [submission.entry_image.name, submission.completion_image.name,
                     *submission.result_images.order_by('pk').values_list('image', flat=True)]
         result.append({'segment_id':row.segment_id, 'version':row.version,
@@ -548,9 +553,14 @@ def verified_person_credit(order, account_id):
 
 
 def _validate_records(order, manifest, plan, *, finalized=False, snapshot_ids=None, subsidy_shares=None,
-                      paid_addon_snapshot=None, paid_addon_cutoff=None):
+                      paid_addon_snapshot=None, paid_addon_cutoff=None, now=None):
     """Reject legacy, duplicate, altered or untraceable credits before more pay."""
     from wallet.models import Transaction
+    clock = require_clock(now)
+    plan_clock = receipt(order, 'MANIFEST', manifest.pk, 'PLAN')
+    if plan_clock is None:
+        raise SettlementError('历史逐段结算清单缺少数据库时钟证据，需人工核对')
+    validate_receipt(plan_clock.clock_evidence, plan_clock.observed_at, clock)
     rows = OrderSegmentPersonSettlement.objects.filter(manifest=manifest)
     if snapshot_ids is not None:
         # A subset is only evidence for historical credits. It must never be
@@ -584,7 +594,7 @@ def _validate_records(order, manifest, plan, *, finalized=False, snapshot_ids=No
     for row in records:
         person = people.get(row.account_id)
         if (not person or row.amount != person.income or row.segment_ids != list(person.segment_ids)
-                or row.report_versions != _report_versions(person)):
+                or row.report_versions != _report_versions(person, clock=clock)):
             raise SettlementError('已结算人员的份额或报单版本发生变化')
         from django.utils.dateparse import parse_datetime
         from engagement.confirmation import aftersale_deadline
@@ -607,8 +617,9 @@ def _validate_records(order, manifest, plan, *, finalized=False, snapshot_ids=No
             if ending and order.completed_at:
                 from datetime import timedelta
                 deadline = min(ending.accepted_at, order.completed_at) + timedelta(hours=order.service_aftersale_hours)
+        verify_clock(order, 'PERSON', row.pk, 'PERSON', row.settled_at, clock)
         reviewed = [parse_datetime(version['reviewed_at']) for version in row.report_versions]
-        if (not row.settled_at or row.settled_at > timezone.now() or not completed_at
+        if (not row.settled_at or row.settled_at > clock.at or not completed_at
                 or row.settled_at < completed_at or not deadline or row.settled_at < deadline
                 or not person.freeze_until or row.settled_at < person.freeze_until
                 or any(not value or value > row.settled_at for value in reviewed)):
@@ -680,7 +691,7 @@ def _validate_records(order, manifest, plan, *, finalized=False, snapshot_ids=No
     if snapshot_ids is None and (manifest.plan.get('points_funding', {}).get('addons')
                                  or manifest.plan.get('ordinary_transfer_funding', {}).get('addons')):
         from .segment_addon_settlement import validate_records
-        validate_records(order, manifest, {row.account_id: row for row in records}, known)
+        validate_records(order, manifest, {row.account_id: row for row in records}, known, clock=clock)
     elif (snapshot_ids is None and manifest.plan.get('points_funding', {}).get('addon_refund_ids')
           and manifest.addon_settlements.exists()):
         raise SettlementError('全额退款加购存在多余逐段结算记录')
@@ -822,12 +833,18 @@ def _validate_records(order, manifest, plan, *, finalized=False, snapshot_ids=No
 
 
 def verify_finalized(order, manifest):
-    """Reconcile finalized credits before confirming customer consumption."""
+    """Reconcile finalized credits with one current store-DB observation."""
+    with clock_scope(require_clock()):
+        return _verify_finalized(order, manifest)
+
+
+def _verify_finalized(order, manifest):
     if isinstance(manifest.plan, dict) and manifest.plan.get('kind') == 'PLATFORM_SUBSIDY':
         from .subsidy_segment_settlement import verify_locked
         return verify_locked(order, manifest, finalized=True)[0]
     if not order.settled_at or not manifest.finalized_at or order.settled_at != manifest.finalized_at:
         raise SettlementError('逐段结算完成时间不一致')
+    verify_clock(order, 'MANIFEST', manifest.pk, 'FINALIZE', order.settled_at, require_clock())
     from .segment_addon_settlement_revision import verify_revisions
     verify_revisions(manifest)
     from .points_service_payment import needs_integrated_processing
@@ -900,7 +917,8 @@ def _finalize(order, manifest, plan, *, trace_id):
     from wallet.notifier import notify_wallet_update
     from .models import OrderSegmentReportSubmission
     from .services import _credit_wallet
-    records = _validate_records(order, manifest, plan)
+    clock = require_clock()
+    records = _validate_records(order, manifest, plan, now=clock)
     if (len(records) != len(plan.persons) or any(person.blockers for person in plan.persons)
             or order.aftersales.filter(status='OPEN').exists()):
         return False
@@ -980,7 +998,7 @@ def _finalize(order, manifest, plan, *, trace_id):
                 tx_type=Transaction.TxType.SHOP_INCOME, remark=f'退款取整差额：{order.order_no}',
                 event='order.settle.rounding', trace_id=trace_id, platform=True, log_after_commit=True)
             revision.save(update_fields=['rounding_transaction'])
-    now = timezone.now()
+    now = clock.at
     manifest.inviter_transaction = inviter_tx; manifest.store_transaction = store_tx
     manifest.rounding_transaction = rounding_tx; manifest.finalized_at = now
     manifest.save(update_fields=['inviter_transaction', 'store_transaction', 'rounding_transaction', 'finalized_at'])
@@ -994,6 +1012,7 @@ def _finalize(order, manifest, plan, *, trace_id):
     order.settled_at = now
     order.save(update_fields=['provider_income', 'inviter_commission', 'shop_income', 'settlement_store_funding', 'settlement_addon_contribution', 'report_ready_at',
                               'consumption_ready_at', 'settled_at'])
+    record(order, 'MANIFEST', manifest.pk, 'FINALIZE', clock)
     return True
 
 
@@ -1057,13 +1076,8 @@ def _settle_due_segment_people(order, *, operator=None, operator_account=None, t
     if not order.customer_account_id or type(order.service_deposit_percent) is not int or not 0 <= order.service_deposit_percent <= 100:
         raise SettlementError('老板账户或押金比例快照待核对')
     from .financial_lock import lock_order_money
-    from .services import _credit_wallet, refresh_escort_status
-    from wallet.models import Transaction, get_platform_wallet
+    from wallet.models import Transaction
     from wallet.services import get_wallet
-    from wallet.income import hold_provider_income
-    from club_accounts.models import LegacyAccountMap
-    from users.models import EscortProfile
-    from common.logging_utils import new_trace_id
     lock_order_money()
     customer = get_wallet(account_id=order.customer_account_id, user_id=order.customer_id, for_update=True)
     payments = list(order.transactions.filter(tx_type=Transaction.TxType.PAY, status='SUCCESS',
@@ -1071,6 +1085,25 @@ def _settle_due_segment_people(order, *, operator=None, operator_account=None, t
     if (len(payments) != 1 or payments[0].wallet_id != customer.pk or payments[0].amount != -order.amount
             or payments[0].reversals.exists() or payments[0].balance_after != payments[0].balance_before + payments[0].amount):
         raise SettlementError('订单付款流水不完整，请先核对')
+    # The order, cross-wallet mutex and payer wallet are locked. Sample only
+    # after those waits, then reuse this observation through every nested plan,
+    # person, add-on and finalization write. Already settled retries returned
+    # above and therefore do not need a new clock to recover the original fact.
+    clock = require_clock()
+    with clock_scope(clock):
+        return _settle_due_segment_people_clocked(
+            order, points_order=points_order, supported_addon=supported_addon,
+            clock=clock, trace_id=trace_id)
+
+
+def _settle_due_segment_people_clocked(order, *, points_order, supported_addon, clock, trace_id):
+    from .services import _credit_wallet, refresh_escort_status
+    from wallet.models import Transaction, get_platform_wallet
+    from wallet.income import hold_provider_income
+    from club_accounts.models import LegacyAccountMap
+    from users.models import EscortProfile
+    from common.logging_utils import new_trace_id
+
     points_funding = None
     if points_order:
         plan, points_funding = _points_transfer_terms(order)
@@ -1271,6 +1304,7 @@ def _settle_due_segment_people(order, *, operator=None, operator_account=None, t
         raise SettlementError('陪玩存在历史退款押金扣减，补足情况待核对')
     if not manifest:
         manifest = OrderSegmentSettlementManifest.objects.create(order=order, plan=terms, plan_hash=_hash(terms))
+        record(order, 'MANIFEST', manifest.pk, 'PLAN', clock)
         if 'round_posting_ids' in terms.get('points_funding', {}):
             from .points_round_settlement_plan import verify_manifest_locked
             verify_manifest_locked(order, manifest, terms)
@@ -1280,7 +1314,7 @@ def _settle_due_segment_people(order, *, operator=None, operator_account=None, t
         elif 'followup_posting_id' in terms.get('points_funding', {}):
             from .points_transfer_followup_settlement import verify_manifest_locked
             verify_manifest_locked(order, manifest, terms, None)
-    now = timezone.now(); trace_id = trace_id or new_trace_id()
+    now = clock.at; trace_id = trace_id or new_trace_id()
     settled_users, settled_accounts = [], []
     for person in due:
         user_id, profile = mappings[person.account_id], profiles[person.account_id]
@@ -1311,15 +1345,16 @@ def _settle_due_segment_people(order, *, operator=None, operator_account=None, t
             if not debit or not credit:
                 raise SettlementError('押金配对流水缺失')
         settlement_record = OrderSegmentPersonSettlement.objects.create(manifest=manifest, account_id=person.account_id,
-            amount=person.income, segment_ids=list(person.segment_ids), report_versions=_report_versions(person),
+            amount=person.income, segment_ids=list(person.segment_ids), report_versions=_report_versions(person, clock=clock),
             income_transaction=income, deposit_debit=debit, deposit_credit=credit, settled_at=now)
+        record(order, 'PERSON', settlement_record.pk, 'PERSON', clock)
         addon_funding = manifest.plan.get('points_funding') or manifest.plan.get('ordinary_transfer_funding') or {}
         if addon_funding.get('addons'):
             from .segment_addon_settlement import settle_person
-            settle_person(order, manifest, settlement_record, profile, now=now, trace_id=trace_id)
+            settle_person(order, manifest, settlement_record, profile, now=clock, trace_id=trace_id)
         if person.income == 0:
             from wallet.refund_recovery_order import close_for_zero_settlement
-            close_for_zero_settlement(profile, settlement_record)
+            close_for_zero_settlement(profile, settlement_record, now=clock)
         settled_users.append(user_id); settled_accounts.append(person.account_id)
     EscortProfile.objects.filter(user_id__in=settled_users).update(completed_order_count=F('completed_order_count') + 1)
     refresh_escort_status(provider_ids=settled_users, account_ids=settled_accounts, exclude_order_ids=[order.pk])

@@ -995,6 +995,21 @@ class ReportSubmitView(APIView):
         if not report.result_images.exists(): missing.append('战绩截图')
         if missing:
             return Response({'code': 400, 'msg': f"请上传：{'、'.join(missing)}"})
+        clock = None
+        subject_id = None
+        if report.order_id:
+            from orders.service_settlement import (
+                legacy_report_clock_chain_enabled, legacy_report_next_subject_id,
+            )
+            if legacy_report_clock_chain_enabled(report.order):
+                from wallet.settlement_clocks import ClockConflict, ClockUnavailable, require_clock
+                try:
+                    clock = require_clock()
+                    subject_id = legacy_report_next_subject_id(report.order, report.pk)
+                except ClockUnavailable:
+                    return Response({'code': 503, 'msg': '门店数据库时钟不可用，报单未提交'}, status=503)
+                except ClockConflict as exc:
+                    return Response({'code': 409, 'msg': str(exc)}, status=409)
         report.commission_rate = commission_rate
         report.status = ProviderReport.Status.PENDING
         report.audit_remark = ''
@@ -1004,8 +1019,11 @@ class ReportSubmitView(APIView):
         report.auditor = None
         report.auditor_account = None
         report.audited_at = None
-        report.submitted_at = timezone.now()
+        report.submitted_at = clock.at if clock is not None else timezone.now()
         report.save(update_fields=['amount', 'commission_rate', 'status', 'audit_remark', 'auditor', 'auditor_account', 'audited_at', 'submitted_at', 'updated_at'])
+        if clock is not None:
+            from wallet.settlement_clocks import record
+            record(report.order, 'SUBMISSION', subject_id, 'SUBMIT', clock)
         if report.order_id:
             from engagement.confirmation import refresh_report_clock
             refresh_report_clock(report.order)

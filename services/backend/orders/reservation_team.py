@@ -19,6 +19,9 @@ from .reservation_state_machine import log_reservation_event, transition_reserva
 
 
 def _event(reservation, number, action, *, provider=None, actor=None, reason='', now=None, notice_preview=None):
+    if now is None:
+        from .reservation_clock import sample
+        now = sample().instant
     intent = None
     if (action == 'INVITED' and provider and notice_preview is not None
             and getattr(settings, 'RESERVATION_NOTICE_RECOVERY_ENABLED', False)
@@ -36,7 +39,7 @@ def _event(reservation, number, action, *, provider=None, actor=None, reason='',
             'preview': f'预约 {reservation.reservation_no} 的陪玩确认状态已更新'}
     event = ReservationSeatEvent.objects.create(reservation=reservation, seat_number=number, action=action,
         provider_account=provider, provider_business_cycle=(provider.business_cycle if provider and action == 'INVITED' else None),
-        actor_account=actor, reason=reason, occurred_at=now or timezone.now(),
+        actor_account=actor, reason=reason, occurred_at=now,
         invitation_notice_intent=intent, status_notice_intent=status_intent)
     if intent:
         from site_messages.reservation_invite import schedule_seat
@@ -64,15 +67,18 @@ def _validate_provider(account, profile, service):
     return provider
 
 
-def _check_slot(account, start, end, *, exclude_id=None):
+def _check_slot(account, start, end, *, exclude_id=None, now=None):
     from .reservation_deadlines import due
-    lock_team_conflicts(account, start, end, exclude_id=exclude_id)
+    if now is None:
+        from .reservation_clock import sample
+        now = sample().instant
+    lock_team_conflicts(account, start, end, exclude_id=exclude_id, now=now)
     rows = Reservation.objects.select_for_update().filter(
         required_provider_count=1, provider_account=account, status__in=ACTIVE_STATUS_LIST,
         start_time__lt=end, end_time__gt=start).order_by('pk')
-    if any(not due(row, now=timezone.now()) for row in rows):
+    if any(not due(row, now=now) for row in rows):
         raise ReservationConflictError('该时间段大神已有预约，请另选时间')
-    conflict = find_conflicting_reservations(account, start, end, exclude_id=exclude_id).select_for_update().first()
+    conflict = find_conflicting_reservations(account, start, end, exclude_id=exclude_id, now=now).select_for_update().first()
     if conflict:
         raise ReservationConflictError('该时间段大神已有预约，请另选时间', conflicting=conflict)
 
@@ -87,14 +93,34 @@ def _lock_profiles(accounts):
 
 def create_team_reservation(*, customer_account, customer, providers, service, start_time, end_time,
                             game_rounds=1, game_region='', game_nickname='', game_uid='', remark='',
-                            operator=None, operator_account=None):
+                            operator=None, operator_account=None, decision_key=None):
+    actor_account = operator_account or customer_account
+    rounds = max(int(game_rounds or 1), 1)
+    if service.price_unit in HOURLY_UNITS:
+        rounds = 1  # Duration, not an integer quantity, determines the price.
+    from .reservation_clock import fingerprint_request
+    request_hash = fingerprint_request({
+        'customer_account_id': getattr(customer_account, 'pk', None),
+        'customer_id': getattr(customer, 'pk', None),
+        'provider_account_ids': [account.pk for account in providers],
+        'service_id': service.pk, 'start_time': start_time, 'end_time': end_time,
+        'game_rounds': rounds, 'game_region': game_region,
+        'game_nickname': game_nickname, 'game_uid': game_uid, 'remark': remark,
+    })
+    if decision_key:
+        from .reservation_clock import assert_replay, get_receipt, validate_decision_key
+        receipt = get_receipt(validate_decision_key(decision_key))
+        if receipt is not None:
+            original = receipt.reservation
+            assert_replay(receipt, reservation=original, action='CREATE',
+                          actor_account=actor_account, deadline=original.confirmation_deadline,
+                          request_fingerprint=request_hash)
+            original._decision_replayed = True
+            return original
     if len(providers) != 2 or len({account.pk for account in providers}) != 2:
         raise ReservationError('双陪预约须选择两位不同的陪玩')
     duration = validate_reservation_window(start_time, end_time)
     service_terms = (service.billing_provider_count, service.fulfillment_provider_count, service.price_unit, service.game_category_id)
-    rounds = max(int(game_rounds or 1), 1)
-    if service.price_unit in HOURLY_UNITS:
-        rounds = 1  # Duration, not an integer quantity, determines the price.
     from .gameplay import validate_service_gameplay
     try:
         validate_service_gameplay(service, rounds, companion_assignment=True)
@@ -124,14 +150,19 @@ def create_team_reservation(*, customer_account, customer, providers, service, s
         except ValidationError as exc:
             raise ReservationError(_first_error(exc.detail)) from exc
         profiles = _lock_profiles(providers)
+        from .reservation_clock import sample, same_connection, ClockUnavailable
+        observed = sample()
+        if not same_connection(observed):
+            raise ClockUnavailable('双陪预约创建锁内数据库连接发生变化')
+        now = observed.instant
         legacy = [_validate_provider(account, profiles[account.pk], service) for account in providers]
         for account in sorted(providers, key=lambda row: row.pk):
             validate_reservation_schedule(profiles[account.pk], start_time, end_time)
-            _check_slot(account, start_time, end_time)
+            _check_slot(account, start_time, end_time, now=now)
         try:
             rules = required_rules(lock=True)
-            duration = validate_reservation_window(start_time, end_time, rules=rules)
-            deadline = confirmation_snapshot(start_time, timezone.now(), rules)
+            duration = validate_reservation_window(start_time, end_time, now=now, rules=rules)
+            deadline = confirmation_snapshot(start_time, now, rules)
         except ValueError as exc:
             raise ReservationError(str(exc)) from exc
         from .reservation_services import lock_reservation_customer
@@ -152,19 +183,28 @@ def create_team_reservation(*, customer_account, customer, providers, service, s
                 provider=user, provider_name_snapshot=profiles[account.pk].display_name or account.nickname or account.username,
                 status=ReservationSeat.Status.PENDING, confirmation_deadline=deadline)
             notice_recipients.append((user.pk if user else None, account.pk, account.business_cycle))
-            _event(booking, number, 'INVITED', provider=account, actor=operator_account,
+            _event(booking, number, 'INVITED', provider=account, actor=operator_account, now=now,
                 notice_preview=f'{timezone.localtime(booking.start_time):%m-%d %H:%M} 起{booking.duration_minutes} 分钟，请尽快确认')
         log_reservation_event(booking, action=ReservationStatusLog.Action.CREATE, operator=operator,
-                              operator_account=operator_account, reason='发起双陪预约')
+                              operator_account=actor_account, reason='发起双陪预约', now=now)
+        from .reservation_clock import prepare_decision
+        clock_decision = prepare_decision(
+            reservation=booking, action='CREATE', deadline=deadline,
+            actor_account=actor_account, decision_key=decision_key, state_before='',
+            request_fingerprint=request_hash,
+        )
         booking._notice_recipients = notice_recipients
-        return booking
+    from .reservation_clock import finalize_decision
+    finalize_decision(clock_decision, state_after=Reservation.Status.PENDING)
+    return booking
 
 
-def refresh_pending(booking, *, now):
+def refresh_pending(booking, *, now, actor_account=None, observed=None):
     """Expire invitations but preserve confirmed seats until booking start.
 
     Caller holds the booking and seat locks. Returns True if booking expired.
     """
+    from .reservation_clock import record_after
     seats = list(ReservationSeat.objects.select_for_update().filter(reservation=booking).order_by('number'))
     if booking.status != Reservation.Status.PENDING or len(seats) != 2:
         raise ReservationError('双陪预约席位资料异常，请联系客服')
@@ -174,6 +214,11 @@ def refresh_pending(booking, *, now):
             previous = seat.provider_account
             previous_user_id = seat.provider_id
             previous_cycle = seat.provider_business_cycle
+            record_after(
+                reservation=booking, action='SEAT_TIMEOUT',
+                deadline=seat.confirmation_deadline, actor_account=actor_account,
+                seat_number=seat.number, state_before=booking.status, observed=observed,
+            )
             seat.provider_account = None
             seat.provider_business_cycle = None
             seat.provider = None
@@ -200,7 +245,12 @@ def refresh_pending(booking, *, now):
     # Vacant seats remain replaceable until the appointment starts, including
     # when both original invitees have declined or timed out.
     if now >= booking.start_time:
-        transition_reservation(booking.pk, Reservation.Status.EXPIRED, reason='双陪预约确认超时')
+        record_after(
+            reservation=booking, action='EXPIRE', deadline=booking.start_time,
+            actor_account=actor_account, state_before=booking.status, observed=observed,
+        )
+        transition_reservation(booking.pk, Reservation.Status.EXPIRED,
+                               reason='双陪预约确认超时', now=now)
         return True
     if (timeout_events and getattr(settings, 'RESERVATION_EXPIRY_NOTICE_RECOVERY_ENABLED', False)
             and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)):
@@ -214,6 +264,7 @@ def refresh_pending(booking, *, now):
             schedule('seat', event.pk)
     booking.confirmation_deadline = min(pending) if pending else booking.start_time
     booking.save(update_fields=['confirmation_deadline', 'updated_at'])
+    Reservation.objects.filter(pk=booking.pk).update(updated_at=now)
     return False
 
 
@@ -224,8 +275,11 @@ def _snapshot_members(booking_id):
     return list(ClubAccount.objects.filter(pk__in=ids).order_by('pk'))
 
 
-def decide(booking_id, actor, *, accept, reason=''):
+def decide(booking_id, actor, *, accept, reason='', decision_key=None):
     """One invited provider decides; successful decisions and events are atomic."""
+    decision_to_finalize = None
+    from .reservation_clock import fingerprint_request
+    request_hash = fingerprint_request({'reason': '' if accept else reason})
     members = _snapshot_members(booking_id)
     with transaction.atomic():
         if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
@@ -252,7 +306,22 @@ def decide(booking_id, actor, *, accept, reason=''):
             raise ReservationError('预约人员已变化，请刷新后重试')
         if booking.required_provider_count != 2:
             raise ReservationError('预约当前不可确认或拒绝')
-        now = timezone.now()
+        action = 'TEAM_CONFIRM' if accept else 'TEAM_REJECT'
+        if decision_key:
+            from .reservation_clock import assert_replay, get_receipt, validate_decision_key
+            existing = get_receipt(validate_decision_key(decision_key))
+            if existing is not None:
+                assert_replay(existing, reservation=booking, action=action,
+                              seat_number=existing.seat_number, actor_account=actor,
+                              deadline=existing.deadline, request_fingerprint=request_hash)
+                booking._decision_replayed = True
+                return booking, ''
+        from .reservation_clock import assert_clock_clear, sample, same_connection, ClockUnavailable
+        assert_clock_clear(booking)
+        observed = sample()
+        if not same_connection(observed):
+            raise ClockUnavailable('双陪决定锁内数据库连接发生变化')
+        now = observed.instant
         refreshed = False
         if booking.status == Reservation.Status.PENDING and booking.confirmation_deadline <= now:
             # Preserve the real expiry when the invited person is the one
@@ -264,7 +333,7 @@ def decide(booking_id, actor, *, accept, reason=''):
                 and original_seat.provider_business_cycle == current_actor.business_cycle
                 and original_seat.status == ReservationSeat.Status.PENDING
                 and original_seat.confirmation_deadline and original_seat.confirmation_deadline <= now)
-            expired = refresh_pending(booking, now=now)
+            expired = refresh_pending(booking, now=now, actor_account=actor, observed=observed)
             booking.refresh_from_db()
             refreshed = True
             if expired:
@@ -302,12 +371,25 @@ def decide(booking_id, actor, *, accept, reason=''):
             return booking, ''
         if booking.status != Reservation.Status.PENDING or not seat or seat.status != ReservationSeat.Status.PENDING:
             raise ReservationError('仅受邀陪玩本人可确认或拒绝')
-        # Lock waiting for the seat or other participant may cross the cutoff.
-        now = timezone.now()
         if now >= seat.confirmation_deadline or now >= booking.start_time:
-            refresh_pending(booking, now=now)
+            refresh_pending(booking, now=now, actor_account=actor, observed=observed)
             booking.refresh_from_db()
             return booking, '预约确认已超时'
+        from .reservation_clock import prepare_decision, require_before, reservation_snapshot, seat_snapshot
+        decision_deadline = min(seat.confirmation_deadline, booking.start_time)
+        clock_decision = prepare_decision(
+            reservation=booking, action=action, deadline=decision_deadline,
+            actor_account=actor, seat_number=seat.number, decision_key=decision_key,
+            state_before=booking.status, request_fingerprint=request_hash,
+            before_snapshot={
+                'reservation': reservation_snapshot(booking),
+                'seat': seat_snapshot(seat),
+            },
+        )
+        if clock_decision.replayed:
+            raise ReservationError('原陪玩决定已回执，请勿重复提交')
+        if clock_decision.state != 'PENDING':
+            require_before(clock_decision)
         if accept:
             if settings.PROVIDER_WECHAT_GATE_ENABLED:
                 error = profiles[actor.pk].wechat_acceptance_error()
@@ -325,10 +407,8 @@ def decide(booking_id, actor, *, accept, reason=''):
                     rules = required_rules(lock=True)
                 except ValueError as exc:
                     raise ReservationError(str(exc)) from exc
-                # State-machine timestamps and payment deadline must both be
-                # after the last confirmation and strictly before start.
-                if timezone.now() >= booking.start_time:
-                    raise ReservationError('预约开始时间已到，请重新预约')
+                # The receipt's lower bound was sampled under all participant
+                # locks; the post-commit upper bound classifies audit-write delay.
                 def payment_fields(row):
                     if row.confirmed_at >= min(row.start_time, seat.confirmation_deadline):
                         raise ReservationError('预约确认时限已到，请重新预约')
@@ -337,9 +417,10 @@ def decide(booking_id, actor, *, accept, reason=''):
                     row.payment_config_version = rules['version']
                 booking = transition_reservation(booking.pk, Reservation.Status.CONFIRMED,
                     operator_account=actor, reason='双陪均已确认', side_effect=payment_fields,
-                    update_fields=['payment_deadline', 'payment_timeout_minutes', 'payment_config_version'])
+                    update_fields=['payment_deadline', 'payment_timeout_minutes', 'payment_config_version'],
+                    now=now)
             else:
-                refresh_pending(booking, now=now)
+                refresh_pending(booking, now=now, actor_account=actor, observed=observed)
         else:
             seat.provider_account = None
             seat.provider_business_cycle = None
@@ -353,19 +434,27 @@ def decide(booking_id, actor, *, accept, reason=''):
             from site_messages.reservation_team_declined import enabled, record
             if enabled():
                 record(event)
-            refresh_pending(booking, now=now)
+            refresh_pending(booking, now=now, actor_account=actor, observed=observed)
         booking.refresh_from_db()
-        if accept and timezone.now() >= seat.confirmation_deadline:
-            # A lock or audit write can cross the participant's cutoff. Abort
-            # every write; the normal expiry scan will process the invitation.
-            raise ReservationError('预约确认时限已到，请重新预约')
-        return booking, ''
+        decision_to_finalize = clock_decision
+        booking._decision_state_after = booking.status
+
+    from .reservation_clock import finalize_decision
+    finalize_decision(decision_to_finalize, state_after=booking._decision_state_after)
+    return booking, ''
 
 
-def replace(booking_id, actor, number, new_account, *, client_request_id=None):
+def replace(booking_id, actor, number, new_account, *, client_request_id=None, decision_key=None):
     """Boss fills one vacant seat without disturbing the other seat."""
+    decision_to_finalize = None
+    clock_decision_key = decision_key or client_request_id
     if number not in (1, 2):
         raise ReservationError('预约席位无效')
+    from .reservation_clock import fingerprint_request
+    request_hash = fingerprint_request({
+        'seat_number': number, 'provider_account_id': new_account.pk,
+        'provider_business_cycle': new_account.business_cycle,
+    })
     members = _snapshot_members(booking_id)
     accounts = {account.pk: account for account in members}
     accounts[new_account.pk] = new_account
@@ -393,12 +482,27 @@ def replace(booking_id, actor, number, new_account, *, client_request_id=None):
                 or current_actor.business_cycle != actor.business_cycle
                 or booking.customer_business_cycle != current_actor.business_cycle):
             raise ReservationError('预约属于此前入店周期，请重新预约')
+        from .reservation_clock import assert_clock_clear
+        assert_clock_clear(booking)
         current_ids = set(ReservationSeat.objects.select_for_update().filter(
             reservation=booking, provider_account__isnull=False).values_list('provider_account_id', flat=True))
         if current_ids != {row.pk for row in members}:
             raise ReservationError('预约人员已变化，请刷新后重试')
         if booking.required_provider_count != 2:
             raise ReservationError('预约当前不可替换陪玩')
+        if clock_decision_key:
+            from .reservation_clock import assert_replay, get_receipt, validate_decision_key, ClockConflict
+            existing = get_receipt(validate_decision_key(clock_decision_key))
+            if existing is not None:
+                if (existing.action != 'REPLACE' or existing.seat_number != number
+                        or existing.before_snapshot.get('replacement_provider_account_id') != new_account.pk
+                        or existing.before_snapshot.get('replacement_business_cycle') != new_account.business_cycle):
+                    raise ClockConflict('原 decision_key 对应的补位内容不同')
+                assert_replay(existing, reservation=booking, action='REPLACE',
+                              seat_number=number, actor_account=actor,
+                              deadline=existing.deadline, request_fingerprint=request_hash)
+                booking._replacement_replayed = True
+                return booking, ''
         import hashlib
         from wallet.models import IdempotencyKey
         scope = 'reservation.replace'
@@ -409,6 +513,12 @@ def replace(booking_id, actor, number, new_account, *, client_request_id=None):
                if client_request_id else None)
         if key and (key.scope != scope or key.request_fingerprint != fingerprint):
             raise ReservationError('请求编号已用于其他操作，请重新核对')
+        from .reservation_clock import assert_clock_clear, sample, same_connection, ClockUnavailable
+        assert_clock_clear(booking)
+        observed = sample()
+        if not same_connection(observed):
+            raise ClockUnavailable('双陪补位锁内数据库连接发生变化')
+        now = observed.instant
 
         def invitation_event():
             return (ReservationSeatEvent.objects.select_for_update().filter(reservation=booking, seat_number=number,
@@ -427,7 +537,7 @@ def replace(booking_id, actor, number, new_account, *, client_request_id=None):
             from .reservation_deadlines import due
             seat = ReservationSeat.objects.select_for_update().get(reservation=booking, number=number)
             event = invitation_event()
-            if (not due(booking, now=timezone.now()) and seat.status == ReservationSeat.Status.CONFIRMED
+            if (not due(booking, now=now) and seat.status == ReservationSeat.Status.CONFIRMED
                     and seat.provider_account_id == new_account.pk and seat.provider_business_cycle == new_account.business_cycle
                     and event and event.provider_account_id == new_account.pk
                     and event.provider_business_cycle == new_account.business_cycle
@@ -437,10 +547,9 @@ def replace(booking_id, actor, number, new_account, *, client_request_id=None):
             return booking, '原邀请已失效，请刷新预约'
         if booking.status != Reservation.Status.PENDING:
             raise ReservationError('预约当前不可替换陪玩')
-        now = timezone.now()
         refreshed = False
         if booking.confirmation_deadline <= now:
-            expired = refresh_pending(booking, now=now)
+            expired = refresh_pending(booking, now=now, actor_account=actor, observed=observed)
             refreshed = True
             if expired:
                 booking.refresh_from_db()
@@ -464,8 +573,8 @@ def replace(booking_id, actor, number, new_account, *, client_request_id=None):
                      (seat.confirmation_deadline and now < seat.confirmation_deadline))):
             # A lost response must not create a second invitation or extend
             # the already promised confirmation deadline.
-            if seat.status == ReservationSeat.Status.PENDING and timezone.now() >= seat.confirmation_deadline:
-                refresh_pending(booking, now=timezone.now())
+            if seat.status == ReservationSeat.Status.PENDING and now >= seat.confirmation_deadline:
+                refresh_pending(booking, now=now, actor_account=actor, observed=observed)
                 booking.refresh_from_db()
                 booking._replacement_refreshed = True
                 return booking, '原邀请已超时，请刷新预约'
@@ -487,10 +596,25 @@ def replace(booking_id, actor, number, new_account, *, client_request_id=None):
             raise ReservationError('两名陪玩不能相同')
         provider = _validate_provider(new_account, profiles[new_account.pk], service)
         validate_reservation_schedule(profiles[new_account.pk], booking.start_time, booking.end_time)
-        _check_slot(new_account, booking.start_time, booking.end_time, exclude_id=booking.pk)
-        now = timezone.now()
+        _check_slot(new_account, booking.start_time, booking.end_time, exclude_id=booking.pk, now=now)
         if now >= booking.start_time:
             return booking, '预约已过期'
+        from .reservation_clock import prepare_decision, require_before, reservation_snapshot, seat_snapshot
+        clock_decision = prepare_decision(
+            reservation=booking, action='REPLACE', deadline=booking.start_time,
+            actor_account=actor, seat_number=number, decision_key=clock_decision_key,
+            state_before=booking.status, request_fingerprint=request_hash,
+            before_snapshot={
+                'reservation': reservation_snapshot(booking),
+                'seat': seat_snapshot(seat),
+                'replacement_provider_account_id': new_account.pk,
+                'replacement_business_cycle': new_account.business_cycle,
+            },
+        )
+        if clock_decision.replayed:
+            raise ReservationError('原补位邀请已回执，请勿重复提交')
+        if clock_decision.state != 'PENDING':
+            require_before(clock_decision)
         deadline = min(now + timedelta(minutes=booking.confirmation_timeout_minutes), booking.start_time)
         seat.provider_account = new_account
         seat.provider_business_cycle = new_account.business_cycle
@@ -521,7 +645,10 @@ def replace(booking_id, actor, number, new_account, *, client_request_id=None):
         from site_messages.reservation_team_replaced import enabled, record
         if enabled():
             record(event)
-        if timezone.now() >= booking.start_time:
-            raise ReservationError('预约开始时间已到，请重新预约')
         booking._replacement_refreshed = refreshed
-        return booking, ''
+        decision_to_finalize = clock_decision
+        booking._replacement_state_after = booking.status
+
+    from .reservation_clock import finalize_decision
+    finalize_decision(decision_to_finalize, state_after=booking._replacement_state_after)
+    return booking, ''

@@ -19,6 +19,8 @@ from stores import test_platform_pass_repayment as platform_fixture
 
 @override_settings(BOSS_FUNDING_SELECTION_ENABLED=True, SERVICE_POINTS_CHECKOUT_TESTING=True,
                    SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_ORDINARY_TRANSFER_FUNDING_TESTING=True,
+                   SERVICE_POINTS_ASSIGN_TESTING=True, SERVICE_POINTS_REPORT_TESTING=True,
+                   SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_ORDINARY_FUNDING_TESTING=True,
                    ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,
                    SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
                    SEGMENT_STANDARD_TRANSFER_ENABLED=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
@@ -28,7 +30,12 @@ from stores import test_platform_pass_repayment as platform_fixture
                    CELERY_TASK_ALWAYS_EAGER=False,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class OrdinaryTransferFundingTest(APITransactionTestCase):
-    setUp = segment_fixture.SegmentSettlementCreditTest.setUp
+    def setUp(self):
+        segment_fixture.SegmentSettlementCreditTest.setUp(self)
+        account = self.accounts[self.provider.pk]
+        self.provider.escort_profile.deposit_business_cycle = account.business_cycle
+        self.provider.escort_profile.save(update_fields=['deposit_business_cycle'])
+
     login = segment_fixture.SegmentSettlementCreditTest.login
     ok = segment_fixture.SegmentSettlementCreditTest.ok
     recharge = segment_fixture.SegmentSettlementCreditTest.recharge
@@ -41,6 +48,14 @@ class OrdinaryTransferFundingTest(APITransactionTestCase):
     submit_and_approve = segment_fixture.SegmentSettlementCreditTest.submit_and_approve
     mature = segment_fixture.SegmentSettlementCreditTest.mature
     settle = segment_fixture.SegmentSettlementCreditTest.settle
+
+    def replacement(self, name='接替陪玩'):
+        user = segment_fixture.SegmentSettlementCreditTest.replacement(self, name)
+        account = self.accounts[user.pk]
+        user.escort_profile.deposit_business_cycle = account.business_cycle
+        user.escort_profile.save(update_fields=['deposit_business_cycle'])
+        return user
+
     def new_order(self):
         self.ok(self.recharge())
         self.login(self.boss)
@@ -155,6 +170,8 @@ class OrdinaryTransferFundingTest(APITransactionTestCase):
 @override_settings(ALLOWED_HOSTS=['*'], PLATFORM_IDENTITY_ENABLED=True, PLATFORM_PASS_REPAYMENT_ENABLED=True,
                    BOSS_FUNDING_SELECTION_ENABLED=True, SERVICE_POINTS_CHECKOUT_TESTING=True,
                    SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_ORDINARY_TRANSFER_FUNDING_TESTING=True,
+                   SERVICE_POINTS_ASSIGN_TESTING=True, SERVICE_POINTS_REPORT_TESTING=True,
+                   SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_ORDINARY_FUNDING_TESTING=True,
                    ADDON_PAYMENT_INTERNAL_TESTING=True, ADDON_ORDER_FUNDING_INTERNAL_TESTING=True,
                    ADDON_SETTLEMENT_INTERNAL_TESTING=True, ADDON_SEGMENT_SETTLEMENT_INTERNAL_TESTING=True,
                    ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,

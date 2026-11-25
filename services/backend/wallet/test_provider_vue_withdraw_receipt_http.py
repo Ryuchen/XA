@@ -19,7 +19,7 @@ from wallet.models import ProviderReport, SystemConfig, Wallet
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
-                   CELERY_TASK_ALWAYS_EAGER=False)
+                   CELERY_TASK_ALWAYS_EAGER=False, PLATFORM_IDENTITY_ENABLED=True)
 class ProviderVueWithdrawReceiptHTTPTest(LiveServerTestCase):
     def setUp(self):
         super().setUp(); self.client = APIClient(); flow.ProviderAfterSaleStatusTest.setUp(self)
@@ -45,10 +45,10 @@ class ProviderVueWithdrawReceiptHTTPTest(LiveServerTestCase):
         role.permissions = [*role.permissions, 'withdraw:view', 'withdraw:audit']
         role.save(update_fields=['permissions'])
         order_id, report_id = self.prepare()
-        matured = timezone.now() - timedelta(hours=73)
-        Order.objects.filter(pk=order_id).update(completed_at=matured)
-        ProviderReport.objects.filter(pk=report_id).update(submitted_at=matured)
-        self.assertTrue(process_order(order_id))
+        matured = timezone.now() + timedelta(hours=73)
+        from unittest.mock import patch
+        with patch('django.utils.timezone.now', return_value=matured):
+            self.assertTrue(process_order(order_id))
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 8000)
         self.login(self.provider)
         payee = self.ok(self.client.put('/api/wallet/withdraw-accounts/WECHAT/', {'payee_account':'isolated-1234',
@@ -60,9 +60,34 @@ class ProviderVueWithdrawReceiptHTTPTest(LiveServerTestCase):
             ids.append(result['request']['id'])
         self.login(self.staff)
         claim = self.ok(self.client.post(f'/api/admin/withdrawals/{ids[0]}/claim/'))
-        approved = self.ok(self.client.post(f'/api/admin/withdrawals/{ids[0]}/approve/', {'payout_reference':'ISOLATED-RECEIPT',
-            'expected_claimed_at':claim['claimed_at']}, format='json'))
-        self.assertEqual((approved['status'], approved['actual_amount'], approved['payout_reference']), ('APPROVED', 1960, 'ISOLATED-RECEIPT'))
+        store_approved = self.ok(self.client.post(
+            f'/api/admin/withdrawals/{ids[0]}/approve/',
+            {'expected_claimed_at':claim['claimed_at']}, format='json'))
+        self.assertEqual(store_approved['status'], 'STORE_APPROVED')
+
+        from stores.models import PlatformAccount, PlatformRoleGrant
+        from stores.platform_auth import issue_tokens
+        finance = PlatformAccount(
+            username='vue-receipt-finance', phone='13800009999', is_phone_verified=True)
+        finance.set_password('test-only-finance-password')
+        finance.save()
+        PlatformRoleGrant.objects.create(account=finance, role='FINANCE', scope_slug='shenglang')
+        finance_token = issue_tokens(finance, 'SMS', finance.phone)[0]
+        finance_client = APIClient(
+            HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + finance_token)
+        platform_path = f'/api/admin/platform/withdrawals/shenglang/{ids[0]}'
+        platform_approved = finance_client.post(
+            platform_path + '/approve', {'client_request_id':'vue-receipt-platform-approve'}, format='json')
+        self.assertEqual(platform_approved.data['code'], 0, platform_approved.data)
+        self.assertEqual(platform_approved.data['data']['status'], 'PLATFORM_APPROVED')
+        paid = finance_client.post(platform_path + '/paid', {
+            'client_request_id':'vue-receipt-platform-paid',
+            'payout_reference':'ISOLATED-RECEIPT', 'paid_amount_fen':1960,
+            'paid_at':timezone.now().isoformat(),
+        }, format='json')
+        self.assertEqual(paid.data['code'], 0, paid.data)
+        self.assertEqual(paid.data['data']['status'], 'PAID')
+
         claim = self.ok(self.client.post(f'/api/admin/withdrawals/{ids[1]}/claim/'))
         self.ok(self.client.post(f'/api/admin/withdrawals/{ids[1]}/reject/', {'audit_remark':'隔离驳回原因',
             'expected_claimed_at':claim['claimed_at']}, format='json'))
@@ -70,8 +95,8 @@ class ProviderVueWithdrawReceiptHTTPTest(LiveServerTestCase):
         self.assertEqual(self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))['status'], 'COMPLETED')
         self.login(self.provider)
         notices = self.ok(self.client.get('/api/messages/'))['messages']
-        approved_notice = next(row for row in notices if row['title'] == '提现审核通过')
-        self.assertIn('已登记打款人民币 ¥19.60', approved_notice['preview'])
+        approved_notice = next(row for row in notices if row['title'] == '提现已登记打款')
+        self.assertIn('平台财务已登记线下打款', approved_notice['preview'])
         self.assertEqual(approved_notice['action_url'], f'/pages/wallet/index?withdraw_id={ids[0]}')
         rejected_notice = next(row for row in notices if row['title'] == '提现审核未通过')
         self.assertEqual(rejected_notice['action_url'], f'/pages/wallet/index?withdraw_id={ids[1]}')

@@ -128,8 +128,8 @@ class TeamReservationDomainTest(ReservationApiTestBase):
             self.assertTrue(find_conflicting_reservations(self.members[0], self.start, self.end).exists())
             self.assertFalse(find_conflicting_reservations(self.members[1], self.start, self.end).exists())
 
-    def test_confirmation_crossing_deadline_during_audit_rolls_back(self):
-        from orders.reservation_services import ReservationError
+    def test_confirmation_crossing_deadline_restores_seat_and_preserves_review(self):
+        from orders.reservation_clock import ClockConflict
         from orders.reservation_team import _event
         booking = self.create_team()
         clock = [booking.confirmation_deadline - timedelta(seconds=1)]
@@ -139,10 +139,13 @@ class TeamReservationDomainTest(ReservationApiTestBase):
                 clock[0] = booking.confirmation_deadline
         with patch('django.utils.timezone.now', side_effect=lambda: clock[0]), \
              patch('orders.reservation_team._event', side_effect=event_then_deadline):
-            with self.assertRaises(ReservationError):
+            with self.assertRaises(ClockConflict):
                 decide(booking.pk, self.members[0], accept=True)
         self.assertEqual(booking.seats.get(number=1).status, 'PENDING')
-        self.assertFalse(booking.seat_events.filter(action='CONFIRMED').exists())
+        self.assertEqual(booking.seat_events.filter(action='CONFIRMED').count(), 1)
+        receipt = booking.clock_receipts.get(action='TEAM_CONFIRM', seat_number=1)
+        self.assertEqual((receipt.state, receipt.review_reason), ('REVIEW', 'MONOTONIC_INCONSISTENT'))
+        self.assertEqual(receipt.state_after, 'PENDING')
 
     def test_real_api_replacement_quote_and_payment_assign_both(self):
         def client(account):
