@@ -1,16 +1,38 @@
 import {createHash} from 'node:crypto';
 
-// Approved material-series r2 adapter. Business values come from content.json.
+// Sample material-series adapter. Business values come from content.json.
 // Copy this file into each campaign before adapting its layout.
-export function makeLayout(content){
+const TARGETS=['cover','ad','price','all'];
+const PLATFORM={desktop:'端游',pc:'端游','端游':'端游',mobile:'手游','手游':'手游'};
+const MODE={absolute:'绝密','绝密':'绝密',secret:'机密',confidential:'机密','机密':'机密'};
+
+export function resolveSelection(content,options={}){
+  const target=options.target||'all';
+  if(!TARGETS.includes(target))throw new Error('未知目标 '+target+'；可选 cover/ad/price/all。');
+  const platform=options.platform?PLATFORM[String(options.platform).toLowerCase()]:null;
+  const mode=options.mode?MODE[String(options.mode).toLowerCase()]:null;
+  if(options.platform&&!platform)throw new Error('未知平台 '+options.platform+'；可选 desktop/mobile 或 端游/手游。');
+  if(options.mode&&!mode)throw new Error('未知模式 '+options.mode+'；可选 absolute(绝密)/secret(机密) 或中文。');
+  const tiers=(content.tiers||[]).filter(t=>(!platform||t.platform===platform)&&(!mode||t.mode===mode));
+  return {target,platform,mode,tiers};
+}
+
+export function makeLayout(content,options={}){
+  const {target,platform,mode,tiers:selected}=resolveSelection(content,options);
   for(const value of [content.brand,content.title,content.columns?.price,content.columns?.loot,content.offer?.when,content.offer?.scope,content.offer?.increase]){
     if(typeof value!=='string'||!value.trim())throw new Error('缺少品牌、标题、列名或优惠字段；不同信息结构应调整项目适配器。');
   }
-  if(content.process?.length!==3)throw new Error('本例底部流程为三步；不同数量应调整布局。');
-  if(content.tiers?.length!==4)throw new Error('此适配器仅对应四类价目；其他玩法请调整项目适配器/底图。');
-  if(content.titleLines?.length!==2)throw new Error('本竖版标题需要两行 titleLines；长标题请调整标题安全区。');
-  if(new Set(content.tiers.map(t=>t.id)).size!==4)throw new Error('页面 id 必须唯一');
-  for(const t of content.tiers){
+  const allTiers=content.tiers||[];
+  if(new Set(allTiers.map(t=>t.id)).size!==allTiers.length)throw new Error('页面 id 必须唯一');
+  const needFullSet=target==='ad'||target==='all';
+  if(needFullSet&&allTiers.length!==4)throw new Error('广告页与全套需要四类价目；其他玩法请调整项目适配器/底图。');
+  const posterTiers=target==='price'?selected:(needFullSet?allTiers:[]);
+  if(target==='price'&&!posterTiers.length)throw new Error('没有匹配的价目页；核对 --platform/--mode 与 content.tiers 的平台/模式取值。');
+  if(posterTiers.length){
+    if(content.process?.length!==3)throw new Error('本例底部流程为三步；不同数量应调整布局。');
+    if(content.titleLines?.length!==2)throw new Error('本竖版标题需要两行 titleLines；长标题请调整标题安全区。');
+  }
+  for(const t of posterTiers){
     if(!['gold','teal'].includes(t.color))throw new Error('本例底图色系为 gold/teal');
     if(t.prices?.length!==6||t.loot?.length!==6)throw new Error('每页需要六档；更改行数需要适配底图与布局');
     if([...t.prices,...t.loot].some(v=>!Number.isFinite(v)||v<0))throw new Error('价格/物资必须为非负数值');
@@ -159,7 +181,10 @@ function social(){
   tx(p,'r = 元   /   w = 万',544,1298,15,{anchor:'middle',fill:secondary,style:0,stroke:white,strokeWidth:2.5});
   return p;
 }
-const pages=[...content.tiers.map(poster),cover(),social()];
+const pages=[];
+if(target==='price'||target==='all')pages.push(...posterTiers.map(poster));
+if(target==='cover'||target==='all')pages.push(cover());
+if(target==='ad'||target==='all')pages.push(social());
 
-return {requests,pages};
+return {requests,pages,target,platform,mode};
 }

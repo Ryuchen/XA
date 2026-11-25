@@ -20,6 +20,38 @@ export function loadSharp(modules){
   throw new Error('找不到 Sharp。使用 workspace dependency loader 提供的 Node，或传 --modules <Node包目录>。');
 }
 
+const SIZE_PRESETS={web:1080,hd:1600,print:3200};
+
+// Export pixels are configurable; aspect ratio stays bound to the background artwork.
+export function resolveSize(page,native,options={}){
+  const ratio=native.width/native.height;
+  let width;
+  if(options.width&&options.height){
+    width=Number(options.width);
+    const height=Number(options.height);
+    if(!Number.isFinite(width)||!Number.isFinite(height)||width<1||height<1)throw new Error('--width/--height 需要正数');
+    if(Math.abs(width/height-ratio)/ratio>0.005)throw new Error(`目标 ${width}×${height} 与底图比例 ${native.width}×${native.height} 不一致；换比例需要先生成该比例的无字底图，不能拉伸现有底图。`);
+    return {width:Math.round(width),height:Math.round(height)};
+  }
+  if(options.scale){
+    const scale=Number(options.scale);
+    if(!Number.isFinite(scale)||scale<=0)throw new Error('--scale 需要正数');
+    width=page.ew*scale;
+  }else if(options.width){
+    width=Number(options.width);
+    if(!Number.isFinite(width)||width<1)throw new Error('--width 需要正数');
+  }else if(options.height){
+    const height=Number(options.height);
+    if(!Number.isFinite(height)||height<1)throw new Error('--height 需要正数');
+    width=height*ratio;
+  }else{
+    const preset=options.size||'print';
+    if(!SIZE_PRESETS[preset])throw new Error('未知尺寸 '+preset+'；可选 web/hd/print，或用 --width/--height/--scale。');
+    width=SIZE_PRESETS[preset];
+  }
+  return {width:Math.round(width),height:Math.round(width/ratio)};
+}
+
 export async function renderProject(project,options={}){
   project=path.resolve(project);
   const state=await readJSON(path.join(project,'campaign-state.json'));
@@ -30,7 +62,11 @@ export async function renderProject(project,options={}){
   const pages=plan.pages.filter(p=>selection.includes(p.id));
   for(const p of pages)if(!/^[a-zA-Z0-9_-]+$/.test(p.id))throw new Error('页面 id 只能包含字母、数字、下划线和短横线');
   const sharp=loadSharp(options.modules),cacheDir=path.join(project,'.cache');
-  for(const dir of [cacheDir,'output/png','output/svg-outlined','output/svg-editable','review'].map(d=>path.isAbsolute(d)?d:path.join(project,d)))await fs.mkdir(dir,{recursive:true});
+  const format=options.format||'webp';
+  if(!['webp','png'].includes(format))throw new Error('未知格式 '+format+'；可选 webp/png。');
+  const quality=options.quality===undefined?88:Number(options.quality);
+  if(!Number.isFinite(quality)||quality<1||quality>100)throw new Error('--quality 需要 1–100 的数值');
+  for(const dir of [cacheDir,'output/raster','output/svg-outlined','output/svg-editable','review'].map(d=>path.isAbsolute(d)?d:path.join(project,d)))await fs.mkdir(dir,{recursive:true});
   const glyphFile=path.join(cacheDir,'font-outlines.json');
   const glyphCache=options.force?{}:await readJSON(glyphFile,{}),glyphs={},missing=[];
   const needed=new Set(pages.flatMap(p=>p.elements.flatMap(e=>e.type==='text'?[e.id]:e.type==='art'?e.ids:[])));
@@ -82,25 +118,30 @@ export async function renderProject(project,options={}){
     const bgRoot=path.resolve(project,'assets/backgrounds'),bgPath=path.resolve(bgRoot,p.bg);
     if(!bgPath.startsWith(bgRoot+path.sep))throw new Error('底图路径必须位于项目 assets/backgrounds 内');
     const bg=await fs.readFile(bgPath),native=await sharp(bg).metadata();
+    const {width,height}=resolveSize(p,native,options);
+    if(width>native.width)console.log('警告：'+p.id+' 导出宽 '+width+' 超过底图原生 '+native.width+'，属放大；应在生成阶段就要求足够尺寸。');
     const requestIds=new Set(p.elements.flatMap(e=>e.type==='text'?[e.id]:e.type==='art'?e.ids:[]));
-    const fingerprint=hash(JSON.stringify([p,rendererHash,hash(bg),[...requestIds].map(id=>glyphs[id])]));
-    const files={png:`output/png/${p.id}.png`,outlinedSVG:`output/svg-outlined/${p.id}.svg`,editableSVG:`output/svg-editable/${p.id}.svg`,preview:`review/${p.id}.png`};
+    const fingerprint=hash(JSON.stringify([p,rendererHash,hash(bg),[...requestIds].map(id=>glyphs[id]),format,quality,width,height]));
+    const files={raster:`output/raster/${p.id}.${format}`,outlinedSVG:`output/svg-outlined/${p.id}.svg`,editableSVG:`output/svg-editable/${p.id}.svg`,preview:`review/${p.id}.webp`};
     if(!options.force&&pageCache[p.id]===fingerprint&&records.has(p.id)&&(await Promise.all(Object.values(files).map(f=>exists(path.join(project,f))))).every(Boolean)){
       console.log('Reused '+p.id);continue;
     }
-    const head=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${p.ew}" height="${p.eh}" viewBox="0 0 ${p.w} ${p.h}"><title>${esc(p.label)}</title><desc>正文、标题与数字保留矢量，背景为嵌入位图。</desc><image x="0" y="0" width="${p.w}" height="${p.h}" preserveAspectRatio="none" xlink:href="data:image/png;base64,${bg.toString('base64')}"/>`;
+    const head=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${p.w} ${p.h}"><title>${esc(p.label)}</title><desc>正文、标题与数字保留矢量，背景为嵌入位图。</desc><image x="0" y="0" width="${p.w}" height="${p.h}" preserveAspectRatio="none" xlink:href="data:image/png;base64,${bg.toString('base64')}"/>`;
     const bounds=[];
     for(const editable of [false,true]){
       const svg=head+p.elements.map(e=>e.type==='text'?textElement(e,editable,bounds):e.type==='art'?artElement(e):e.markup).join('')+'</svg>';
       await fs.writeFile(path.join(project,editable?files.editableSVG:files.outlinedSVG),svg);
       if(!editable){
-        await sharp(Buffer.from(svg),{limitInputPixels:false}).withMetadata({density:300}).png({compressionLevel:9}).toFile(path.join(project,files.png));
-        await sharp(Buffer.from(svg),{limitInputPixels:false}).resize({width:Math.min(p.w,1280)}).png().toFile(path.join(project,files.preview));
+        const raster=sharp(Buffer.from(svg),{limitInputPixels:false}).withMetadata({density:300});
+        await (format==='webp'?raster.webp({quality,effort:6}):raster.png({compressionLevel:9})).toFile(path.join(project,files.raster));
+        await sharp(Buffer.from(svg),{limitInputPixels:false}).resize({width:Math.min(p.w,1280)}).webp({quality:80}).toFile(path.join(project,files.preview));
       }
     }
     await fs.writeFile(path.join(project,'review',p.id+'-text-bounds.json'),JSON.stringify(bounds,null,2));
-    records.set(p.id,{id:p.id,label:p.label,...files,width:p.ew,height:p.eh,nativeWidth:native.width,nativeHeight:native.height});
-    pageCache[p.id]=fingerprint;console.log('Exported '+p.id);
+    const stale=records.get(p.id);
+    if(stale&&stale.raster&&stale.raster!==files.raster)await fs.rm(path.join(project,stale.raster),{force:true});
+    records.set(p.id,{id:p.id,label:p.label,...files,width,height,format,nativeWidth:native.width,nativeHeight:native.height});
+    pageCache[p.id]=fingerprint;console.log('Exported '+p.id+' '+width+'×'+height+' '+format);
   }
   await fs.writeFile(path.join(cacheDir,'pages.json'),JSON.stringify(pageCache,null,2));
   await fs.writeFile(path.join(project,'output/manifest.json'),JSON.stringify([...records.values()],null,2));

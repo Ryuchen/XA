@@ -11,9 +11,9 @@
     "pixelFormat": "Format32bppArgb",
     "sha256": "B9588AAAFAC4F9239DE749DAF9B12854283421668C30B79A9B1EFAFB71ABB172",
     "characters": [
-      "带额头护目镜的可爱男性蜂医",
+      "带额头护目镜的男性医疗兵角色",
       "粉发电竞女孩",
-      "灰鼠"
+      "灰鼠吉祥物"
     ],
     "use": "角色身份、Q版比例、服装、配色和统一二次元手绘风格；按玩法选用角色",
     "excludedDefault": "r2侧分短发、胡茬、橄榄绿全套服装版本"
@@ -33,5 +33,6 @@
     "typography": "厚重深海军蓝、纤细奶白描边、柔和雾蓝右下偏移、暖金弧线",
     "businessContentApprovedForReuse": false
   },
-  "guidance": "../../references/approved-characters-and-cover.md"
+  "guidance": "sample-visuals.md",
+  "note": "技能自带示例素材，可整套替换为当前俱乐部已确认稿；本记录只说明示例来源与尺寸。"
 }

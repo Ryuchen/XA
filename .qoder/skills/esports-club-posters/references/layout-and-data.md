@@ -1,10 +1,10 @@
 # 数据与布局参考
 
-新做或调整封面，先按 [2026-10-08 确认封面规范](approved-characters-and-cover.md) 与原图建立结构。默认左文右图，品牌/艺术主标题左对齐，卖点胶囊和平台行在左侧安全文字区居中；这项用户新确认优先于历史封面全部居中的要求。
+新做或调整封面，先按 [示例封面规范](sample-visuals.md) 与原图建立结构。默认左文右图，品牌/艺术主标题左对齐，卖点胶囊和平台行在左侧安全文字区居中；这项确认优先于历史封面全部居中的要求。
 
 ## 示例的边界
 
-`assets/material-v3/content.example.json` 是 2026-09-28 物资系列的历史记录。新海报用用户本轮资料；明确沿用时才采用这份值。价格、优惠、规则不是技能永久业务常量。
+`assets/sample-club/content.example.json` 是 2026-09-28 物资系列的历史记录。新海报用用户本轮资料；明确沿用时才采用这份值。价格、优惠、规则不是技能永久业务常量。
 
 样例业务结构：端游/手游 × 绝密/机密，每类六档。案例活动是工作日基础累计保底 +20%，补偿另计且不参与上浮。案例保障在成功撤离时适用，陪玩击杀人数 ≤4人 **或** 当局物资低于模式门槛，才不计入当局累计保底。这些逻辑仅属于样例。
 
@@ -36,7 +36,7 @@
 
 ## 新玩法布局的最小模型
 
-`layout.json` = `{requests:[{id,text,font,style}], pages:[{id,label,bg,w,h,ew,eh,elements:[]}]} `。
+`layout.json` = `{requests:[{id,text,font,style}], pages:[{id,label,bg,w,h,ew,eh,elements:[]}], target, platform, mode}`。`target`/`platform`/`mode` 记录本轮选择，`pages` 只含目标页；封面页不含价目元素，也不要求 `tiers` 数据。
 
 - `text` 元素：`id,text,x,cy,size,fill,anchor,maxWidth,role`。anchor 为 start/middle/end；x 是可见字形锚点，cy 是字形中心。
 - `art` 元素：`text,ids,x,cy,size,maxWidth,fill,shadow,outline,outlineWidth,angles`。ids 为逐字字体请求，渲染为可编辑的矢量轮廓。
