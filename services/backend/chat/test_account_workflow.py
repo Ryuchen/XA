@@ -16,7 +16,8 @@ from config.asgi import application
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class AccountSupportChatTest(APITestCase):
     def client_for(self, account):
-        client = APIClient()
+        host = 'admin.esports.club' if account.account_type == ClubAccount.AccountType.STAFF else 'sl.esports.club'
+        client = APIClient(HTTP_HOST=host)
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
         return client
 
@@ -85,13 +86,15 @@ class AccountSupportChatTest(APITestCase):
         session_id = self.ok(client.get('/api/chat/session/'))['session']['id']
         url = f'/api/admin/chat-sessions/{session_id}/'
         self.ok(admin.post(url + 'claim/', {'expected_version': 0}, format='json'))
-        self.ok(admin.post(url + 'reply/', {'content': '客服回复'}, format='json'))
+        reply = self.ok(admin.post(url + 'reply/', {'content': '客服回复'}, format='json'))
 
         denied = admin.post('/api/chat/read/', {}, format='json')
         self.assertEqual(denied.status_code, 403, denied.data)
         self.assertFalse(ChatSession.objects.filter(account=staff).exists())
         self.assertEqual(ChatSession.objects.get(pk=session_id).unread_user, 1)
-        self.assertEqual(self.ok(client.post('/api/chat/read/', {}, format='json'))['unread_user'], 0)
+        self.assertEqual(client.post('/api/chat/read/', {}, format='json').status_code, 400)
+        self.assertEqual(ChatSession.objects.get(pk=session_id).unread_user, 1)
+        self.assertEqual(self.ok(client.post('/api/chat/read/', {'through_id': reply['id']}, format='json'))['unread_user'], 0)
 
     def test_boss_read_does_not_clear_reply_arriving_after_history_load(self):
         boss = ClubAccount.objects.create_account(username='chat-boss-read-race', account_type='BOSS')
@@ -111,7 +114,8 @@ class AccountSupportChatTest(APITestCase):
         session = self.ok(client.get('/api/chat/session/'))
         self.assertEqual(session['session']['unread_user'], 1)
         self.assertFalse(next(row for row in session['messages'] if row['id'] == second['id'])['is_read'])
-        self.assertEqual(self.ok(client.post('/api/chat/read/', {}, format='json'))['unread_user'], 0)
+        self.assertEqual(client.post('/api/chat/read/', {}, format='json').status_code, 400)
+        self.assertEqual(self.ok(client.post('/api/chat/read/', {'through_id': second['id']}, format='json'))['unread_user'], 0)
 
     def test_staff_read_does_not_clear_message_arriving_after_history_load(self):
         boss = ClubAccount.objects.create_account(username='chat-staff-read-race', account_type='BOSS')
@@ -133,7 +137,8 @@ class AccountSupportChatTest(APITestCase):
         self.assertEqual(session['list'][0]['unread_support'], 1)
         messages = self.ok(admin.get(url + 'messages/'))['list']
         self.assertFalse(next(row for row in messages if row['id'] == second['id'])['is_read'])
-        self.assertEqual(self.ok(admin.post(url + 'read/', {}, format='json'))['unread_support'], 0)
+        self.assertEqual(admin.post(url + 'read/', {}, format='json').status_code, 400)
+        self.assertEqual(self.ok(admin.post(url + 'read/', {'through_id': second['id']}, format='json'))['unread_support'], 0)
 
     def test_staff_reply_keeps_later_unseen_customer_message_unread(self):
         boss = ClubAccount.objects.create_account(username='chat-reply-read-race', account_type='BOSS')
@@ -157,6 +162,12 @@ class AccountSupportChatTest(APITestCase):
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class AccountSupportChatRealtimeTest(APITransactionTestCase):
+    def client_for(self, account):
+        host = 'admin.esports.club' if account.account_type == ClubAccount.AccountType.STAFF else 'sl.esports.club'
+        client = APIClient(HTTP_HOST=host)
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        return client
+
     @override_settings(CHAT_NOTIFICATION_OUTBOX_ENABLED=True)
     def test_outbox_delivers_real_chat_events_to_authorized_sockets(self):
         from chat.models import ChatNotificationOutbox
@@ -170,15 +181,15 @@ class AccountSupportChatRealtimeTest(APITransactionTestCase):
         staff = get_or_create_account_for_legacy_user(staff_user)
         staff_user.admin_membership.account = staff
         staff_user.admin_membership.save(update_fields=['account'])
-        tokens = [issue_account_tokens(account)[0] for account in (boss, staff)]
-        clients = []
-        for token in tokens:
-            client = APIClient()
-            client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
-            clients.append(client)
+        accounts = (boss, staff)
+        tokens = [issue_account_tokens(account)[0] for account in accounts]
+        clients = [self.client_for(account) for account in accounts]
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}',
+                headers=[(b'host', ('admin.esports.club' if account.account_type == ClubAccount.AccountType.STAFF
+                                    else 'sl.esports.club').encode())])
+                for token, account in zip(tokens, accounts)]
             try:
                 for socket in sockets:
                     self.assertTrue((await socket.connect())[0])
@@ -187,17 +198,30 @@ class AccountSupportChatRealtimeTest(APITransactionTestCase):
                 self.assertEqual(response.data['code'], 0, response.data)
                 events = [await socket.receive_json_from(timeout=3) for socket in sockets]
                 self.assertEqual([event['type'] for event in events], ['chat_message', 'chat_session_update'])
-                self.assertEqual(events[1]['data']['session']['last_message'], '')
                 session_id = events[0]['data']['session_id']
+                self.assertEqual(events[1]['data']['session_id'], session_id)
+                if 'session' in events[1]['data']:
+                    self.assertNotIn('last_message', events[1]['data']['session'])
+                self.assertNotIn('message', events[1]['data'])
                 claimed = await database_sync_to_async(clients[1].post)(
                     f'/api/admin/chat-sessions/{session_id}/claim/', {'expected_version': 0}, format='json')
                 self.assertEqual(claimed.data['code'], 0, claimed.data)
                 self.assertEqual((await sockets[1].receive_json_from(timeout=3))['type'], 'chat_session_update')
+                self.assertEqual((await sockets[0].receive_json_from(timeout=3))['type'], 'chat_session_update')
                 response = await database_sync_to_async(clients[1].post)(
                     f'/api/admin/chat-sessions/{session_id}/reply/', {'content': '已收到'}, format='json')
                 self.assertEqual(response.data['code'], 0, response.data)
-                events = [await socket.receive_json_from(timeout=3) for socket in sockets]
-                self.assertTrue(all(event['data']['message']['content'] == '已收到' for event in events), events)
+                received = []
+                for socket in sockets:
+                    rows = [await socket.receive_json_from(timeout=3)]
+                    if rows[0]['type'] != 'chat_message':
+                        rows.append(await socket.receive_json_from(timeout=3))
+                    for event in rows:
+                        if event['type'] == 'chat_session_update':
+                            self.assertEqual(event['data']['session_id'], session_id)
+                            self.assertNotIn('message', event['data'])
+                    received.append(next(event for event in rows if event['type'] == 'chat_message'))
+                self.assertTrue(all(event['data']['message']['content'] == '已收到' for event in received), received)
             finally:
                 for socket in sockets:
                     await socket.disconnect()

@@ -17,6 +17,31 @@ from wallet.models import ProviderReport, ProviderReportImage, Transaction
 from wallet.services import get_wallet
 
 
+def attest_legacy_report(order, report, *, submitted_at=None):
+    """Append an explicit test-clock round for a direct legacy-report fixture."""
+    from orders.service_settlement import (
+        legacy_report_clock_chain_enabled, legacy_report_next_subject_id,
+    )
+    from wallet.settlement_clocks import record, trusted_test_clock
+    order.refresh_from_db()
+    report.refresh_from_db()
+    if not legacy_report_clock_chain_enabled(order):
+        return None
+    submitted_at = submitted_at or report.submitted_at
+    reviewed_at = report.audited_at or submitted_at
+    assignment = order.providers.filter(provider_id=report.provider_id).first()
+    report.submitted_at = submitted_at
+    report.audited_at = reviewed_at
+    report.commission_rate = assignment.commission_rate if assignment else order.commission_rate
+    if not report.auditor_id and not report.auditor_account_id:
+        report.auditor = report.provider
+    report.save(update_fields=['submitted_at', 'audited_at', 'auditor', 'commission_rate'])
+    subject_id = legacy_report_next_subject_id(order, report.pk)
+    record(order, 'SUBMISSION', subject_id, 'SUBMIT', trusted_test_clock(submitted_at))
+    record(order, 'SUBMISSION', subject_id, 'REVIEW', trusted_test_clock(reviewed_at))
+    return subject_id
+
+
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=False)
 class ConfirmationRealtimeTest(TransactionTestCase):
     def setUp(self):
@@ -54,6 +79,7 @@ class ConfirmationRealtimeTest(TransactionTestCase):
                                       entry_image='test/entry.png', completion_image='test/completion.png',
                                       status='APPROVED', submitted_at=self.now-timedelta(hours=report_age))
         ProviderReportImage.objects.create(report=report, image='test/result.png')
+        attest_legacy_report(order, report)
         return order
 
     def test_overlapping_clocks_delay_settlement_and_confirmation_until_report_matures(self):
@@ -104,6 +130,7 @@ class ConfirmationRealtimeTest(TransactionTestCase):
             amount=500, payout_amount=400, game_name='本地双陪', entry_image='test/entry.png',
             completion_image='test/completion.png', status='APPROVED', submitted_at=self.now-timedelta(hours=1))
         ProviderReportImage.objects.create(report=report, image='test/result.png')
+        attest_legacy_report(order, report)
         with patch('engagement.confirmation.notify_order_update') as notify:
             self.assertFalse(process_order(order.pk))
             order.refresh_from_db(); self.wallet.refresh_from_db(); other_wallet.refresh_from_db()

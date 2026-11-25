@@ -7,15 +7,15 @@ from .models import Order, OrderOriginalShareTransfer, PointsNegotiationPosting
 from .points_checkout_test import require_isolated_checkout
 
 
-def verify_locked(order):
+def verify_locked(order, *, include_release=False):
     from .points_transfer_refund_access import permits, verification_scope
     if any(permits(order, phase=phase) for phase in ('report', 'settlement')):
         with verification_scope(order):
-            return _verify_locked(order)
-    return _verify_locked(order)
+            return _verify_locked(order, include_release=include_release)
+    return _verify_locked(order, include_release=include_release)
 
 
-def _verify_locked(order):
+def _verify_locked(order, *, include_release):
     from .points_transfer_refund_access import permits, require_refund_or_isolated
     require_refund_or_isolated()
     if (not transaction.get_connection().in_atomic_block
@@ -31,4 +31,6 @@ def _verify_locked(order):
                 .filter(points_refund__redemption__order=order).order_by('pk')[:2])
     if len(rows) != 1 or not isinstance(rows[0].participants, (dict, list)):
         raise ValidationError('转单退款后的履约凭证不完整')
-    return verify_termination_locked(rows[0])
+    if include_release and not isinstance(rows[0].participants, dict):
+        raise ValidationError('转单退款补资释放凭证类型异常')
+    return verify_termination_locked(rows[0], include_release=include_release)

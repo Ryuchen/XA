@@ -97,7 +97,8 @@ class RoomCompletionReviewTests(APITestCase):
 
     def test_both_providers_are_snapshotted_for_team_review(self):
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         order = OrderRoomTests.order(self, escort_mode='DOUBLE')
         OrderRoomTests.assign(self, order, [(self.provider, self.provider_account), (self.other, self.other_account)])
         transition(order.pk, Order.Status.IN_SERVICE)
@@ -131,7 +132,8 @@ class RoomCompletionReviewTests(APITestCase):
         from orders.tests.test_release_flow import screenshot
         from wallet.models import ProviderReport
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         order = OrderRoomTests.order(self, escort_mode='DOUBLE', requires_boss_selection=True)
         OrderRoomTests.assign(self, order, [(self.provider, self.provider_account), (self.other, self.other_account)])
         transition(order.pk, Order.Status.IN_SERVICE)
@@ -163,7 +165,7 @@ class RoomCompletionReviewTests(APITestCase):
                 transition(order.pk, Order.Status.COMPLETED)
 
     def test_notification_failure_rolls_back_submission(self):
-        with patch('site_messages.models.Message.objects.bulk_create', side_effect=RuntimeError('notification failed')):
+        with patch('site_messages.utils.create_cycle_message', side_effect=RuntimeError('notification failed')):
             with self.assertRaises(RuntimeError):
                 self.provider_client.post(self.url, self.payload, format='json')
         self.assertFalse(OrderRoomCompletionRequest.objects.exists())
@@ -178,9 +180,10 @@ class RoomCompletionReviewTests(APITestCase):
         self.assertFalse(OrderRoomConfirmation.objects.exists())
         self.assertFalse(AdminAuditLog.objects.filter(resource='room-completion-review').exists())
 
+    @override_settings(ROOM_REVIEW_NOTICE_RECOVERY_ENABLED=False)
     def test_review_notification_failure_rolls_back_confirmation_and_audit(self):
         pk = self.submit()
-        with patch('site_messages.models.Message.objects.create', side_effect=RuntimeError('notification failed')):
+        with patch('site_messages.utils.create_cycle_message', side_effect=RuntimeError('notification failed')):
             with self.assertRaises(RuntimeError):
                 self.staff.post(f'/api/admin/room-completion-requests/{pk}/review/',
                     {'decision': 'VERIFIED', 'note': '核实完成', 'client_request_id': 'review'}, format='json')
@@ -256,6 +259,7 @@ class RoomCompletionReviewTests(APITestCase):
         wait.refresh_from_db()
         self.assertEqual((wait.status, wait.deadline), ('RUNNING', start+timedelta(minutes=35)))
 
+    @override_settings(ROOM_OBJECTION_NOTICE_RECOVERY_ENABLED=False)
     def test_objection_notification_and_resolution_audit_failures_restore_clock(self):
         pk = self.submit()
         self.staff.post(f'/api/admin/room-completion-requests/{pk}/review/',
@@ -263,7 +267,7 @@ class RoomCompletionReviewTests(APITestCase):
         path = f'/api/orders/orders/{self.order.pk}/room/objections/'
         data = {'reason': '需要核对', 'client_request_id': 'objection'}
         original = OrderRoomConfirmation.objects.get(request_id=pk).deadline
-        with patch('site_messages.models.Message.objects.bulk_create', side_effect=RuntimeError('notification failed')):
+        with patch('site_messages.utils.create_cycle_message', side_effect=RuntimeError('notification failed')):
             with self.assertRaises(RuntimeError):
                 self.boss_client.post(path, data, format='json')
         wait = OrderRoomConfirmation.objects.get(request_id=pk)

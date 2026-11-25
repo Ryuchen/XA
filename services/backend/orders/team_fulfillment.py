@@ -41,7 +41,7 @@ def team_report_evidence_error(report, kind):
 
 def team_evidence_submitted(order, account, field):
     from .team_progress import team_progress
-    progress = team_progress(order)
+    progress = team_progress(order, for_display=True)
     stage = 'ENTRY' if field == 'entry_image' else 'COMPLETION'
     if progress and progress['stage'] == stage:
         # 兼容此前从报单草稿上传导致两人截图齐全但状态未流转的订单；
@@ -58,7 +58,6 @@ def submit_team_evidence(request, order_id, field, image):
         return Response({'code':400,'msg':'双人服务请分别上传自己的入队或结单截图'})
     try:
         from contextlib import ExitStack
-        from django.conf import settings
         with transaction.atomic(), ExitStack() as scopes:
             order=Order.objects.select_for_update().get(pk=order_id)
             assignment=OrderProvider.objects.filter(order=order,provider_account=request.account,released_at__isnull=True).first()
@@ -68,16 +67,10 @@ def submit_team_evidence(request, order_id, field, image):
             if not report_order_cycle_matches(order, request.account):
                 return Response({'code':409,'msg':'订单陪玩所属周期待核对，请联系客服'}, status=409)
             from .points_service_payment import needs_integrated_processing
+            from .segment_reports import enter_points_report_scope
             snapshot = None
             from .models import OrderOriginalShareTransfer
-            if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
-                    and needs_integrated_processing(order)):
-                if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
-                    from .points_transfer_refund_access import after_transfer
-                    order = scopes.enter_context(after_transfer(order.pk, phase='report'))
-                else:
-                    from .points_business_access import service_order
-                    order = scopes.enter_context(service_order(order.pk, phase='report', addon=order.addon_intents.filter(payment__isnull=False).exists()))
+            order = enter_points_report_scope(scopes, order, include_untransferred=True)
             from .points_transfer_capture import enabled as points_transfer_enabled
             points_order = needs_integrated_processing(order)
             points_transferred = (field == 'completion_image' and points_transfer_enabled() and OrderOriginalShareTransfer.objects.filter(

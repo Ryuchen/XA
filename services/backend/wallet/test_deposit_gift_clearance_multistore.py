@@ -16,6 +16,7 @@ from stores.db import transaction
 from stores.tests_hosts import xinan_store
 from wallet.income import release_due_income
 from wallet.models import IncomeHold, Transaction
+from wallet.settlement_clocks import trusted_test_clock
 
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated store databases')
@@ -75,7 +76,7 @@ class GiftDepositClearanceStoresTest(TestCase):
                         'aftersale_hours': 0, 'income_freeze_hours': 0, 'expected_version': 1}, format='json')
                     self.assertEqual(changed.data['code'], 0, changed.data)
                     with patch('django.utils.timezone.now', return_value=hold.release_at):
-                        self.assertEqual(release_due_income(now=hold.release_at), 1)
+                        self.assertEqual(release_due_income(now=trusted_test_clock(hold.release_at)), 1)
                         preview = admin.get(refund_url).data['data']
                     self.assertEqual((preview['wait_status'], preview['cleared_at']), ('WAITING', hold.release_at))
                     cleared = hold.release_at

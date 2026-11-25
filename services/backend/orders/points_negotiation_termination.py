@@ -108,10 +108,19 @@ def available_for_order(order):
     from .points_business_access import permits as service_permits
     formal_addon = service_permits(order, phase='refund', kind='addon')
     if has_paid_addons(order) and not formal_addon and not getattr(settings, 'SERVICE_POINTS_REFUND_ADDON_RELEASE_TESTING', False):
-        from .points_transfer_refund_access import permits as transfer_permits
+        from .points_transfer_refund_access import permits as transfer_permits, room_direct_addon_refund
         from .points_returned_addon_refund import before_first_main_refund
-        if not transfer_permits(order, phase='refund') or not before_first_main_refund(order):
+        if not transfer_permits(order, phase='refund'):
             return False
+        room_refund = room_direct_addon_refund(order)
+        if not room_refund and not before_first_main_refund(order):
+            return False
+        if room_refund:
+            from .addon_funding_release import verify_run
+            try:
+                verify_run(room_refund.funding_release_run, _skip_usage=True)
+            except ValidationError:
+                return False
     from .models import OrderOriginalShareTransfer
     if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
         if not transfer_endpoint_enabled():

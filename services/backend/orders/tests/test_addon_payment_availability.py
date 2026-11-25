@@ -27,7 +27,7 @@ class AddonPaymentAvailabilityTest(APITestCase):
     ok = flow.ReleaseFlowTest.ok
     recharge = flow.ReleaseFlowTest.recharge
 
-    def prepare(self, *, disabled_on_create=False, prefund=False, lock_ready=True):
+    def prepare(self, *, disabled_on_create=False, prefund=False):
         second = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         second_account = get_or_create_account_for_legacy_user(second)
         self.accounts[second.pk] = second_account
@@ -81,13 +81,9 @@ class AddonPaymentAvailabilityTest(APITestCase):
                 HTTP_AUTHORIZATION='Bearer ' + finance.token)
             self.assertEqual(result.status_code, 200, result.data)
             self.funding_allocation_id = result.data['data']['allocation_id']
-            if lock_ready:
-                from orders.financial_lock import lock_order_money
-                with transaction.atomic():
-                    lock_order_money()
-            else:
-                from orders.models import OrderFinancialLock
-                OrderFinancialLock.objects.filter(pk=1).delete()
+            from orders.financial_lock import lock_order_money
+            with transaction.atomic():
+                lock_order_money()
         self.login(self.boss)
         self.path = f'/api/orders/orders/{order_id}/addons/intents/'
         payload = {'addon_id': addon.pk, 'unit': 'HOUR', 'quantity': 1, 'configuration_version': 1,
@@ -126,12 +122,25 @@ class AddonPaymentAvailabilityTest(APITestCase):
 
     def test_missing_money_mutex_stays_unknown_without_creating_it(self):
         from orders.models import OrderFinancialLock
-        item = self.prepare(prefund=True, lock_ready=False)
-        self.assertFalse(item['payment_available'])
+        item = self.prepare(prefund=True)
+        self.assertTrue(item['payment_available'])
+        # Intent creation is a write path and legitimately creates the mutex.
+        # Remove it afterwards so both preview reads exercise the real
+        # missing-lock state rather than the creation transaction's lock.
+        OrderFinancialLock.objects.filter(pk=1).delete()
         self.assertFalse(self.state()['payment_available'])
         self.assertFalse(OrderFinancialLock.objects.exists())
         paid = self.ok(self.client.post(self.path + str(self.item_id) + '/pay/', {}, format='json'))
         self.assertTrue(paid['paid'])
+        self.assertTrue(OrderFinancialLock.objects.filter(pk=1).exists())
+
+    def test_missing_money_mutex_without_extra_platform_funding_stays_unknown(self):
+        from orders.models import OrderFinancialLock
+        item = self.prepare()
+        self.assertTrue(item['payment_available'])
+        OrderFinancialLock.objects.filter(pk=1).delete()
+        self.assertFalse(self.state()['payment_available'])
+        self.assertFalse(OrderFinancialLock.objects.exists())
 
     def test_existing_funding_is_verified_without_posting_or_releasing(self):
         from orders.models import OrderAddonFundingRelease, OrderAddonFundingReleaseRun, OrderFinancialLock, OrderPointsFundingAction

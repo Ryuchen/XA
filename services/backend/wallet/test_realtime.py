@@ -300,6 +300,8 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
             submitted_at=completed + timedelta(seconds=1),
         )
         ProviderReportImage.objects.create(report=report, image=screenshot())
+        from engagement.test_confirmation_realtime import attest_legacy_report
+        attest_legacy_report(order, report)
         boundary = report.submitted_at + timedelta(hours=72)
         with self.captureOnCommitCallbacks(execute=True):
             with patch('django.utils.timezone.now', return_value=boundary - timedelta(microseconds=1)):

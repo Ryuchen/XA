@@ -32,7 +32,7 @@ class PlatformStoreManagementBase(APIView):
         # arbitrary error strings into the platform audit record.
         field_names = sorted(set(request.data).intersection({
             'slug', 'name', 'entity_prefix', 'provider_name_prefix', 'currency_name', 'database_alias', 'status', 'logo_url',
-            'background_url', 'introduction',
+            'background_url', 'introduction', 'content_compliance_enabled',
             'boss_url', 'provider_url', 'admin_url', 'admin_username', 'admin_phone', 'admin_nickname',
         }))
         try:

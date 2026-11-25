@@ -1,6 +1,6 @@
 import { PlatformReadStatus, PlatformStoreStatus } from "@/components/PlatformStoreStatus"
 import { DataValue, DataRegion } from "@/components/page-data-state"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { NavLink, Navigate, Route, Routes } from "react-router"
 import {
   Building2,
@@ -11,6 +11,7 @@ import {
   Moon,
   Package,
   ShieldCheck,
+  ScrollText,
   Sun,
   Users,
   WalletCards,
@@ -19,25 +20,28 @@ import { formatDateTime, useResource, syncThemeColor } from "@xa/shared"
 import { Button } from "@/components/ui/button"
 import {
   clearPlatformSession,
+  PLATFORM_AUTHORIZATION_DENIED_EVENT,
   platformRequest,
   type PlatformProfile,
+  type PlatformStore,
+  type PlatformStoreDirectory,
 } from "@/lib/platform-session"
+import {
+  hasPlatformOrderReadAccess,
+  hasPlatformOrderRole,
+} from "@/lib/platform-orders"
 import { PlatformOtpSetup } from "@/components/PlatformOtpSetup"
 import { PlatformAccounts } from "@/components/PlatformAccounts"
 import { PlatformPassRefundShortfalls } from "@/components/PlatformPassRefundShortfalls"
 import { PlatformWithdrawals } from "@/components/PlatformWithdrawals"
 import { PlatformStoreManagement } from "@/components/PlatformStoreManagement"
+import { PlatformGuaranteeClosureDirectory } from "@/components/PlatformGuaranteeClosure"
+import { PlatformCompliance } from "@/components/PlatformCompliance"
 import { Feedback, PageHeader } from "@/components/business"
 import PlatformOrders from "./PlatformOrders"
 import { PlatformModulesPage } from "./ModuleCenter"
 import "./saas.css"
 
-type Store = {
-  slug: string
-  name: string
-  status: string
-  currency_name: string
-}
 type Aggregate = {
   complete: boolean
   generated_at: string
@@ -58,9 +62,14 @@ export default function PlatformConsole() {
     [revision]
   )
   const directory = useResource(
-    () => platformRequest<{ results: Store[] }>("stores"),
+    () => platformRequest<PlatformStoreDirectory>("stores"),
     [revision]
   )
+  useEffect(() => {
+    const refreshIdentity = () => setRevision((value) => value + 1)
+    globalThis.addEventListener(PLATFORM_AUTHORIZATION_DENIED_EVENT, refreshIdentity)
+    return () => globalThis.removeEventListener(PLATFORM_AUTHORIZATION_DENIED_EVENT, refreshIdentity)
+  }, [])
   const [dark, setDark] = useState(() =>
     document.documentElement.classList.contains("dark")
   )
@@ -71,8 +80,10 @@ export default function PlatformConsole() {
   }, [dark])
   const profile =
     !identity.error && !identity.loading ? identity.data : undefined
-  const stores =
-    !directory.error && !directory.loading ? directory.data?.results || [] : []
+  const stores = useMemo(
+    () => !directory.error && !directory.loading ? directory.data?.results || [] : [],
+    [directory.data, directory.error, directory.loading],
+  )
   const superAdmin =
     profile?.grants.some(
       (grant) => grant.role === "SUPER_ADMIN" && grant.scope_slug === "*"
@@ -80,11 +91,9 @@ export default function PlatformConsole() {
   const finance =
     superAdmin ||
     profile?.grants.some((grant) => grant.role === "FINANCE") === true
-  const orders =
-    superAdmin ||
-    profile?.grants.some((grant) =>
-      ["ORDER_VIEWER", "ORDER_OPERATOR"].includes(grant.role)
-    ) === true
+  const storeAccess = finance || profile?.grants.some(grant => grant.role === "SUPER_ADMIN") === true
+  const orderRole = profile ? hasPlatformOrderRole(profile) : false
+  const orders = profile ? hasPlatformOrderReadAccess(profile) : false
   const navigation = [
     {
       to: "/platform/overview",
@@ -96,11 +105,11 @@ export default function PlatformConsole() {
       to: "/platform/clubs",
       label: "入驻俱乐部",
       icon: Building2,
-      visible: superAdmin,
+      visible: storeAccess,
     },
     {
       to: "/platform/orders",
-      label: "订单与派单",
+      label: "统一订单",
       icon: ClipboardList,
       visible: orders,
     },
@@ -108,6 +117,12 @@ export default function PlatformConsole() {
       to: "/platform/modules",
       label: "模块与购买",
       icon: Package,
+      visible: superAdmin,
+    },
+    {
+      to: "/platform/compliance",
+      label: "内容合规",
+      icon: ScrollText,
       visible: superAdmin,
     },
     {
@@ -228,42 +243,37 @@ export default function PlatformConsole() {
               <Route
                 path="/platform/clubs"
                 element={
-                  superAdmin ? (
+                  storeAccess ? (
                     <div className="space-y-6">
-                      <PageHeader title="入驻俱乐部" description="维护俱乐部资料、营业状态与独立业务配置，核对各店入驻和初始化进度。" />
+                      <PageHeader title="入驻俱乐部" description="按平台授权维护门店资料，或核对各店保证金合同、线下收退和闭店公示。" />
                       {profile.capabilities?.includes("STORE_MANAGEMENT_V1") ? (
-                        <PlatformStoreManagement
+                        superAdmin ? <PlatformStoreManagement
                           revision={revision}
-                          canSetup={profile.capabilities.includes(
-                            "PLATFORM_SETUP_V1"
-                          )}
-                          canEditClocks={profile.capabilities.includes(
-                            "PLATFORM_CLOCKS_V1"
-                          )}
-                          canEditDeposit={profile.capabilities.includes(
-                            "PLATFORM_DEPOSIT_V1"
-                          )}
-                          canEditWithdraw={profile.capabilities.includes(
-                            "PLATFORM_WITHDRAW_V1"
-                          )}
+                          profile={profile}
+                          canSetup={profile.capabilities.includes("PLATFORM_SETUP_V1")}
+                          canEditClocks={profile.capabilities.includes("PLATFORM_CLOCKS_V1")}
+                          canEditDeposit={profile.capabilities.includes("PLATFORM_DEPOSIT_V1")}
+                          canEditWithdraw={profile.capabilities.includes("PLATFORM_WITHDRAW_V1")}
                           onChanged={() => setRevision((value) => value + 1)}
-                        />
+                        /> : directory.loading && !directory.data ? <p role="status" className="text-sm text-muted-foreground">正在读取授权门店…</p> : <PlatformGuaranteeClosureDirectory key={revision} stores={stores} profile={profile} revision={revision} />
                       ) : (
-                        <p className="saas-note">
-                          俱乐部入驻管理暂未开放，请联系平台。
-                        </p>
+                        <p className="saas-note">俱乐部入驻管理暂未开放，请联系平台。</p>
                       )}
                     </div>
-                  ) : (
-                    forbidden
-                  )
+                  ) : forbidden
                 }
               />
               <Route
                 path="/platform/orders"
                 element={
-                  orders ? (
-                    <PlatformOrders profile={profile} stores={stores} />
+                  orderRole ? (
+                    <PlatformOrders
+                      profile={profile}
+                      stores={stores}
+                      storesLoading={directory.loading}
+                      storesError={directory.error?.message}
+                      storesRetry={directory.reload}
+                    />
                   ) : (
                     forbidden
                   )
@@ -274,6 +284,19 @@ export default function PlatformConsole() {
                 element={
                   superAdmin ? (
                     <PlatformModulesPage profile={profile} stores={stores} />
+                  ) : (
+                    forbidden
+                  )
+                }
+              />
+              <Route
+                path="/platform/compliance"
+                element={
+                  superAdmin ? (
+                    <div className="space-y-6">
+                      <PageHeader title="内容合规" description="维护平台合规规则版本，按门店核对内容校验留痕；门店正文不进入平台回执。" />
+                      <PlatformCompliance stores={stores} />
+                    </div>
                   ) : (
                     forbidden
                   )
@@ -337,7 +360,7 @@ function PlatformOverview({
   revision, storesLoading, storesKnown, storesError, storesRetry,
 }: {
   superAdmin: boolean
-  stores: Store[]
+  stores: PlatformStore[]
   revision: number
   storesLoading: boolean
   storesKnown: boolean

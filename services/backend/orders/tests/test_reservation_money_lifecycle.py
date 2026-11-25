@@ -18,10 +18,14 @@ from wallet.models import ProviderReport, Transaction, Wallet
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
                    REQUIRE_RECHARGE_PROOF=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
+                   SEGMENT_STANDARD_TRANSFER_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,
+                   ORIGINAL_ATTRIBUTION_ENABLED=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ReservationMoneyLifecycleTest(APITransactionTestCase):
     def setUp(self):
         flow.ReleaseFlowTest.setUp(self)
+        from engagement.models import ClubOperationConfig
+        ClubOperationConfig.objects.get_or_create(pk=1)
         from console.reservation_deadlines import save_deadlines
         save_deadlines(30, 60, 0, lambda *_: None)
     login = flow.ReleaseFlowTest.login
@@ -87,7 +91,10 @@ class ReservationMoneyLifecycleTest(APITransactionTestCase):
         self.ok(self.client.post(f'/api/admin/orders/{order_id}/transfer/', {
             'transfers': [{'old_provider_id': self.accounts[self.provider.pk].pk,
                            'new_provider_id': self.accounts[replacement.pk].pk,
-                           'split_type': 'PERCENT', 'split_value': 40, 'penalty_amount': 0}],
+                           # Segment orders derive shares from original-price facts.
+                           'split_type': 'PERCENT', 'split_value': 0, 'penalty_amount': 0,
+                           'original_share': {'retained': 4000, 'transferred': 6000,
+                                              'agreement': '双方确认原预约履约段原价份额'}}],
             'reason': '隔离预约转单验证',
         }, format='json'))
         self.login(replacement)

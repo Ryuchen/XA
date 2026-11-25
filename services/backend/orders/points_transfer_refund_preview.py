@@ -93,13 +93,23 @@ def preview_locked(case_id, *, refund_equivalent_units):
         deadline = aftersale_deadline(order)
         if not deadline or case.created_at >= deadline:
             raise ValidationError('售后申请时间超出订单售后期')
+    other_room_seat = False
     if formal:
         from .points_returned_addon_refund import before_first_main_refund, require_other_seat
+        from .points_transfer_refund_access import room_direct_addon_refund
         returned = before_first_main_refund(order)
         if returned:
             if case.addon_payment_id:
                 raise ValidationError('请单独登记主服务售后')
             require_other_seat(order, returned, case.affected_segment_ids)
+        elif order.required_provider_count == 2:
+            addon = room_direct_addon_refund(order)
+            if addon and (case.addon_payment_id or len(selected_segments) != 1
+                    or not OrderParticipationSegment.objects.filter(pk__in=selected_segments,
+                        attribution__order=order, started_at__isnull=False, released_at__isnull=True)
+                    .exclude(slot=addon.payment.intent.segment.slot).exists()):
+                raise ValidationError('请为另一席选择仍在履约的主服务段')
+            other_room_seat = addon is not None
     try:
         original = plan_points_transfer(order.pk, allow_recorded=True, preview_unstarted=True)
         funding = verify_order_funding(order.pk, allow_finalized=True, allow_unstarted=True,
@@ -108,6 +118,8 @@ def preview_locked(case_id, *, refund_equivalent_units):
         allocations = verified_order_allocations_locked(order, _transfer_refund_usage=transfer_refund_eligible(order))
     except (PointsFundingPlanError, RefundCalculationError) as exc:
         raise ValidationError('付款、转单或补资凭证待核对') from exc
+    if other_room_seat and assets.is_final:
+        raise ValidationError('另一席仍在履约，本次须为主单部分退款')
     from .points_transfer_revision import revision_tables_exist, verify_revisions_locked
     try:
         released = (verify_revisions_locked(order)[0] if revision_tables_exist()

@@ -44,23 +44,23 @@ class ChatImageUploadHTTPTest(LiveServerTestCase):
             body = (f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="proof.png"\r\n'
                     'Content-Type: image/png\r\n\r\n').encode() + image + f'\r\n--{boundary}--\r\n'.encode()
             request = Request(self.live_server_url + '/api/chat/send/', data=body, method='POST',
-                              headers={'Authorization': 'Bearer ' + token,
+                              headers={'Authorization': 'Bearer ' + token, 'Host': 'sl.esports.club',
                                        'Content-Type': 'multipart/form-data; boundary=' + boundary})
             try:
                 with urlopen(request, timeout=10) as response:
                     return response.status, json.load(response)
             except HTTPError as error:
-                return error.code, None
+                return error.code, json.loads(error.read().decode() or '{}')
 
         with TemporaryDirectory(prefix='xa-chat-image-') as media_root, override_settings(MEDIA_ROOT=media_root):
             status, result = send_image(broken_png_crc())
-            self.assertEqual(status, 200)
+            self.assertEqual(status, 400, result)
             self.assertEqual(result['code'], 400)
             self.assertEqual(result['msg'], '图片内容无效')
             self.assertEqual(ChatMessage.objects.count(), 0)
 
             status, result = send_image(png_bytes())
-            self.assertEqual(status, 200)
+            self.assertEqual(status, 200, result)
             self.assertEqual(result['code'], 0, result)
             self.assertEqual(result['data']['content_type'], 'IMAGE')
             self.assertEqual(ChatMessage.objects.count(), 1)

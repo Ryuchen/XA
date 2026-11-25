@@ -9,8 +9,13 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
+from common.compliance import (
+    PROVIDER_DISPLAY_NAME, check_content, record_content_receipt,
+)
 from common.media import build_media_url
 from console.mixins import EnvelopeViewSetMixin
+from stores.closure import closure_refusal_response
+from stores.context import current_store
 from users.models import CustomUser, EscortLevel, EscortProfile, ProviderRegistration
 from users.provider_registration import decrypt_identity
 from wallet.models import CashDepositTopup, Wallet, Transaction, get_platform_wallet
@@ -128,6 +133,17 @@ class ProviderRegistrationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     if (ClubAccount.objects.filter(username__iexact=row.username).exists()
                             or CustomUser.objects.filter(username__iexact=row.username).exists()):
                         return Response({'code': 409, 'msg': '登录账号已被占用，请联系管理员处理账号冲突'}, status=409)
+                    # Submission only checked PROVIDER_REGISTRATION_DISPLAY_NAME;
+                    # approval must validate the profile name against the current rules.
+                    display_name_result = check_content(PROVIDER_DISPLAY_NAME, row.display_name)
+                    # The original APPROVED response above is a read-back, not a
+                    # new account. Every genuinely new approval rechecks closure
+                    # after the registration lock and all review validations.
+                    denied = closure_refusal_response(current_store())
+                    if denied is not None:
+                        if denied.status_code == 409:
+                            denied.data['msg'] = '本店处于闭店公示或待结清阶段，暂不能审核新建陪玩账号'
+                        return denied
                     account = ClubAccount.objects.create(
                         username=row.username, password=row.password_hash, account_type='PROVIDER',
                         nickname=row.display_name, real_name=row.real_name, phone=row.phone,
@@ -148,6 +164,11 @@ class ProviderRegistrationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         deposit_business_cycle=account.business_cycle if data['deposit_paid'] else None,
                         status='OFFLINE',
                     )
+                    if display_name_result is not None:
+                        record_content_receipt(
+                            'escort_profile', profile.pk, PROVIDER_DISPLAY_NAME, display_name_result,
+                            actor_account=request.account,
+                        )
                     if row.deposit_mode == 'CASH':
                         # External cash goes directly to the store deposit pool;
                         # it is never a provider wallet recharge.

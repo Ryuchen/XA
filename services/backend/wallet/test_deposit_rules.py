@@ -8,8 +8,13 @@ from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from console.models import AdminMembership
 from wallet.club_rules import DEPOSIT_PERCENT_KEY, deposit_rules
-from wallet.income import hold_provider_income, release_due_income
+from wallet.income import hold_provider_income, release_due_income as _release_due_income
 from wallet.models import Wallet, Transaction, IncomeHold, SystemConfig, get_platform_wallet
+from wallet.settlement_clocks import trusted_test_clock
+
+
+def release_due_income(*, now, limit=500):
+    return _release_due_income(now=trusted_test_clock(now), limit=limit)
 
 
 @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])

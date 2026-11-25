@@ -1,5 +1,7 @@
 import { coinText, coinUnit, useCurrentStore, PrivateAudio, NegotiationProposalPanel, OrderJourney, OrderSource, OrderSyncBar } from "@xa/shared"
+import { AddonRefundProposals } from "./addon-refund-proposals"
 import { formatProviderName, ProviderName } from "./provider-name"
+import { RoomCompletionPanel } from "./room-completion"
 import {
   bossOrderPresentation,
   orderBusinessDetails,
@@ -99,7 +101,7 @@ export function OrdersPage() {
         {...load}
         empty={!visible.length}
         emptyTitle={hasFilters ? "没有符合当前条件的订单" : "还没有订单"}
-        emptyDescription={hasFilters ? "清除筛选可查看全部订单。" : "选择服务并下单后，可以在这里跟进接单和履约进度。"}
+        emptyDescription={hasFilters ? "清除筛选可查看全部订单。" : "当前没有可展示的订单记录。"}
         emptyAction={hasFilters && <Button variant="outline" onClick={() => {
           setStatus("")
           setGiftsOnly(false)
@@ -123,6 +125,8 @@ export function OrderPage() {
   const store = useCurrentStore()
   const query = useQuery(),
     id = query.get("id"),
+    addonPaymentId = Number(query.get("addon_payment_id")) || null,
+    addonProposalId = Number(query.get("addon_proposal_id")) || null,
     [reason, setReason] = useState(""),
     [aftersaleProvider, setAftersaleProvider] = useState("ALL"),
     [cancelReason, setCancelReason] = useState(""),
@@ -342,6 +346,8 @@ export function OrderPage() {
             <OrderJourney order={order} audience="boss" />
             <div className="boss-order-detail-columns">
               <div className="boss-order-detail-main">
+                <AddonRefundProposals key={`${order.id}:${addonPaymentId || ""}:${addonProposalId || ""}`} role="boss" orderId={order.id} initialPaymentId={addonPaymentId} initialProposalId={addonProposalId} />
+                {order.room_required_snapshot === true && <RoomCompletionPanel key={order.id} orderId={order.id} status={order.status} onSaved={load.reload} />}
             {can("SELECT_PROVIDER") && !order.pending_deadline_expired && (
               <Panel icon={UsersRound} title="挑选接单陪玩" className="boss-order-provider-selection">
                 <p className="boss-muted">

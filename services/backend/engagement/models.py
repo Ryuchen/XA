@@ -1,4 +1,7 @@
 """会员运营：积分与资金分账，兑换、抽奖和播报均保留不可变业务快照。"""
+import uuid
+
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -880,6 +883,78 @@ class RetirementAudit(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['account', 'business_cycle'], name='unique_retirement_cycle')]
+
+
+class H5Page(models.Model):
+    """One stable public link per page kind in this store database."""
+
+    class Kind(models.TextChoices):
+        PRICE_LIST = 'PRICE_LIST', '价目表'
+        ORDER_NOTICE = 'ORDER_NOTICE', '下单须知'
+        INTRODUCTION = 'INTRODUCTION', '门店介绍'
+
+    kind = models.CharField(max_length=16, choices=Kind.choices, unique=True)
+    public_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    revision = models.PositiveIntegerField(default=0)
+    current_version = models.ForeignKey(
+        'H5PageVersion', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='+', editable=False,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(revision__gte=0), name='h5_page_revision_nonnegative')]
+        ordering = ['kind']
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            previous = type(self).objects.using(self._state.db).filter(pk=self.pk).only('public_token').first()
+            if previous is not None and previous.public_token != self.public_token:
+                raise ValidationError('H5 公开链接标识创建后不可更改')
+            if self.current_version_id and self.current_version.page_id != self.pk:
+                raise ValidationError('H5 当前版本必须属于同一页面')
+        elif self.current_version_id:
+            raise ValidationError('H5 页面首次创建时不能指定已发布版本')
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.get_kind_display()
+
+
+class H5PageVersion(models.Model):
+    """Immutable published text snapshot; withdrawal only clears the page pointer."""
+
+    class ComplianceStatus(models.TextChoices):
+        CHECKED = 'CHECKED', '已校验'
+        DISABLED = 'DISABLED', '门店已停用文本合规'
+
+    page = models.ForeignKey(H5Page, on_delete=models.PROTECT, related_name='versions')
+    version = models.PositiveIntegerField()
+    snapshot = models.JSONField()
+    content_sha256 = models.CharField(max_length=64)
+    compliance_status = models.CharField(max_length=16, choices=ComplianceStatus.choices)
+    compliance_receipt_ids = models.JSONField(default=list)
+    publisher = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    copyright_confirmed = models.BooleanField(default=False)
+    published_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['page', 'version'], name='unique_h5_page_version'),
+            models.CheckConstraint(condition=models.Q(version__gte=1), name='h5_page_version_positive'),
+            models.CheckConstraint(condition=models.Q(copyright_confirmed=True), name='h5_page_copyright_confirmed'),
+        ]
+        ordering = ['page', 'version']
+        indexes = [models.Index(fields=['page', '-version'], name='h5_page_history_idx')]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('H5 历史发布版本不可修改')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('H5 历史发布版本不可删除')
 
 
 from .refunded_points_models import RefundedPointsConsumptionEvidence, TransferRefundPointsConsumptionEvidence  # noqa: E402,F401

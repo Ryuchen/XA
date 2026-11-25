@@ -14,7 +14,7 @@
     "dev:admin": "npm run dev --workspace @xa/fronted-admin",
     "dev:boss": "npm run dev --workspace @xa/fronted-boss",
     "dev:provider": "npm run dev --workspace @xa/fronted-provider",
-    "test": "node --experimental-strip-types --test shared/tests/*.test.ts",
+    "test": "node --experimental-strip-types --import ./test-loader.mjs --test shared/tests/*.test.ts admin/src/lib/*.test.ts admin/tests/*.test.ts boss/tests/*.test.ts provider/src/lib/*.test.ts",
     "test:ui": "node ../.tools/web-design-review-20261108/run-regression.cjs"
   },
   "engines": { "node": ">=22.12.0" },

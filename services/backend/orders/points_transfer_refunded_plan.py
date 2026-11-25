@@ -1,5 +1,6 @@
 """Rebuild per-person service readiness after a transferred points refund."""
 from collections import defaultdict
+from dataclasses import replace
 from datetime import timedelta
 
 from django.conf import settings
@@ -14,16 +15,42 @@ from .segment_settlement_plan import PersonAmount, SegmentAmount, SegmentSettlem
 from .settlement import SettlementError
 
 
-def build_refunded_plan(order, *, now=None, allow_in_service=False):
+def preview_first_main_refund(order):
+    """Present the verified main-service net amount for each accountable segment."""
+    from .models import OrderSegmentSettlementManifest, PointsNegotiationPosting, PointsPostRefundTransferRevision
+
+    if order.settled_at or OrderSegmentSettlementManifest.objects.filter(order=order).exists():
+        raise SettlementError('订单已有收益结算记录，请核对原资金流水')
+    if PointsPostRefundTransferRevision.objects.filter(order=order).exists():
+        raise SettlementError('主单退款后再次转单，请按原协商及履约记录核对')
+    plan, _ = build_refunded_plan(order)
+    posting = PointsNegotiationPosting.objects.select_related('proposal').get(points_refund__redemption__order=order)
+    selected = set(posting.proposal.affected_segment_ids or [])
+    started = {segment['id'] for segment in posting.participants['facts']['segments'] if segment['started_at']}
+    eligible = started & selected if selected else started
+    lines = {line.segment_id: line for line in plan.segments}
+    for account_id, amount in posting.shares.filter(pending_deduction__gt=0).values_list('account_id', 'pending_deduction'):
+        affected = [line for line in plan.segments if line.account_id == account_id and line.segment_id in eligible]
+        if len(affected) != 1 or affected[0].income < amount:
+            raise SettlementError('主单退款扣减须明确唯一履约段')
+        line = affected[0]
+        lines[line.segment_id] = replace(line, income=line.income - amount)
+    for person in plan.persons:
+        if sum(lines[pk].income for pk in person.segment_ids) != person.income:
+            raise SettlementError('逐段预计收益与退款后本人净收益不一致')
+    return replace(plan, segments=tuple(lines.values()))
+
+
+def build_refunded_plan(order, *, now=None, allow_in_service=False, basis=None):
     """Read actual refund terms and report clocks; never settle or credit."""
     from .points_transfer_refund_access import permits, verification_scope
     if any(permits(order, phase=phase) for phase in ('report', 'settlement')):
         with verification_scope(order):
-            return _build_refunded_plan(order, now=now, allow_in_service=allow_in_service)
-    return _build_refunded_plan(order, now=now, allow_in_service=allow_in_service)
+            return _build_refunded_plan(order, now=now, allow_in_service=allow_in_service, basis=basis)
+    return _build_refunded_plan(order, now=now, allow_in_service=allow_in_service, basis=basis)
 
 
-def _build_refunded_plan(order, *, now=None, allow_in_service=False):
+def _build_refunded_plan(order, *, now=None, allow_in_service=False, basis=None):
     from .points_transfer_refund_access import permits, require_refund_or_isolated
     try:
         require_refund_or_isolated()
@@ -36,18 +63,14 @@ def _build_refunded_plan(order, *, now=None, allow_in_service=False):
             or (order.status == Order.Status.COMPLETED and not order.completed_at)
             or order.service_aftersale_hours is None or order.service_freeze_hours is None):
         raise SettlementError('转单退款后的结算条件尚未满足')
-    from .points_transfer_refund_continuation import verify_locked
     from .points_transfer_refund_evidence import reconstruct_funding_locked
     from .points_transfer_refunded_funding import plan_refunded_transfer
     try:
-        posting = verify_locked(order)
-        funding = plan_refunded_transfer(order.pk, allow_finalized=True)
-        from .models import PointsPostRefundTransferRevision
-        version = PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first()
+        if basis is None:
+            basis = plan_refunded_transfer(order.pk, allow_finalized=True, include_basis=True)
+        funding, posting, version = basis.funding, basis.posting, basis.revision
         if version:
-            from .points_post_refund_transfer import verify_locked as verify_version
             from .points_transfer_refund_evidence import _reconstruct_from_verified_facts
-            verify_version(version)
             facts = version.snapshot['facts']
             history = _reconstruct_from_verified_facts(order.pk, facts,
                 refund_id=posting.points_refund.refund_id, through_transfer_id=version.transfer_id)
@@ -58,43 +81,20 @@ def _build_refunded_plan(order, *, now=None, allow_in_service=False):
     except (ValidationError, PointsFundingPlanError) as exc:
         raise SettlementError('转单退款后的履约或资金凭证待核对') from exc
     plan_funding = funding
-    addon_history = (version.snapshot.get('addon_history') if version else
-                     getattr(getattr(posting, 'funding_release_evidence', None), 'addon_funding_snapshot', None))
-    if version:
-        from .points_transfer_addon_events import later_runs
-        try:
-            later = [row for row in later_runs(order, posting) if row.created_at > version.created_at]
-        except ValidationError as exc:
-            raise SettlementError('转单后加购资金版本待核对') from exc
-        if later:
-            snapshot = later[-1].refunded_main_snapshot
-            if (not isinstance(snapshot, dict) or snapshot.get('transfer_revision_id') != version.pk
-                    or not isinstance(snapshot.get('addon_history'), list)):
-                raise SettlementError('转单后加购资金版本待核对')
-            addon_history = snapshot['addon_history']
-    else:
-        from .points_transfer_addon_events import later_runs
-        try:
-            later = later_runs(order, posting)
-        except ValidationError as exc:
-            raise SettlementError('主单退款后的加购资金版本待核对') from exc
-        if later:
-            snapshot = later[-1].refunded_main_snapshot
-            if (not isinstance(snapshot, dict) or snapshot.get('transfer_origin_posting_id') != posting.pk
-                    or not isinstance(snapshot.get('addon_history'), list)):
-                raise SettlementError('主单退款后的加购来源待核对')
-            addon_history = snapshot['addon_history']
+    addon_history = basis.addon_history
+    if basis.latest_addon_run and not isinstance(addon_history, list):
+        raise SettlementError('退款后的加购资金版本缺少加购明细')
     if addon_history:
-        from dataclasses import replace
         addon_income = sum(item['provider_units'] for item in addon_history)
         if addon_income > funding.provider_income_units:
             raise SettlementError('加购收益超过整单收益')
         plan_funding = replace(funding, provider_income_units=funding.provider_income_units - addon_income)
-    plan, _ = build_from_verified_evidence(order, facts, history, [posting], plan_funding, now=now)
+    plan, _ = build_from_verified_evidence(order, facts, history, [posting], plan_funding, now=now,
+                                           first_refund_basis=basis)
     return plan, funding
 
 
-def build_from_verified_evidence(order, facts, history, postings, funding, *, now=None):
+def build_from_verified_evidence(order, facts, history, postings, funding, *, now=None, first_refund_basis=None):
     """Build readiness only after the caller has verified all refund evidence."""
     now = now or timezone.now()
     segments = {row['id']: row for row in facts['segments']}
@@ -133,11 +133,14 @@ def build_from_verified_evidence(order, facts, history, postings, funding, *, no
                     raise SettlementError('二次退款后的加购接替资金版本缺失')
             elif (handover.accepted_at >= posting.created_at
                     or handover.payment.refund_records.filter(created_at__gte=posting.created_at).exists()):
-                from .points_transfer_addon_events import later_runs
-                try:
-                    later = later_runs(order, posting)
-                except ValidationError as exc:
-                    raise SettlementError('主单退款后的加购退款资金版本待核对') from exc
+                if first_refund_basis is not None:
+                    later = first_refund_basis.addon_runs
+                else:
+                    from .points_transfer_addon_events import later_runs
+                    try:
+                        later = later_runs(order, posting)
+                    except ValidationError as exc:
+                        raise SettlementError('主单退款后的加购退款资金版本待核对') from exc
                 if (not later or (handover.accepted_at >= posting.created_at
                         and handover.pk not in {row.handover_id for row in later if row.handover_id})):
                     raise SettlementError('主单退款后的加购退款资金版本尚未接入')
@@ -191,11 +194,17 @@ def build_from_verified_evidence(order, facts, history, postings, funding, *, no
     cases = list(order.aftersales.filter(status='OPEN'))
     from .aftersale_scope import applies_to
     from .addon_main_segment_deduction import verified_deductions
-    prior_addon = verified_deductions(order, before=postings[-1].created_at) if postings else {}
-    if len(postings) >= 3:
+    if first_refund_basis is not None:
+        boundary = first_refund_basis.addon_boundary
+        if not boundary:
+            raise SettlementError('加购收益扣减时间待核对')
+        prior_addon = verified_deductions(order, before=boundary)
+    elif len(postings) >= 3:
         # The third-round event chain may contain later actual add-on refunds;
         # their main-segment deductions must reach the final payout once.
         prior_addon = verified_deductions(order)
+    else:
+        prior_addon = verified_deductions(order, before=postings[-1].created_at) if postings else {}
     if len(postings) == 2:
         from .models import OrderPointsTransferFollowupFundingRevision
         from .points_transfer_followup_addon_version import latest_run_locked
@@ -206,25 +215,6 @@ def build_from_verified_evidence(order, facts, history, postings, funding, *, no
             boundary = parse_datetime(latest.points_followup_snapshot.get('captured_at', ''))
             if not boundary:
                 raise SettlementError('后续加购收益扣减时间待核对')
-            prior_addon = verified_deductions(order, before=boundary)
-    if len(postings) == 1:
-        from .models import PointsPostRefundTransferRevision
-        version = PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first()
-        if version:
-            prior_addon = verified_deductions(order, before=version.transfer.created_at)
-        from .points_transfer_addon_events import later_runs
-        try:
-            later = later_runs(order, postings[0])
-        except ValidationError as exc:
-            raise SettlementError('主单退款后的加购资金版本待核对') from exc
-        snapshot = later[-1].refunded_main_snapshot if later else None
-        if (isinstance(snapshot, dict) and
-                ((version and snapshot.get('transfer_revision_id') == version.pk) or
-                 (not version and snapshot.get('transfer_origin_posting_id') == postings[0].pk))):
-            from django.utils.dateparse import parse_datetime
-            boundary = parse_datetime(snapshot.get('captured_at', ''))
-            if not boundary:
-                raise SettlementError('加购收益扣减时间待核对')
             prior_addon = verified_deductions(order, before=boundary)
     zero_termination = None
     from .models import PointsZeroFollowupTermination

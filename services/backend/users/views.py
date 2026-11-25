@@ -839,6 +839,11 @@ class ProviderPassView(APIView):
         profile = self._profile(request)
         if profile is None:
             return Response({'code': 403, 'msg': '仅陪玩可购买通行证'})
+        # 装饰器已先核对持久资金回执；这里只守卫真正的新购买。
+        from .closure_purchase import provider_pass_closure_refusal
+        denied = provider_pass_closure_refusal()
+        if denied is not None:
+            return denied
         points_requested = 'points_quote_token' in request.data
         points_token = request.data.get('points_quote_token')
         if points_requested:
@@ -888,6 +893,10 @@ class ProviderPassView(APIView):
             replayed, reason = peek_fund_write(account=request.account, request_id=request.data.get('client_request_id'))
             if replayed:
                 return Response({'code': 409, 'msg': reason})
+            # 等待价格/档案锁期间可能开始闭店；持久回执之后再次守住新写。
+            denied = provider_pass_closure_refusal()
+            if denied is not None:
+                return denied
             reason = pass_purchase_block_reason(locked_profile)
             if reason:
                 return Response({'code': 400, 'msg': reason})
@@ -1243,6 +1252,11 @@ class EscortMeView(APIView):
             profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
             if 'avatar' in changes and profile.account_id != request.account.pk:
                 return Response({'code': 409, 'msg': '陪玩资料已变化，请刷新后重试'}, status=409)
+            display_name_result = None
+            if ('display_name' in changes
+                    and changes['display_name'] != profile.display_name):
+                from common.compliance import check_content
+                display_name_result = check_content('PROVIDER_DISPLAY_NAME', changes['display_name'])
             if item_ids is not None:
                 previous=set(profile.service_items.values_list('pk',flat=True))
                 if any(item.pk not in previous and not profile.can_take_service(item) for item in items):
@@ -1256,6 +1270,12 @@ class EscortMeView(APIView):
                 setattr(profile, field, value)
             if changes:
                 profile.save(update_fields=list(changes))
+            if display_name_result is not None:
+                from common.compliance import record_content_receipt
+                record_content_receipt(
+                    'escort_profile', profile.pk, 'PROVIDER_DISPLAY_NAME', display_name_result,
+                    actor_account=request.account,
+                )
             if 'avatar' in changes:
                 avatar_url = build_media_url(request, profile.avatar)
                 ClubAccount.objects.filter(pk=profile.account_id).update(avatar_url=avatar_url)

@@ -1,6 +1,9 @@
 """Owner confirmation of a reviewed room; settlement still follows report rules."""
+from contextlib import ExitStack
+
 from django.conf import settings
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -21,7 +24,7 @@ def preflight_confirmation(order, room, row, wait):
     if (wait.status != 'RUNNING' or row.status != 'VERIFIED' or order.status != Order.Status.IN_SERVICE
             or not _payment_eligible(order, participants) or order.room_required_snapshot is not True
             or order.settled_at is not None or participants != row.participants
-            or room.objections.filter(status='OPEN').exists() or not _completion_evidence_ready(order)):
+            or room.objections.filter(status='OPEN').exists() or not _completion_evidence_ready(order, participants)):
         return None, '房间状态、参与人或结单凭证已变化，请联系客服核对'
     from .refunds import negotiated_aftersale_blocks_completion
     if negotiated_aftersale_blocks_completion(order):
@@ -35,13 +38,28 @@ def preflight_confirmation(order, room, row, wait):
 
 def complete_confirmation_locked(order, row, wait, participants, *, actor, legacy_actor, key, at, automatic=False):
     """Persist one confirmation and finish fulfilment in the caller's transaction."""
-    wait.status, wait.confirmed_at, wait.confirmed_by = ('AUTO' if automatic else 'CONFIRMED'), at, actor
-    wait.confirmation_request_id = key
-    wait.save(update_fields=['status', 'confirmed_at', 'confirmed_by', 'confirmation_request_id'])
     from .services import complete_fulfillment
-    order = transition(order.pk, Order.Status.COMPLETED, operator=legacy_actor, operator_account=actor,
-        room_confirmation_id=wait.pk, reason='房间超时自动确认' if automatic else '老板确认房间结单',
-        side_effect=lambda current: complete_fulfillment(current, operator=legacy_actor, operator_account=actor))
+    from .segment_reports import enter_points_report_scope
+    from .points_funding_plan import PointsFundingPlanError
+    with ExitStack() as scopes:
+        paid = order.payment_status == Order.PaymentStatus.PAID
+        continuing = (order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED
+                      and order.required_provider_count == 2 and len(participants) == 1)
+        if paid or continuing:
+            try:
+                order = enter_points_report_scope(scopes, order, include_untransferred=paid)
+                from .points_transfer_refund_access import permits
+                if paid and permits(order, phase='report'):
+                    from .points_funding_evidence import verify_order_funding
+                    verify_order_funding(order.pk)
+            except (ValidationError, PointsFundingPlanError) as exc:
+                raise SettlementError('积分订单履约和资金凭证待核对') from exc
+        wait.status, wait.confirmed_at, wait.confirmed_by = ('AUTO' if automatic else 'CONFIRMED'), at, actor
+        wait.confirmation_request_id = key
+        wait.save(update_fields=['status', 'confirmed_at', 'confirmed_by', 'confirmation_request_id'])
+        order = transition(order.pk, Order.Status.COMPLETED, operator=legacy_actor, operator_account=actor,
+            room_confirmation_id=wait.pk, reason='房间超时自动确认' if automatic else '老板确认房间结单',
+            side_effect=lambda current: complete_fulfillment(current, operator=legacy_actor, operator_account=actor))
     from site_messages.utils import create_cycle_message
     from site_messages.order_cycle import recipient_cycle
     text = '房间已超时自动确认，报单和收益请按流程查看。' if automatic else '老板已确认订单，报单和收益请按流程查看。'

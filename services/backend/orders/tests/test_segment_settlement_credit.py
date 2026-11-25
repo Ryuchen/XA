@@ -39,17 +39,22 @@ class SegmentSettlementCreditTest(APITransactionTestCase):
     submit_and_approve = fixture.SegmentSettlementPlanTest.submit_and_approve
 
     def mature(self, order):
+        """Advance the trusted observation without rewriting attested reports."""
+        order.refresh_from_db()
         now = timezone.now()
-        if order.completed_at > now - timedelta(hours=72):
-            order.completed_at = now - timedelta(hours=80)
-            order.save(update_fields=['completed_at'])
-        OrderSegmentReportSubmission.objects.filter(report__segment__attribution__order=order,
-            submitted_at__gt=now-timedelta(hours=75)).update(
-            submitted_at=now-timedelta(hours=79), reviewed_at=now-timedelta(hours=78))
+        submissions = list(OrderSegmentReportSubmission.objects.filter(
+            report__segment__attribution__order=order, status='APPROVED'))
+        deadlines = [order.completed_at + timedelta(hours=order.service_aftersale_hours)]
+        deadlines.extend(row.submitted_at + timedelta(hours=order.service_freeze_hours)
+                         for row in submissions)
+        observed = max(deadlines) + timedelta(hours=1)
+        previous = getattr(self, 'settlement_time', None)
+        self.settlement_time = max(previous, observed) if previous else observed
 
     def settle(self, order):
         from orders.models import Order
-        with transaction.atomic():
+        observed = getattr(self, 'settlement_time', None) or timezone.now()
+        with patch('django.utils.timezone.now', return_value=observed), transaction.atomic():
             locked = Order.objects.select_for_update().get(pk=order.pk)
             return settle_due_segment_people(locked)
 

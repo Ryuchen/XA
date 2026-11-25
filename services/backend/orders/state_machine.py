@@ -205,7 +205,11 @@ def transition(
     if pre_check:
         pre_check(order)
 
-    now = timezone.now()
+    cancel_clock = None
+    if from_status == Order.Status.GRABBED and to_status in (Order.Status.CANCELLED, Order.Status.PENDING):
+        from wallet.refund_recovery_order import sample_unstarted_clock
+        cancel_clock = sample_unstarted_clock(order)
+    now = cancel_clock.at if cancel_clock is not None else timezone.now()
     fields_to_save = ['status', 'updated_at']
 
     # 一旦订单离开抢单池，必须清理抢单超时点。否则延迟执行的自动取消
@@ -235,7 +239,7 @@ def transition(
 
     if from_status == Order.Status.GRABBED and to_status in (Order.Status.CANCELLED, Order.Status.PENDING):
         from wallet.refund_recovery_order import cancel_unstarted
-        cancel_unstarted(order)
+        cancel_unstarted(order, now=cancel_clock)
 
     if to_status == Order.Status.IN_SERVICE and order.pk:
         # A paid appointment starts consuming a slot only now. No capacity

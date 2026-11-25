@@ -4,13 +4,16 @@ This module is enabled only for the staged VIP safety-box settlement path.
 """
 from stores.db import transaction
 from django.db.models import Exists, OuterRef, Q, Sum
-from django.utils import timezone
 
 from .financial_lock import lock_order_money
 from .models import Order, OrderPlatformSubsidyShare
 from wallet.income import hold_provider_income
 from wallet.models import Transaction, get_platform_wallet
 from wallet.services import get_wallet
+from wallet.settlement_clocks import (
+    ClockConflict, clock_scope, receipt as clock_receipt, record as record_clock,
+    require_clock, validate_receipt, verify as verify_clock,
+)
 
 
 def released_before_service(order, assignment):
@@ -137,6 +140,62 @@ def _locked_subsidy_shares(order):
     return shares
 
 
+def _verify_direct_original_payment(order, subsidy):
+    """A zero-paid subsidized order still needs its original payment fact."""
+    from .settlement import SettlementError
+    payments = list(Transaction.objects.filter(
+        order=order, tx_type=Transaction.TxType.PAY, status=Transaction.Status.SUCCESS,
+        reversal_of__isnull=True,
+    ).select_related('wallet'))
+    if (subsidy.order_id != order.pk or type(subsidy.basis) is not int or subsidy.basis < 1
+            or type(subsidy.coupon_id_snapshot) is not int or subsidy.coupon_id_snapshot < 1
+            or len(payments) != 1):
+        raise SettlementError('安全箱原付款或补贴事实待核对')
+    payment = payments[0]
+    if (payment.amount != 0 or payment.balance_after != payment.balance_before
+            or payment.wallet.user_id != order.customer_id
+            or payment.wallet.account_id != order.customer_account_id
+            or payment.reversal_of_id or payment.reversals.exists()):
+        raise SettlementError('安全箱原付款流水待核对')
+
+
+_DIRECT_SUBJECT_NAMESPACE = 1 << 60
+
+
+def _direct_subject_id(pk):
+    # Receipt uniqueness is global to subject_type/id/operation, not per order.
+    # Keep direct subsidy/share IDs apart from raw segment manifest/person IDs.
+    if type(pk) is not int or not 0 < pk < _DIRECT_SUBJECT_NAMESPACE:
+        raise ClockConflict('安全箱直接份额时钟主体编号待核对')
+    return _DIRECT_SUBJECT_NAMESPACE + pk
+
+
+def _verify_direct_clock_history(order, subsidy, shares, clock):
+    """Recheck original facts and every paid person before another direct credit."""
+    _verify_direct_original_payment(order, subsidy)
+    plan_id = _direct_subject_id(subsidy.pk)
+    plan = clock_receipt(order, 'MANIFEST', plan_id, 'PLAN')
+    paid = [row for row in shares if row.paid_at]
+    if plan is None:
+        if paid:
+            raise ClockConflict('安全箱直接份额缺少原清单时钟回执')
+    else:
+        validate_receipt(plan.clock_evidence, plan.observed_at, clock)
+        for row in paid:
+            if row.paid_at < plan.observed_at:
+                raise ClockConflict('安全箱直接份额支付早于原清单，需人工核对')
+            verify_clock(order, 'PERSON', _direct_subject_id(row.pk), 'PERSON', row.paid_at, clock)
+    if any(clock_receipt(order, 'PERSON', _direct_subject_id(row.pk), 'PERSON') is not None
+           for row in shares if not row.paid_at):
+        raise ClockConflict('安全箱未支付份额已存在时钟回执，需人工核对')
+    final = clock_receipt(order, 'MANIFEST', plan_id, 'FINALIZE')
+    if (order.settled_at is None) != (final is None):
+        raise ClockConflict('安全箱直接份额整单完成凭证状态不一致')
+    if final is not None:
+        verify_clock(order, 'MANIFEST', plan_id, 'FINALIZE', order.settled_at, clock)
+    return plan
+
+
 def subsidy_funds(platform):
     """Exclude refundable provider deposits from platform-owned funds."""
     deposits = (Transaction.objects.filter(wallet=platform, tx_type=Transaction.TxType.DEPOSIT_INCOME,
@@ -199,14 +258,19 @@ def settle_platform_subsidy_share(share_id, *, finishing_order=None, transferrin
         raise ValueError('补贴份额与订单不一致')
     if share.paid_at:
         if order.status == Order.Status.COMPLETED:
-            _locked_subsidy_shares(order)
+            shares = _locked_subsidy_shares(order)
+            from .models import OrderSegmentSettlementManifest
+            if not OrderSegmentSettlementManifest.objects.filter(order=order).exists():
+                clock = require_clock()
+                _verify_direct_clock_history(order, share.subsidy, shares, clock)
         return True
     from .segment_financial_capture import transfer_settlement_pending
     if transfer_settlement_pending(order):
         return False
     # A transferred or finishing order is still in service at the database
     # boundary; neither that event nor a legacy cancellation authorizes payout.
-    now = timezone.now()
+    clock = require_clock()
+    now = clock.at
     ready = _share_ready(order, assignment, now=now)
     if not ready and not share.amount:
         ready = _aftersale_ready(order, assignment, now=now) and released_before_service(order, assignment)
@@ -214,7 +278,7 @@ def settle_platform_subsidy_share(share_id, *, finishing_order=None, transferrin
         return False
     if order.refund_records.exists():
         return False
-    _locked_subsidy_shares(order)
+    shares = _locked_subsidy_shares(order)
     transferring = transferring_order is not None and order.status == Order.Status.IN_SERVICE and assignment.released_at is not None
     negotiated_termination = (order.status == Order.Status.CANCELLED
         and order.payment_status == Order.PaymentStatus.REFUNDED
@@ -224,11 +288,15 @@ def settle_platform_subsidy_share(share_id, *, finishing_order=None, transferrin
         raise ValueError('订单尚未完成或未付款，不能支付平台补贴')
     if not assignment.provider_id and not assignment.provider_account_id:
         raise ValueError('补贴份额缺少陪玩')
+    plan = _verify_direct_clock_history(order, share.subsidy, shares, clock)
     if not share.amount:
-        share.paid_at = timezone.now()
+        if plan is None:
+            record_clock(order, 'MANIFEST', _direct_subject_id(share.subsidy.pk), 'PLAN', clock)
+        share.paid_at = now
         share.save(update_fields=['paid_at'])
-        assignment.settled_at = share.paid_at
+        assignment.settled_at = now
         assignment.save(update_fields=['settled_at'])
+        record_clock(order, 'PERSON', _direct_subject_id(share.pk), 'PERSON', clock)
         return True
     from users.models import EscortProfile
     profile = EscortProfile.objects.select_for_update().filter(user_id=assignment.provider_id).first()
@@ -238,6 +306,8 @@ def settle_platform_subsidy_share(share_id, *, finishing_order=None, transferrin
     if subsidy_funds(platform)['available'] < unpaid:
         return False
     provider = get_wallet(user_id=assignment.provider_id, account_id=assignment.provider_account_id, for_update=True)
+    if plan is None:
+        record_clock(order, 'MANIFEST', _direct_subject_id(share.subsidy.pk), 'PLAN', clock)
     platform_before = platform.balance
     platform.balance -= share.amount
     platform.save(update_fields=['balance'])
@@ -255,10 +325,11 @@ def settle_platform_subsidy_share(share_id, *, finishing_order=None, transferrin
                          deposit_percent=order.service_deposit_percent, apply_without_hold=True)
     share.expense_transaction = expense
     share.income_transaction = income
-    share.paid_at = timezone.now()
+    share.paid_at = now
     share.save(update_fields=['expense_transaction', 'income_transaction', 'paid_at'])
-    assignment.settled_at = share.paid_at
+    assignment.settled_at = now
     assignment.save(update_fields=['settled_at'])
+    record_clock(order, 'PERSON', _direct_subject_id(share.pk), 'PERSON', clock)
     from wallet.notifier import notify_wallet_update
     transaction.on_commit(lambda: notify_wallet_update(platform))
     return True
@@ -283,28 +354,34 @@ def settle_due_subsidy_order(order):
     shares = _locked_subsidy_shares(order)
     if order.refund_records.exists():
         return []
-    outstanding=sum(row.amount for row in shares if not row.paid_at)
-    if outstanding and subsidy_funds(get_platform_wallet(for_update=True))['available'] < outstanding:
-        return []
-    paid=[]
-    for share in shares:
-        if share.paid_at:
-            continue
-        unstarted = not share.amount and released_before_service(order, share.assignment)
-        if settle_platform_subsidy_share(share.pk):
-            share.refresh_from_db(fields=['paid_at'])
-            if not unstarted:
-                paid.append(share.assignment.provider_id)
-    if paid:
-        from django.db.models import F
-        from users.models import EscortProfile
-        from .services import refresh_escort_status
-        EscortProfile.objects.filter(user_id__in=paid).update(completed_order_count=F('completed_order_count')+1)
-        refresh_escort_status(provider_ids=paid, exclude_order_ids=[order.pk])
-    if all(row.paid_at for row in shares) and not order.aftersales.filter(status='OPEN').exists():
-        order.settled_at=timezone.now()
-        order.save(update_fields=['settled_at'])
-    return paid
+    clock = require_clock()
+    subsidy = shares[0].subsidy
+    with clock_scope(clock):
+        _verify_direct_clock_history(order, subsidy, shares, clock)
+        outstanding=sum(row.amount for row in shares if not row.paid_at)
+        if outstanding and subsidy_funds(get_platform_wallet(for_update=True))['available'] < outstanding:
+            return []
+        paid=[]
+        for share in shares:
+            if share.paid_at:
+                continue
+            unstarted = not share.amount and released_before_service(order, share.assignment)
+            if settle_platform_subsidy_share(share.pk):
+                share.refresh_from_db(fields=['paid_at'])
+                if not unstarted:
+                    paid.append(share.assignment.provider_id)
+        if paid:
+            from django.db.models import F
+            from users.models import EscortProfile
+            from .services import refresh_escort_status
+            EscortProfile.objects.filter(user_id__in=paid).update(completed_order_count=F('completed_order_count')+1)
+            refresh_escort_status(provider_ids=paid, exclude_order_ids=[order.pk])
+        if all(row.paid_at for row in shares) and not order.aftersales.filter(status='OPEN').exists():
+            _verify_direct_clock_history(order, subsidy, shares, clock)
+            order.settled_at=clock.at
+            order.save(update_fields=['settled_at'])
+            record_clock(order, 'MANIFEST', _direct_subject_id(subsidy.pk), 'FINALIZE', clock)
+        return paid
 
 
 @transaction.atomic

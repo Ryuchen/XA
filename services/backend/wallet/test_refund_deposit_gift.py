@@ -3,9 +3,8 @@ from datetime import timedelta
 from django.test import override_settings
 
 from orders.tests.factories import make_completed_order
-from wallet.income import release_due_income
 from wallet.models import IncomeHold, RefundDepositIncomeApplication, Transaction, get_platform_wallet
-from wallet.test_gift_income_clocks import GiftIncomeClocksTest
+from wallet.test_gift_income_clocks import GiftIncomeClocksTest, release_due_income
 from wallet.test_refund_deposit_deficit import RefundDepositDeficitTest
 
 

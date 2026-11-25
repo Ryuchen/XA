@@ -6,6 +6,7 @@ from users.models import EscortProfile
 from django.conf import settings
 
 from .models import ProviderReport, get_commission_rate
+from .settlement_clocks import SettlementClockError, require_clock
 
 if TYPE_CHECKING:
     from orders.models import OrderSegmentFinancialSnapshot
@@ -258,8 +259,15 @@ def report_platform_funding_insufficient(report, context):
     if not has_subsidy or amount is None or paid_at:
         return False
     from orders.subsidies import _share_ready
-    from django.utils import timezone
-    if not _share_ready(order, share, now=timezone.now()):
+    from django.db import DatabaseError
+    try:
+        clock = require_clock()
+        ready = _share_ready(order, share, now=clock.at)
+    except (SettlementClockError, DatabaseError, TypeError, ValueError):
+        # A funding warning is a read projection. Unknown clock/evidence stays
+        # reviewable and must never be promoted to a ready subsidy decision.
+        return None
+    if not ready:
         return False
     from orders.models import OrderPlatformSubsidyShare
     from django.db.models import Sum

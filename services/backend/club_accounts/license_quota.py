@@ -17,6 +17,15 @@ class LicenseAdmissionUnavailable(LicenseAdmissionError):
     default_code = 'license_admission_unavailable'
 
 
+class LicenseClosureRestricted(LicenseAdmissionError):
+    status_code = 409
+    default_code = 'STORE_CLOSURE_RESTRICTED'
+
+
+class LicenseClosureUnavailable(LicenseAdmissionUnavailable):
+    default_code = 'STORE_CLOSURE_STATUS_UNAVAILABLE'
+
+
 def enabled():
     return getattr(settings, 'LICENSE_ACCOUNT_ADMISSION_ENABLED', True)
 
@@ -124,6 +133,16 @@ def rejoin_if_retired(account):
             _assert_certificate_admission()
             if enabled():
                 assert_available(locked.account_type, quota=quota)
+            # Boss retirement already advanced its cycle; provider re-entry
+            # advances below only after this guard. If another request already
+            # completed re-entry, the active locked row bypasses this branch and
+            # is read back as an existing login rather than a new cycle.
+            from stores.closure import closure_refusal_response
+            denied = closure_refusal_response(current_store())
+            if denied is not None:
+                if denied.status_code == 409:
+                    raise LicenseClosureRestricted('本店处于闭店公示或待结清阶段，暂不能重新入店')
+                raise LicenseClosureUnavailable(denied.data.get('msg', '暂时无法核验本店闭店状态，请稍后重试'))
             quota.active_count += 1
             quota.save(update_fields=['active_count'])
             locked.license_membership_active = True

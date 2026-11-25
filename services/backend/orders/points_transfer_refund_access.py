@@ -27,6 +27,53 @@ def has_paid_addon_before(order, boundary):
     return payments.filter(buyer_transaction__created_at__lt=boundary).exists()
 
 
+def room_direct_addon_refund(order):
+    """Identify the posted refund for an add-on bought on the room's incoming seat."""
+    from .models import OrderAddonPayment, OrderOriginalShareTransfer
+
+    if (order.room_required_snapshot is not True or order.required_provider_count not in (1, 2)
+            or (order.status != order.Status.COMPLETED
+                and (order.required_provider_count != 2 or order.status != order.Status.IN_SERVICE))
+            or order.prestart_handoffs.exists()):
+        return None
+    refunds = list(order.addon_refunds.select_related(
+        'payment__intent__segment', 'payment__buyer_transaction', 'funding_release_run', 'proposal')[:2])
+    if len(refunds) != 1:
+        return None
+    refund = refunds[0]
+    payment = refund.payment
+    if (refund.proposal.status != 'ACCEPTED' or not 0 < refund.amount < payment.intent.amount
+            or refund.addon_pending_deduction != refund.amount
+            or refund.main_pending_deduction or refund.wallet_deduction or refund.deposit_deduction
+            or payment.handovers.exists()):
+        return None
+    run = getattr(refund, 'funding_release_run', None)
+    transfers = list(OrderOriginalShareTransfer.objects.filter(
+        previous_segment__attribution__order=order)[:2])
+    if (not run or not run.points_addon_snapshot or len(transfers) != 1
+            or transfers[0].next_segment_id != payment.intent.segment_id
+            or not transfers[0].created_at < payment.buyer_transaction.created_at < refund.created_at):
+        return None
+    other_payments = list(OrderAddonPayment.objects.filter(intent__order=order).exclude(pk=payment.pk)
+                          .select_related('intent__segment', 'buyer_transaction')[:2])
+    if not other_payments:
+        return refund
+    if order.required_provider_count != 2 or len(other_payments) != 1:
+        return None
+    other = other_payments[0]
+    segment = other.intent.segment
+    incoming = payment.intent.segment
+    paid_at = other.buyer_transaction.created_at
+    if (segment is None or segment.attribution_id != incoming.attribution_id or segment.slot == incoming.slot
+            or segment.provider_account_id != other.intent.provider_id
+            or not segment.started_at or segment.started_at > paid_at
+            or not transfers[0].created_at < paid_at < refund.created_at
+            or (segment.released_at and segment.released_at <= paid_at)
+            or other.handovers.exists()):
+        return None
+    return refund
+
+
 def _pending_allowed(payment_id, allowed):
     return payment_id in allowed if isinstance(allowed, (set, frozenset, tuple, list)) else payment_id == allowed
 
@@ -1306,13 +1353,7 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
                     yield order
                     return
                 from .points_transfer_refund_continuation import verify_locked
-                from .points_transfer_refund_release import verify_release_locked
-                from .models import OrderPointsFundingReleaseEvidence
-                posting = verify_locked(order)
-                evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
-                if not evidence:
-                    raise ValidationError('积分转单退款释放凭证缺失')
-                verify_release_locked(evidence)
+                verify_locked(order, include_release=True)
         yield order
 
 

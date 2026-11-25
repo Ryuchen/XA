@@ -5,7 +5,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.utils import timezone
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -16,6 +15,8 @@ from club_accounts.permissions import IsClubAccountAuthenticated
 from console.permissions import get_account_permissions, is_console_account
 from stores.db import transaction
 from wallet.report_lifecycle import provider_report_operation
+from wallet.settlement_clocks import (ClockConflict, ClockUnavailable, record,
+                                      require_clock, verify)
 from .models import (Order, OrderParticipationSegment, OrderSegmentReport, OrderSegmentReportImage,
                      OrderSegmentReportSubmission, OrderSegmentSubmissionImage)
 from .order_operation_receipts import order_receipt
@@ -91,35 +92,27 @@ def supports(order):
         except (ValidationError, Order.DoesNotExist):
             return False
     from .points_transfer_refund_access import permits as transfer_permits
+    verified_transfer = transfer_permits(order, phase='report')
     if (enabled() and order.payment_status in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
-            and (transfer_permits(order, phase='report')
-                 or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_REPORT_TESTING', False))):
+            and (verified_transfer or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_REPORT_TESTING', False))):
+        if verified_transfer:
+            # after_transfer already verified the closure under this order's locks.
+            return 1 <= order.refund_records.count() <= 2
         from rest_framework.exceptions import ValidationError
         from .points_transfer_refund_continuation import verify_locked
         try:
             with transaction.atomic():
                 locked = Order.objects.select_for_update().get(pk=order.pk)
                 if locked.refund_records.count() == 2:
-                    if transfer_permits(locked, phase='report'):
-                        from .models import PointsNegotiationPosting
-                        from .points_transfer_refund_access import verification_scope
-                        from .points_transfer_followup_termination import verify_closed_or_settled_locked
-                        posting = PointsNegotiationPosting.objects.filter(
-                            points_refund__redemption__order=locked).order_by('points_refund__refund_id').last()
-                        if not posting:
-                            return False
-                        with verification_scope(locked):
-                            verify_closed_or_settled_locked(posting)
-                    else:
-                        if not getattr(settings, 'SERVICE_POINTS_TRANSFER_FOLLOWUP_SETTLEMENT_TESTING', False):
-                            return False
-                        from .models import OrderPointsTransferFollowupFundingRevision
-                        from .points_transfer_followup_revision import _verify_followup_revision_facts_locked
-                        revision = OrderPointsTransferFollowupFundingRevision.objects.filter(
-                            posting__points_refund__redemption__order=locked).first()
-                        if not revision:
-                            return False
-                        _verify_followup_revision_facts_locked(revision)
+                    if not getattr(settings, 'SERVICE_POINTS_TRANSFER_FOLLOWUP_SETTLEMENT_TESTING', False):
+                        return False
+                    from .models import OrderPointsTransferFollowupFundingRevision
+                    from .points_transfer_followup_revision import _verify_followup_revision_facts_locked
+                    revision = OrderPointsTransferFollowupFundingRevision.objects.filter(
+                        posting__points_refund__redemption__order=locked).first()
+                    if not revision:
+                        return False
+                    _verify_followup_revision_facts_locked(revision)
                 else:
                     verify_locked(locked)
             return True
@@ -128,6 +121,36 @@ def supports(order):
     from .principal_segments import enabled_for_order
     return bool((enabled() or enabled_for_order(order)) and order.status in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
                 and order.payment_status == Order.PaymentStatus.PAID and transfer_income_pending(order))
+
+
+def supports_detail(order):
+    """Check reporting on a single authorized order detail."""
+    supported, _ = detail_support(order)
+    return supported
+
+
+def detail_support(order, *, check_paid_transfer=False):
+    """Return report support and eligibility to upload released points segments."""
+    from rest_framework.exceptions import ValidationError
+    from .models import OrderOriginalShareTransfer
+    from .points_business_access import formal_service_read_candidate
+    from .points_transfer_refund_access import after_transfer, permits
+
+    if permits(order, phase='report'):
+        supported = supports(order)
+        return supported, supported
+    refunded = order.payment_status in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
+    if (not (refunded or (check_paid_transfer and order.payment_status == Order.PaymentStatus.PAID))
+            or not enabled()
+            or not formal_service_read_candidate(order, phase='report')
+            or not OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+        return supports(order), False
+    try:
+        with transaction.atomic(), after_transfer(order.pk, phase='report', read_only=True) as locked:
+            supported = supports(locked)
+            return supported, supported
+    except ValidationError:
+        return (False if refunded else supports(order)), False
 
 
 def _entry_enabled(order_id):
@@ -141,16 +164,21 @@ def _entry_enabled(order_id):
     return enabled_for_order(Order.objects.filter(pk=order_id).first())
 
 
-def _enter_points_report_scope(scopes, order):
+def enter_points_report_scope(scopes, order, *, include_untransferred=False):
     if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is not True:
         return order
     from .points_service_payment import needs_integrated_processing
     from .models import OrderOriginalShareTransfer
-    if not needs_integrated_processing(order) or not OrderOriginalShareTransfer.objects.filter(
-            previous_segment__attribution__order=order).exists():
+    if not needs_integrated_processing(order):
         return order
-    from .points_transfer_refund_access import after_transfer
-    return scopes.enter_context(after_transfer(order.pk, phase='report'))
+    if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
+        from .points_transfer_refund_access import after_transfer
+        return scopes.enter_context(after_transfer(order.pk, phase='report'))
+    if include_untransferred:
+        from .points_business_access import service_order
+        has_paid_addons = order.addon_intents.filter(payment__isnull=False).exists()
+        return scopes.enter_context(service_order(order.pk, phase='report', addon=has_paid_addons))
+    return order
 
 
 def _latest(report):
@@ -171,6 +199,13 @@ def _person_freeze_until(segment):
         latest = _latest(report)
         if (not report or report.status not in ('PENDING', 'APPROVED') or not latest
                 or latest.version != report.version or latest.status != report.status):
+            return None
+        try:
+            clock = require_clock()
+            verify(order, 'SUBMISSION', latest.pk, 'SUBMIT', latest.submitted_at, clock)
+            if latest.status == 'APPROVED':
+                verify(order, 'SUBMISSION', latest.pk, 'REVIEW', latest.reviewed_at, clock)
+        except (ClockConflict, ClockUnavailable):
             return None
         timestamps.append(latest.submitted_at)
     return max(timestamps) + timedelta(hours=order.service_freeze_hours) if timestamps else None
@@ -239,7 +274,7 @@ class SegmentReportActionView(APIView):
             order = Order.objects.select_for_update().filter(pk=order_id).first()
             if not order:
                 return Response({'code':409, 'msg':'订单当前不支持逐段报单'}, status=409)
-            order = _enter_points_report_scope(scopes, order)
+            order = enter_points_report_scope(scopes, order)
             if not supports(order):
                 return Response({'code':409, 'msg':'订单当前不支持逐段报单'}, status=409)
             if order.settled_at:
@@ -294,9 +329,14 @@ class SegmentReportActionView(APIView):
                 images = list(report.draft_images.filter(active=True).order_by('pk'))
                 if not segment.entry_image or not segment.completion_image or not images:
                     return Response({'code':400, 'msg':'请补齐本次入队、结单及战绩截图'})
+                try:
+                    clock = require_clock()
+                except ClockUnavailable:
+                    return Response({'code':503, 'msg':'门店数据库时钟不可用，报单未提交'}, status=503)
                 submission = OrderSegmentReportSubmission.objects.create(report=report, version=report.version + 1,
                     status='PENDING', entry_image=segment.entry_image.name, completion_image=segment.completion_image.name,
-                    submitted_at=timezone.now())
+                    submitted_at=clock.at)
+                record(order, 'SUBMISSION', submission.pk, 'SUBMIT', clock)
                 OrderSegmentSubmissionImage.objects.bulk_create([OrderSegmentSubmissionImage(submission=submission,
                     image=image.image.name) for image in images])
                 report.version = submission.version; report.status = 'PENDING'
@@ -358,7 +398,7 @@ class SegmentReportReviewView(APIView):
             order = Order.objects.select_for_update().filter(pk=order_id).first()
             if not order:
                 return Response({'code':409, 'msg':'订单当前不支持逐段审核'}, status=409)
-            order = _enter_points_report_scope(scopes, order)
+            order = enter_points_report_scope(scopes, order)
             if not supports(order):
                 return Response({'code':409, 'msg':'订单当前不支持逐段审核'}, status=409)
             segment = OrderParticipationSegment.objects.select_for_update().filter(pk=segment_id, attribution__order=order).first()
@@ -373,9 +413,19 @@ class SegmentReportReviewView(APIView):
             if (not report or report.status != 'PENDING' or report.version != version
                     or not latest or latest.version != version or latest.status != 'PENDING'):
                 return Response({'code':409, 'msg':'报单状态已变化，请刷新核对'}, status=409)
+            try:
+                clock = require_clock()
+                verify(order, 'SUBMISSION', latest.pk, 'SUBMIT', latest.submitted_at, clock)
+                if clock.at < latest.submitted_at:
+                    raise ClockConflict('报单提交时间晚于当前数据库时间，需核对')
+            except ClockUnavailable:
+                return Response({'code':503, 'msg':'门店数据库时钟不可用，审核未记录'}, status=503)
+            except ClockConflict:
+                return Response({'code':409, 'msg':'原报单时钟证据待核对，不能审核'}, status=409)
             latest.status = 'APPROVED' if action == 'approve' else 'REJECTED'
-            latest.reviewed_at = timezone.now(); latest.reviewer = request.account; latest.review_remark = remark.strip()
+            latest.reviewed_at = clock.at; latest.reviewer = request.account; latest.review_remark = remark.strip()
             latest.save(update_fields=['status','reviewed_at','reviewer','review_remark'])
+            record(order, 'SUBMISSION', latest.pk, 'REVIEW', clock)
             report.status = latest.status; report.save(update_fields=['status','updated_at'])
             from .notifier import notify_order_update
             transaction.on_commit(lambda: notify_order_update(order))

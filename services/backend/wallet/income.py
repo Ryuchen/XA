@@ -6,9 +6,10 @@ import logging
 from django.conf import settings
 from stores.db import transaction
 from django.db.models import Exists, F, OuterRef, Q
-from django.utils import timezone
 
-from .models import IncomeHold, Transaction, Wallet, get_platform_wallet
+from .models import IncomeHold, SettlementClockEvidence, Transaction, Wallet, get_platform_wallet
+from .settlement_clocks import (ClockConflict, ClockUnavailable, clock_scope, receipt, record,
+                                require_clock, sample, validate_receipt)
 
 PRIORITY_GIFT_FREEZE_REMARK = '礼物收益等待先到期的退款押金补差'
 
@@ -46,13 +47,38 @@ def _provider_business_cycle(wallet):
         ).values_list('business_cycle', flat=True).first()
 
 
-def hold_gift_income(income_tx, *, paid_at, aftersale_hours, freeze_hours):
+def _freeze_clock_valid(row, *, order_id, release_at, clock):
+    """Bind the original hold, its deadline and the current store DB identity."""
+    if row is None or row.order_id != order_id or row.deadline_at != release_at:
+        return False
+    try:
+        validate_receipt(row.clock_evidence, row.observed_at, clock)
+    except ClockConflict:
+        return False
+    return True
+
+
+def _require_freeze_clock(hold, clock):
+    row = receipt(hold.income_transaction.order, 'HOLD', hold.pk, 'FREEZE')
+    if not _freeze_clock_valid(row, order_id=hold.income_transaction.order_id,
+                               release_at=hold.release_at, clock=clock):
+        raise ClockConflict('冻结收益缺少原数据库时钟或截止证据，需人工核对')
+    return row
+
+
+def _record_freeze_clock(hold, clock):
+    return record(hold.income_transaction.order, 'HOLD', hold.pk, 'FREEZE', clock,
+                  deadline_at=hold.release_at)
+
+
+def hold_gift_income(income_tx, *, paid_at, aftersale_hours, freeze_hours, now=None):
     """Freeze gift income until both payment-based clocks have elapsed."""
     if not transaction.get_connection().in_atomic_block:
         raise RuntimeError('礼物收益冻结须与付款处于同一事务')
     if income_tx.amount <= 0:
         return None
     priority_wait = False
+    clock = None
     if max(aftersale_hours, freeze_hours) == 0:
         from .refund_deposit import enabled as deficit_enabled, protection_enabled
         if protection_enabled():
@@ -69,13 +95,15 @@ def hold_gift_income(income_tx, *, paid_at, aftersale_hours, freeze_hours):
                 if outstanding:
                     from .refund_priority import require_current_priority_read
                     require_current_priority_read()
-                    priority_wait = bool(_due_income_candidates(paid_at, 1, wallet_id=wallet.pk))
+                    clock = require_clock(now)
+                    priority_wait = bool(_due_income_candidates(clock, 1, wallet_id=wallet.pk))
                 if not priority_wait:
                     from .refund_deposit import apply_released_income
-                    apply_released_income(source=income_tx, profile=profile, wallet=wallet)
+                    apply_released_income(source=income_tx, profile=profile, wallet=wallet, now=clock or now)
         if not priority_wait:
             return None
     wallet = Wallet.objects.select_for_update().get(pk=income_tx.wallet_id)
+    clock = require_clock(clock or now)
     if wallet.balance < income_tx.amount or wallet.frozen_amount + income_tx.amount > 2147483647:
         raise ValueError('礼物收益冻结金额异常')
     before = wallet.balance
@@ -90,6 +118,7 @@ def hold_gift_income(income_tx, *, paid_at, aftersale_hours, freeze_hours):
         remark=PRIORITY_GIFT_FREEZE_REMARK if priority_wait else '礼物收益等待售后及冻结期')
     hold.freeze_transaction = freeze
     hold.save(update_fields=['freeze_transaction'])
+    _record_freeze_clock(hold, clock)
     from .refund_deposit import enabled as deficit_enabled
     if deficit_enabled():
         from .income_priority_evidence import record_hold
@@ -97,7 +126,7 @@ def hold_gift_income(income_tx, *, paid_at, aftersale_hours, freeze_hours):
     return hold
 
 
-def hold_provider_income(income_tx, *, profile, hold_hours, deposit_percent=None, apply_without_hold=False):
+def hold_provider_income(income_tx, *, profile, hold_hours, deposit_percent=None, apply_without_hold=False, now=None):
     if not transaction.get_connection().in_atomic_block:
         raise RuntimeError('收益冻结须与收益入账处于同一事务')
     if income_tx is None:
@@ -109,6 +138,7 @@ def hold_provider_income(income_tx, *, profile, hold_hours, deposit_percent=None
     transaction.on_commit(lambda: notify_wallet_update(wallet))
     deficit_repayment = 0
     priority_wait = False
+    clock = None
     has_deficit = False
     supported = False
     from .refund_deposit import enabled as deficit_enabled, protection_enabled as deficit_protected
@@ -127,13 +157,20 @@ def hold_provider_income(income_tx, *, profile, hold_hours, deposit_percent=None
             if has_deficit:
                 from .refund_priority import require_current_priority_read
                 require_current_priority_read()
-                priority_wait = (income_tx.order.status != income_tx.order.Status.COMPLETED
-                                 or bool(_due_income_candidates(timezone.now(), 1, wallet_id=wallet.pk)))
+                if income_tx.order.status != income_tx.order.Status.COMPLETED:
+                    priority_wait = True
+                else:
+                    clock = require_clock(now)
+                    priority_wait = bool(_due_income_candidates(clock, 1, wallet_id=wallet.pk))
             if not priority_wait and income_tx.order.status == income_tx.order.Status.COMPLETED:
-                deficit_repayment = apply_released_income(source=income_tx, profile=profile, wallet=wallet)
+                deficit_repayment = apply_released_income(
+                    source=income_tx, profile=profile, wallet=wallet, now=clock or now,
+                )
     if hold_hours <= 0 and not apply_without_hold and not priority_wait:
         return None
     wallet = Wallet.objects.select_for_update().get(pk=income_tx.wallet_id)
+    if hold_hours > 0 or priority_wait:
+        clock = require_clock(clock or now)
     from .club_rules import deposit_income_percent
     percent = deposit_income_percent() if deposit_percent is None else deposit_percent
     if type(percent) is not int or not 0 <= percent <= 100:
@@ -182,13 +219,14 @@ def hold_provider_income(income_tx, *, profile, hold_hours, deposit_percent=None
                                     account_business_cycle=_provider_business_cycle(wallet),
                                     initial_deposit_debit=initial_debit, initial_deposit_credit=initial_credit,
                                     deferred_deposit_percent=(percent if has_deficit and (priority_wait or hold_hours > 0) else None),
-                                    release_at=timezone.now() + timedelta(hours=hold_hours))
+                                    release_at=clock.at + timedelta(hours=hold_hours))
     freeze = Transaction.objects.create(wallet=wallet, order=income_tx.order, amount=-held,
                                tx_type=Transaction.TxType.EARNINGS_FREEZE,
                                balance_before=before, balance_after=wallet.balance,
                                remark=f'订单收益冻结{hold_hours}小时')
     hold.freeze_transaction = freeze
     hold.save(update_fields=['freeze_transaction'])
+    _record_freeze_clock(hold, clock)
     if deficit_enabled() and supported:
         from .income_priority_evidence import record_hold
         record_hold(hold)
@@ -207,6 +245,8 @@ def _legacy_service_aftersale_waiting(order, now):
 
 
 def _due_income_candidates(now, limit, *, wallet_id=None):
+    clock = require_clock(now, scoped_datetime=True)
+    now = clock.at
     # Direct-payment settlement and trustworthy channel-clearing evidence are
     # not implemented. Exclude all such holds before the limit so they cannot
     # starve ordinary balance-funded or orderless historical income.
@@ -274,16 +314,23 @@ def _due_income_candidates(now, limit, *, wallet_id=None):
             break
         cases_by_order = {}
         order_ids = {row[2] for row in page if row[2] is not None}
+        clock_receipts = {}
+        if wallet_id is None:
+            clock_receipts = {row.subject_id: row for row in SettlementClockEvidence.objects.filter(
+                subject_type='HOLD', operation='FREEZE', subject_id__in=[row[0] for row in page])}
         waiting_orders = {order.pk for order in Order.objects.filter(pk__in=order_ids).only(
             'status', 'is_gift_snapshot', 'service_clock_version', 'service_aftersale_hours', 'completed_at')
             if _legacy_service_aftersale_waiting(order, now)}
         for case in AfterSale.objects.filter(order_id__in=order_ids, status='OPEN').only(
                 'order_id', 'affected_provider_account_ids'):
             cases_by_order.setdefault(case.order_id, []).append(case)
-        for hold_id, candidate_wallet_id, order_id, account_id, _, amount, recovered in page:
+        for hold_id, candidate_wallet_id, order_id, account_id, release_at, amount, recovered in page:
             if order_id in waiting_orders:
                 continue
             if any(applies_to(case, account_id) for case in cases_by_order.get(order_id, ())):
+                continue
+            if wallet_id is None and not _freeze_clock_valid(
+                    clock_receipts.get(hold_id), order_id=order_id, release_at=release_at, clock=clock):
                 continue
             if wallet_id is not None:
                 if recovered > amount:
@@ -326,8 +373,11 @@ def _direct_income_blocked(order_id):
 
 
 def release_due_income(*, now=None, limit=500):
-    now = now or timezone.now()
-    due = _due_income_candidates(now, limit)
+    explicit_clock = now is not None
+    initial_clock = require_clock(now)
+    now = initial_clock.at
+    with clock_scope(initial_clock):
+        due = _due_income_candidates(initial_clock, limit)
     released = 0
     for hold_id, wallet_id, order_id in due:
         lifecycle_identity = None
@@ -400,9 +450,28 @@ def release_due_income(*, now=None, limit=500):
                 logging.getLogger(__name__).warning('收益钱包归属已变化 wallet_id=%s', wallet_id)
                 continue
             hold = IncomeHold.objects.select_for_update().get(pk=hold_id)
-            if hold.released_at or hold.cancelled_at or hold.release_at > now:
+            if hold.released_at or hold.cancelled_at:
                 continue
             if hold.wallet_id != wallet_id or hold.income_transaction.order_id != order_id:
+                continue
+            try:
+                # Explicit attested clocks are used by outer locked workflows
+                # and controlled tests. The standalone production scanner takes
+                # a fresh observation after every order/wallet/hold lock wait.
+                release_clock = initial_clock if explicit_clock else sample(fresh=True)
+                now = release_clock.at
+                if hold.release_at > now:
+                    continue
+                if order_id is not None and _legacy_service_aftersale_waiting(order, now):
+                    continue
+                _require_freeze_clock(hold, release_clock)
+                if receipt(hold.income_transaction.order, 'HOLD', hold.pk, 'RELEASE') is not None:
+                    raise ClockConflict('冻结收益释放回执与记录状态不一致')
+            except ClockUnavailable as exc:
+                logging.getLogger(__name__).warning('收益解冻时钟不可用 hold_id=%s: %s', hold.pk, exc)
+                continue
+            except ClockConflict as exc:
+                logging.getLogger(__name__).warning('收益解冻时钟证据待核对 hold_id=%s: %s', hold.pk, exc)
                 continue
             if not valid_freeze_transaction(hold):
                 logging.getLogger(__name__).warning('冻结收益原流水待核对 hold_id=%s', hold.pk)
@@ -459,7 +528,8 @@ def release_due_income(*, now=None, limit=500):
                         from rest_framework.exceptions import ValidationError
                         try:
                             require_current_priority_read()
-                            first, reason = earliest_safe_hold(now, wallet.pk, recover=True)
+                            with clock_scope(release_clock):
+                                first, reason = earliest_safe_hold(now, wallet.pk, recover=True)
                         except ValidationError:
                             first, reason = None, '多笔待释放收益的当前顺序无法核对'
                         if reason or not first or first[0] != hold.pk:
@@ -477,7 +547,9 @@ def release_due_income(*, now=None, limit=500):
             deficit_repayment = 0
             if deficit_enabled() and profile and profile.account_id and order_id and remaining:
                 from .refund_deposit import apply_released_income
-                deficit_repayment = apply_released_income(source=released_tx, profile=profile, wallet=wallet, hold=hold, now=now)
+                deficit_repayment = apply_released_income(
+                    source=released_tx, profile=profile, wallet=wallet, hold=hold, now=release_clock,
+                )
             if hold.deferred_deposit_percent is not None:
                 percent = hold.deferred_deposit_percent
                 if not profile or type(percent) is not int or not 0 <= percent <= 100:
@@ -514,6 +586,8 @@ def release_due_income(*, now=None, limit=500):
             hold.released_at = now
             hold.release_transaction = released_tx
             hold.save(update_fields=['released_at', 'release_transaction', 'deferred_deposit_debit', 'deferred_deposit_credit'])
+            record(hold.income_transaction.order, 'HOLD', hold.pk, 'RELEASE', release_clock,
+                   deadline_at=hold.release_at)
             from .notifier import notify_wallet_update
             transaction.on_commit(lambda wallet=wallet: notify_wallet_update(wallet))
             released += 1

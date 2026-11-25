@@ -29,6 +29,10 @@ PERMISSION_GROUPS = [
         ('dictionary:view', '查看运营字典'),
         ('dictionary:edit', '维护运营字典'),
     ]},
+    {'group': 'content', 'label': '内容与命名合规', 'permissions': [
+        ('content:view', '查看内容合规回执'),
+        ('content:official_name', '使用官方职能昵称'),
+    ]},
     {'group': 'payment_fee', 'label': '微信支付费率', 'permissions': [
         ('payment_fee:view', '查看支付费率配置'), ('payment_fee:edit', '修改支付费率配置'),
     ]},
@@ -101,6 +105,7 @@ PERMISSION_GROUPS = [
         'label': '订单管理',
         'permissions': [
             ('order:view', '查看订单'),
+            ('order:export', '导出授权门店订单明细'),
             ('order:dispatch', '代派单'),
             ('order:settle', '订单结算'),
             ('order:refund', '订单退款'),

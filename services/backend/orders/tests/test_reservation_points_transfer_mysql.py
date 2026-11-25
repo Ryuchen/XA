@@ -13,7 +13,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.conf import settings
-from django.db import connection, connections, transaction
+from django.db import DatabaseError, connection, connections, transaction
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -78,6 +78,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     gift_returned_addon = False
     main_refund_after_addon = False
     defer_funding = False
+    room_service = False
+    room_confirmation_minutes = 30
+    room_addon_purchase = False
+    opening_points_hundredths = 15000
 
     def prepare(self):
         reservation_fixture.AssignedOrderReservationGuardTest.setUp(self)
@@ -110,9 +114,21 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             self.service.billing_provider_count = 2
             self.service.fulfillment_provider_count = 2
             self.service.save(update_fields=['price', 'billing_provider_count', 'fulfillment_provider_count'])
+        if self.room_service:
+            from console.room_confirmation_config import save_room_confirmation
+            save_room_confirmation(self.room_confirmation_minutes, 0, lambda *_: None)
+            self.service.room_enabled = True
+            self.service.save(update_fields=['room_enabled'])
+        if self.room_addon_purchase:
+            self.room_addon = self.make_consultation_addon()
+            profile.service_items.add(self.service)
+            replacement.escort_profile.service_items.add(self.service)
+            if self.teammate:
+                self.teammate.escort_profile.service_items.add(self.service)
         self.ok(self.recharge())
         self.points, _ = MemberProfile.objects.update_or_create(
-            account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon else 15000})
+            account=self.buyer, defaults={'points_balance': 20000 if self.gift_returned_addon
+                                          else self.opening_points_hundredths})
         save_points_terms(group_point_hundredths=10000, group_coin_units=4000,
                           max_ratio_basis_points=5000, version=0, audit=lambda *_: None)
 
@@ -123,10 +139,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             provider_accounts, self.start, 'points-transfer-booking')
         self.receipt = OrderPointsRedemption.objects.get(order_id=self.order_id)
         self.assertEqual((self.receipt.deal_units, self.receipt.paid_units, self.receipt.points_hundredths), (10000, 6000, 10000))
+        if self.room_addon_purchase:
+            self.assert_room_addon_unavailable_before_entry()
         self.funding_receipt = self.fund_reservation()
         for account in provider_accounts:
-            self.ok(self.api(account).post(f'/api/orders/orders/{self.order_id}/start/',
+            provider = self.api(account)
+            if self.room_service:
+                self.assert_room_provider_actions(provider, 'grabbed', ['START'])
+            self.ok(provider.post(f'/api/orders/orders/{self.order_id}/start-service/',
                 {'entry_image': release_fixture.screenshot()}, format='multipart'))
+            if self.room_service and self.teammate and account == self.original:
+                self.assert_room_provider_actions(provider, 'grabbed', [])
         self.service.commission_override = True
         self.service.commission_rate = 30
         self.service.save(update_fields=['commission_override', 'commission_rate'])
@@ -295,6 +318,21 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
         self.run_in_stores(self.exercise_paid_addon_consultation)
+
+    def test_paid_addon_consultation_and_other_order_funding_share_one_receipt(self):
+        self.opening_points_hundredths = 20000
+        self.run_in_stores(self.exercise_shared_funding_and_addon_consultation)
+
+    def test_refund_releases_shared_funding_before_other_order_allocates(self):
+        self.opening_points_hundredths = 20000
+        self.run_in_stores(lambda: self.exercise_shared_refund_and_allocation(refund_first=True))
+
+    def test_other_order_allocation_waits_for_a_new_request_after_refund(self):
+        self.opening_points_hundredths = 20000
+        self.run_in_stores(lambda: self.exercise_shared_refund_and_allocation(refund_first=False))
+
+    def test_consultation_addon_refund_waits_for_payroll_and_adjusts_next_period(self):
+        self.run_in_stores(self.exercise_addon_refund_after_payroll)
 
     def test_returned_addon_consultation_refunds_only_the_returned_segment(self):
         self.run_in_stores(self.exercise_returned_addon_consultation)
@@ -819,6 +857,203 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         membership.account = account
         membership.save(update_fields=['account'])
         return self.api(account), membership, message
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+                       AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True)
+    def exercise_shared_funding_and_addon_consultation(self):
+        self.transfer_and_join()
+        payment = self.pay_consultation_addon(self.replacement)
+        order_path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(self.api(self.replacement).post(order_path + 'complete/', {
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'shared-funding-completed'},
+            format='multipart'))
+        second_service = make_service(price=10000, commission_override=True, commission_rate=20)
+        _, second_order_id = self.book_points_reservation([self.original], self.start + timedelta(hours=3),
+            'shared-receipt-other-reservation', service=second_service)
+        allocation = self.ok(self.finance_client.post(self.funding_url, {
+            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 900}, format='json'))
+        self.assertEqual((allocation['order_id'], allocation['amount']), (second_order_id, 900))
+        staff, _, message = self.order_consultation()
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        payload = {**self.consultation_payload(message), 'addon_payment_id': payment.pk,
+                   'affected_segment_ids': [payment.intent.segment_id]}
+        path = '/api/admin/aftersales/open-negotiation/'
+        finance_url = f'/api/admin/platform/points-funding/{self.store.slug}/orders/{second_order_id}'
+        events = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
+        before = [('ORDER', 2000), ('RELEASE', 600), ('RELEASE', 300), ('ORDER', 900)]
+        self.assertEqual(list(events.values_list('kind', 'amount')), before)
+        buyer_balance = Wallet.objects.get(account=self.buyer).balance
+
+        held, resume = Event(), Event()
+        receipt_table = PassRefundRepaymentReceipt._meta.db_table
+
+        def pause_receipt(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if (not held.is_set() and f'`{receipt_table}`' in sql.lower() and 'for update' in sql.lower()
+                    and self.funding_receipt.pk in (params or ())):
+                held.set()
+                self.assertTrue(resume.wait(8), '财务查询未续办原到账核对')
+            return result
+
+        waits = []
+        case_id = None
+        for attempt in range(2):
+            held.clear()
+            resume.clear()
+            money_table = OrderFinancialLock._meta.db_table
+            attempts = Queue()
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                finance = pool.submit(self.independent_request, lambda: self.finance_client.get(finance_url), pause_receipt)
+                try:
+                    self.assertTrue(held.wait(4), '财务未锁定共用到账')
+                    opening = pool.submit(self.independent_request, lambda: staff.post(path, payload, format='json'),
+                        self.observe_lock_attempt(attempts, money_table, 'for update', account_id=1))
+                    waits.append(self.wait_for_lock(opening, attempts, table=money_table))
+                    with self.assertRaises(DatabaseError) as occupied:
+                        with transaction.atomic(using=self.store.database_alias):
+                            Order.objects.select_for_update(nowait=True).get(pk=self.order_id)
+                    self.assertEqual(occupied.exception.args[0], 3572)
+                    with transaction.atomic(using=self.store.database_alias):
+                        ClubAccount.objects.select_for_update(nowait=True).get(pk=self.buyer.pk)
+                        ChatSession.objects.select_for_update(nowait=True).get(pk=message.session_id)
+                        ChatMessage.objects.select_for_update(nowait=True).get(pk=message.pk)
+                finally:
+                    resume.set()
+                funding = self.ok(finance.result(timeout=15))
+                opened = self.ok(opening.result(timeout=15))
+            self.assertEqual((funding['order_id'], funding['required_units'], funding['allocated_units'],
+                              funding['remaining_units']), (second_order_id, 2000, 900, 1100))
+            if attempt == 0:
+                case_id = opened['id']
+            self.assertEqual((opened['id'], opened['addon_payment']), (case_id, payment.pk))
+        case = AfterSale.objects.get(order_id=self.order_id)
+        self.assertEqual((len(case.history), case.history[0]['consultation_message_id']), (1, message.pk))
+        self.assertFalse(AfterSale.objects.filter(order_id=second_order_id).exists())
+        rejected = self.finance_client.post(self.funding_url, {
+            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 1}, format='json')
+        self.assertEqual((rejected.status_code, rejected.data['msg']), (409, '分配金额超过到账未分配余额'))
+        self.assertEqual(list(events.values_list('kind', 'amount')), before)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, buyer_balance)
+        self.assertFalse(payment.refund_records.exists())
+        print(f'{self.store.slug} order={self.order_id} other_order={second_order_id} '
+              f'receipt={self.funding_receipt.pk} allocation={allocation["allocation_id"]} '
+              f'addon={payment.pk} case={case.pk} money_waits={waits}', flush=True)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+                       NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def exercise_shared_refund_and_allocation(self, *, refund_first):
+        from stores.models import PlatformPointsFundingOperation
+
+        self.transfer_and_join()
+        transfer = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        replacement = self.api(self.replacement)
+        order_path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(replacement.post(order_path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'shared-refund-completed'}, format='multipart'))
+        second_service = make_service(price=10000, commission_override=True, commission_rate=20)
+        _, second_order_id = self.book_points_reservation([self.original], self.start + timedelta(hours=3),
+            'shared-refund-other-reservation', service=second_service)
+        self.ok(self.finance_client.post(self.funding_url, {
+            'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 600}, format='json'))
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'reason': '双方确认退部分主服务',
+            'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
+        admin = f'/api/admin/aftersales/{case["id"]}/'
+        proposal = self.ok(staff.post(admin + 'negotiation-proposal/', {
+            'request_id': 'shared-funding-refund-proposal', 'expected_version': 0, 'refund_units': 1000,
+            'provider_terms': [{'account_id': self.replacement.pk, 'retained_units': 3200}],
+            'explanation': '按接替段退回部分服务款'}, format='json'))
+        for actor in (self.api(self.buyer), replacement):
+            self.ok(actor.post(order_path + 'negotiation-proposal/',
+                {'proposal_id': proposal['id'], 'accepted': True}, format='json'))
+
+        refund_payload = {'proposal_id': proposal['id'], 'client_request_id': 'shared-funding-refund'}
+        allocation_payload = {'request_id': str(uuid4()), 'order_id': second_order_id, 'amount': 400}
+
+        def refund():
+            return staff.post(admin + 'negotiation-execution/', refund_payload, format='json')
+
+        def allocate():
+            return self.finance_client.post(self.funding_url, allocation_payload, format='json')
+
+        events = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
+        before = [('ORDER', 2000), ('RELEASE', 600), ('ORDER', 600)]
+        self.assertEqual(list(events.values_list('kind', 'amount')), before)
+        balance = Wallet.objects.get(account=self.buyer).balance
+        points = MemberProfile.objects.get(account=self.buyer).points_balance
+        held, resume = Event(), Event()
+        if refund_first:
+            first, second = refund, allocate
+            pause = self.pause_refund_race(PassReceiptUsageEvent._meta.db_table, 'insert into', 'RELEASE', held, resume)
+        else:
+            writing = Event()
+            operation_table = PlatformPointsFundingOperation._meta.db_table
+            pause_receipt = self.pause_refund_race(PassRefundRepaymentReceipt._meta.db_table, 'for update',
+                                                  self.funding_receipt.pk, held, resume)
+
+            def observe_operation(execute, sql, params, many, context):
+                result = execute(sql, params, many, context)
+                if f'`{operation_table}`' in sql.lower() and 'for update' in sql.lower():
+                    writing.set()
+                return result
+
+            def allocate_first():
+                with connections['default'].execute_wrapper(observe_operation):
+                    return allocate()
+
+            def pause(execute, sql, params, many, context):
+                if writing.is_set():
+                    return pause_receipt(execute, sql, params, many, context)
+                return execute(sql, params, many, context)
+
+            first, second = allocate_first, refund
+        attempts = Queue()
+        money_table = OrderFinancialLock._meta.db_table
+        observer = self.observe_lock_attempt(attempts, money_table, 'for update', account_id=1)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            holding = pool.submit(self.independent_request, first, pause)
+            try:
+                self.assertTrue(held.wait(5), '未观察到先行事务锁定共用到账')
+                competing = pool.submit(self.independent_request, second, observer)
+                waited = self.wait_for_lock(competing, attempts, table=money_table)
+                self.assertEqual(list(events.values_list('kind', 'amount')), before)
+            finally:
+                resume.set()
+            first_response, second_response = holding.result(timeout=18), competing.result(timeout=18)
+
+        refund_response, allocation_response = ((first_response, second_response) if refund_first
+                                                else (second_response, first_response))
+        posted = self.ok(refund_response)
+        self.assertEqual(self.ok(refund()), posted)
+        posting = PointsNegotiationPosting.objects.get(pk=posted['execution_id'])
+        self.assertEqual(posting.funding_release_evidence.expected_release, 400)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, balance + 600)
+        self.assertEqual(MemberProfile.objects.get(account=self.buyer).points_balance, points + 1000)
+        if not refund_first:
+            self.assertEqual((allocation_response.status_code, allocation_response.data['msg']),
+                             (409, '分配金额超过到账未分配余额'))
+            operation = PlatformPointsFundingOperation.objects.get(request_id=allocation_payload['request_id'])
+            self.assertIsNotNone(operation.rejected_at)
+            self.assertIsNone(operation.tenant_action_id)
+            rejected = allocate()
+            self.assertEqual((rejected.status_code, rejected.data), (409, allocation_response.data))
+            allocation_payload['request_id'] = str(uuid4())
+            allocation_response = allocate()
+        allocation = self.ok(allocation_response)
+        self.assertEqual(self.ok(allocate()), allocation)
+        self.assertEqual((allocation['receipt_id'], allocation['order_id'], allocation['amount']),
+                         (self.funding_receipt.pk, second_order_id, 400))
+        self.assertEqual(list(events.values_list('kind', 'amount')), before + [('RELEASE', 400), ('ORDER', 400)])
+        funding_path = f'/api/admin/platform/points-funding/{self.store.slug}/orders/'
+        for order_id, required, allocated in ((self.order_id, 1000, 1000), (second_order_id, 2000, 1000)):
+            status = self.ok(self.finance_client.get(f'{funding_path}{order_id}'))
+            self.assertEqual((status['required_units'], status['allocated_units'], status['remaining_units']),
+                             (required, allocated, required - allocated))
+        print(f'{self.store.slug} refund_first={refund_first} order={self.order_id} other_order={second_order_id} '
+              f'receipt={self.funding_receipt.pk} refund={posting.points_refund.refund_id} '
+              f'allocation={allocation["allocation_id"]} money_wait={waited}', flush=True)
 
     def consultation_payload(self, message):
         return {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
@@ -1402,15 +1637,23 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 'affected_provider_account_ids': [account.pk], 'affected_segment_ids': [segment]}, format='json')
             self.assertEqual(reopened.status_code, 400, reopened.data)
         self.assertEqual(order.refund_records.count(), 1)
+        self.assert_released_evidence_available(teammate, path, teammate_segment.pk)
         self.ok(teammate.post(path + 'participation-evidence/', {'segment_id': teammate_segment.pk,
             'completion_image': release_fixture.screenshot(), 'client_request_id': 'main-refund-released-segment'},
             format='multipart'))
+        self.assert_main_refund_completion_actions(path, original, teammate)
         self.ok(original.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'main-refund-unaffected-seat-complete'}, format='multipart'))
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(original.get(path))
+        self.assertCountEqual(
+            [(row['id'], row['segment_report_available']) for row in detail['my_participation_segments']],
+            [(transfer_out.previous_segment_id, True), (transfer_back.next_segment_id, True)])
         reporting = [(self.original, transfer_out.previous_segment_id),
                      (self.replacement, transfer_back.previous_segment_id),
                      (self.original, transfer_back.next_segment_id), (self.teammate, teammate_segment.pk)]
-        reports = [self.approve_report(account, segment) for account, segment in reporting]
+        reports = [self.approve_report(account, segment, verify_detail=index == 0)
+                   for index, (account, segment) in enumerate(reporting)]
         due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
         with patch('django.utils.timezone.now', return_value=due):
             funding = self.ok(self.finance_client.get(funding_url))
@@ -1453,6 +1696,34 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} order={order.pk} addon_refund={addon_refund.pk} main_posting={posting.pk} '
               f'main_refund={main.refund_id} main_credit={main.coin_transaction_id} points={main.points_ledger_id} '
               f'funding=780 release={events[-1][0]} unchanged_payment={other_payment.pk}', flush=True)
+
+    def assert_main_refund_completion_actions(self, detail_path, continuing, terminated):
+        listing = '/api/orders/orders/?status=in_progress&role=provider&page=1&page_size=20'
+        alias = self.store.database_alias
+        with connections[alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(continuing.get(detail_path))
+            rows = self.ok(continuing.get(listing))['list']
+            listed = next(row for row in rows if row['id'] == self.order_id)
+            for row in (detail, listed):
+                self.assertIn('COMPLETE', row['allowed_actions'])
+                self.assertFalse(row['my_assignment_released'])
+                progress = row['team_progress']
+                self.assertEqual((progress['stage'], progress['submitted_count'], progress['total_count']),
+                                 ('COMPLETION', 0, 1))
+                self.assertEqual([member['id'] for member in progress['members']], [self.original.pk])
+            for client in (terminated, self.api(self.replacement)):
+                other = self.ok(client.get(detail_path))
+                self.assertNotIn('COMPLETE', other['allowed_actions'])
+                self.assertTrue(other['my_assignment_released'])
+
+    def assert_released_evidence_available(self, provider, detail_path, segment_id):
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(provider.get(detail_path))
+        segments = {row['id']: row for row in detail['my_participation_segments']}
+        self.assertTrue(segments[segment_id]['segment_report_available'])
+        self.assertTrue(segments[segment_id]['can_upload_completion'])
+        self.assertFalse(segments[segment_id]['completion_image_url'])
+        self.assertFalse(any(row['can_upload_completion'] for row in segments.values() if not row['released_at']))
 
     def fund_gift_addon_gap(self, funding_url, required):
         funding = self.ok(self.finance_client.get(funding_url))
@@ -2153,10 +2424,76 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertTrue(preview['can_confirm'], preview['warnings'])
         return payroll, preview
 
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
+                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)
+    def exercise_addon_refund_after_payroll(self):
+        from console.payroll_models import PayrollRefundPerformanceAdjustment
+
+        PayrollEventBarrier.objects.get_or_create(pk=1)
+        self.transfer_and_join()
+        payment = self.pay_consultation_addon(self.replacement)
+        replacement = self.api(self.replacement)
+        path = f'/orders/{self.order_id}/'
+        self.ok(replacement.post('/api/orders' + path + 'complete/', {
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'payroll-addon-complete'},
+            format='multipart'))
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'addon_payment_id': payment.pk,
+            'affected_segment_ids': [payment.intent.segment_id]}, format='json'))
+        refund_path = path + f'addons/payments/{payment.pk}/refund-proposals/'
+        proposal = self.ok(staff.post('/api/admin' + refund_path, {
+            'request_id': 'payroll-addon-refund', 'amount_raw': 500, 'case_id': case['id'],
+            'explanation': '退回未履约的加购部分'}, format='json'))
+        for actor in (self.api(self.buyer), replacement):
+            self.ok(actor.post(f'/api/orders{refund_path}{proposal["id"]}/', {'accepted': True}, format='json'))
+        execute_url = f'/api/admin{refund_path}{proposal["id"]}/execute/'
+
+        salary = payroll_fixture.LateActivityPayrollTest()
+        salary.setUp()
+        salary.plan.base_fen, salary.plan.performance_fen, salary.plan.target_fen = 1000, 1000, 10000
+        salary.plan.target_scope = 'STORE'
+        salary.plan.save(update_fields=['base_fen', 'performance_fen', 'target_fen', 'target_scope'])
+        salary.assign(salary.current_text)
+        preview = salary.preview(salary.current_text)
+        self.assertTrue(preview['can_confirm'], preview['warnings'])
+        self.assertEqual((preview['lines'][0]['performance_basis_fen'], preview['totals']['performance_fen']),
+                         (self.receipt.paid_units + payment.intent.amount, 700))
+
+        def assert_payment_unlocked():
+            with transaction.atomic(using=self.store.database_alias):
+                OrderAddonPayment.objects.select_for_update(nowait=True).get(pk=payment.pk)
+                AfterSale.objects.select_for_update(nowait=True).get(pk=case['id'])
+                self.assertFalse(payment.refund_records.exists())
+
+        result, waited = self.consultation_during_payroll((salary, preview), staff, execute_url, {}, message,
+                                                         while_waiting=assert_payment_unlocked)
+        posted = self.ok(result)
+        self.assertEqual(self.ok(staff.post(execute_url, {}, format='json')), posted)
+        refund = payment.refund_records.get(proposal_id=proposal['id'])
+        self.assertEqual((refund.amount, refund.buyer_transaction.amount), (500, 500))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 500)
+        closed = salary.preview(salary.current_text)
+        self.assertEqual(closed['totals'], preview['totals'])
+        next_month = (salary.current.replace(day=28) + timedelta(days=4)).replace(day=1).strftime('%Y-%m')
+        salary.assign(next_month)
+        following = salary.confirm(next_month)
+        deduction = following['lines'][0]['refund_deduction_plan']
+        self.assertEqual((deduction['deducted_fen'], following['totals']['total_fen']), (50, 950))
+        adjustment = PayrollRefundPerformanceAdjustment.objects.get(addon_refund=refund, account=salary.worker)
+        self.assertEqual((adjustment.before_fen, adjustment.after_fen, adjustment.amount_fen), (700, 650, 50))
+        self.assertEqual(adjustment.original_run_id, closed['run_id'])
+        self.assertEqual(list(adjustment.applications.values_list('run_id', 'amount_fen')), [(following['run_id'], 50)])
+        self.assertEqual(payment.refund_records.count(), 1)
+        print(f'{self.store.slug} order={self.order_id} addon={payment.pk} refund={refund.pk} '
+              f'payroll_run={adjustment.original_run_id} waiting_session={waited} '
+              f'following_run={following["run_id"]} deduction={adjustment.amount_fen}', flush=True)
+
     def consultation_during_payroll(self, payroll_preview, staff, path, payload, message, *, while_waiting=None):
         payroll, preview = payroll_preview
         payroll_url = '/api/admin/payroll/confirm/'
-        confirm_payload = {'month': payroll.original_text, 'fingerprint': preview['fingerprint']}
+        confirm_payload = {'month': preview['month'], 'fingerprint': preview['fingerprint']}
         held, resume = Event(), Event()
         attempts = Queue()
         table = PayrollEventBarrier._meta.db_table
@@ -2347,7 +2684,924 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_funded_points_reservation_pays_each_provider_at_their_own_deadline(self):
         self.run_in_stores(self.exercise_settlement_after_transfer)
 
-    def approve_report(self, account, segment_id):
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)
+    def test_paid_team_transfer_uses_current_completion_actions(self):
+        self.team_returned_addon = True
+        self.run_in_stores(self.exercise_paid_team_transfer_completion_actions)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_single_transfer_room_requires_current_evidence_and_boss_confirmation(self):
+        self.room_service = True
+        self.run_in_stores(self.exercise_paid_transfer_room_confirmation)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_team_transfer_room_requires_both_current_screenshots_before_auto_confirmation(self):
+        self.room_service = True
+        self.team_returned_addon = True
+        self.defer_funding = True
+        self.run_in_stores(self.exercise_paid_transfer_room_confirmation)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_single_points_room_allows_boss_confirmation(self):
+        self.room_service = True
+        self.run_in_stores(self.exercise_paid_points_room_confirmation)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_team_points_room_auto_confirms_before_funding(self):
+        self.room_service = True
+        self.team_returned_addon = True
+        self.defer_funding = True
+        self.run_in_stores(self.exercise_paid_points_room_confirmation)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_transferred_points_room_objection_resumes_original_timer_and_serializes_confirmation(self):
+        self.room_service = self.team_returned_addon = self.defer_funding = True
+        self.room_confirmation_minutes = 60
+        self.run_in_stores(self.exercise_paid_points_room_objections)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_points_room_transfer_invalidates_timer_without_dismissing_open_objection(self):
+        self.room_service = self.team_returned_addon = self.defer_funding = True
+        self.run_in_stores(self.exercise_paid_points_room_transfer_during_objection)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+    def test_paid_transfer_room_keeps_addon_on_replacement_segment_after_confirmation(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(self.exercise_paid_transfer_room_addon)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+    def test_paid_room_hands_over_existing_addon_before_confirmation(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(self.exercise_paid_room_addon_handover)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True, ROOM_AUTO_CONFIRMATION_ENABLED=True)
+    def test_paid_room_waits_for_addon_handover_before_review(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(self.exercise_paid_room_waits_for_addon_handover)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def test_refunded_points_room_preview_uses_net_segment_income(self):
+        self.room_service = True
+        self.run_in_stores(self.exercise_refunded_points_room_preview)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True,
+        REFUND_DEPOSIT_DEFICIT_ENABLED=True, REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=True)
+    def test_refunded_points_preview_never_creates_platform_wallet(self):
+        self.room_service = True
+        self.run_in_stores(lambda: self.exercise_refunded_points_room_preview(deposit_recovery=True))
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True)
+    def test_room_addon_refund_before_confirmation_can_be_read_back_after_settlement(self):
+        self.room_service = self.room_addon_purchase = True
+        self.addon_receipt_reads = []
+        self.run_in_stores(self.exercise_room_addon_refund_before_confirmation)
+        if len(self.routes) > 1:
+            for slug, staff, path in self.addon_receipt_reads:
+                wrong_host = next(host for other_slug, host, _ in self.routes if other_slug != slug)
+                self.assertEqual(staff.get(path, HTTP_HOST=wrong_host).status_code, 401)
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def test_room_main_refund_after_addon_refund_keeps_original_receipts(self):
+        self.room_service = self.room_addon_purchase = True
+        self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def test_team_room_other_seat_finishes_after_separate_addon_and_main_refunds(self):
+        self.room_service = self.room_addon_purchase = self.team_returned_addon = True
+        self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
+
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+        ROOM_COMPLETION_REVIEW_ENABLED=True, ROOM_BOSS_CONFIRMATION_ENABLED=True,
+        NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    def test_team_room_main_and_addon_refunds_keep_the_second_addon(self):
+        self.room_service = self.room_addon_purchase = self.team_returned_addon = self.teammate_paid_addon = True
+        self.run_in_stores(lambda: self.exercise_room_addon_refund_before_confirmation(refund_main=True))
+
+    def exercise_room_addon_refund_before_confirmation(self, *, refund_main=False):
+        former, replacement, transfer = self.transfer_and_enter_room()
+        payment = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
+        other_payment = None
+        if self.teammate_paid_addon:
+            other_payment = self.pay_consultation_addon(self.teammate, addon=self.room_addon,
+                                                       request_id='room-other-seat-addon')
+        wait = None
+        if not self.teammate:
+            wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'addon_payment_id': payment.pk,
+            'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
+        path = f'/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/'
+        proposal = self.ok(staff.post('/api/admin' + path, {'request_id': 'room-addon-refund', 'amount_raw': 500,
+            'case_id': case['id'], 'explanation': '部分加购服务未履行'}, format='json'))
+        decision = f'/api/orders{path}{proposal["id"]}/'
+        execute = f'/api/admin{path}{proposal["id"]}/execute/'
+        boss = self.api(self.buyer)
+        self.assertEqual(self.ok(boss.post(decision, {'accepted': True}, format='json'))['status'], 'PENDING')
+        self.assertEqual(self.ok(replacement.post(decision, {'accepted': True}, format='json'))['status'], 'ACCEPTED')
+        posted = self.ok(staff.post(execute, {}, format='json'))
+        self.assertEqual(self.ok(staff.post(execute, {}, format='json')), posted)
+        refund = payment.refund_records.select_related('buyer_transaction').get()
+        self.assertEqual((refund.amount, refund.buyer_transaction.amount, refund.addon_pending_deduction), (500, 500, 500))
+        self.assertEqual(list(refund.earning_deductions.values_list('payment_id', 'segment_id', 'amount')),
+                         [(payment.pk, transfer.next_segment_id, 500)])
+        self.assertEqual(list(payment.allocations.values_list('kind', 'amount', 'refunded_amount')),
+                         [('PREPAID', 1000, 500)])
+        other_paid = other_payment.intent.amount if other_payment else 0
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - other_paid - 500)
+        self.ok(self.api(self.staff).post(f'/api/admin/aftersales/{case["id"]}/resolve/',
+            {'resolution': '已退指定加购，本次主单继续'}, format='json'))
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual((order.status, order.payment_status, order.room.pk),
+                         (Order.Status.IN_SERVICE, Order.PaymentStatus.PAID, self.room_id))
+        self.assertFalse(order.refund_records.exists())
+        self.assertEqual(list(PointLedger.objects.filter(order=order).values_list('amount', flat=True)), [-10000])
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        if wait:
+            wait.refresh_from_db()
+            self.assertEqual(wait.status, 'RUNNING')
+            confirmed = self.ok(boss.post(f'/api/orders/orders/{order.pk}/room/completion-requests/{wait.request_id}/confirm/',
+                {'client_request_id': 'room-confirm-after-addon-refund'}, format='json'))
+            self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} order={order.pk} room={self.room_id} addon={payment.pk} refund={refund.pk} '
+              f'buyer_refund_transaction={refund.buyer_transaction_id}', flush=True)
+        if refund_main:
+            self.exercise_room_main_refund_after_addon(staff, message, transfer, refund, execute, posted,
+                                                      other_payment=other_payment)
+            return
+        settled = self.settle_consultation_addon_refund(staff, transfer, refund)
+        receipt_path = f'/api/admin{path}{proposal["id"]}/execution-receipt/'
+        with (connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes),
+              connections['default'].execute_wrapper(self.reject_detail_writes)):
+            receipt = self.ok(staff.get(receipt_path))
+            self.assertEqual(self.ok(staff.get(receipt_path)), receipt)
+        self.assertEqual((receipt['order_id'], receipt['payment_id'], receipt['proposal_id'],
+                          receipt['case_id'], receipt['case_request_id'], receipt['refund_executed']),
+                         (order.pk, payment.pk, proposal['id'], case['id'], proposal['case_request_id'], True))
+        self.assertEqual(receipt['execution_receipt'], posted['execution_receipt'])
+        self.addon_receipt_reads.append((self.store.slug, staff, receipt_path))
+        print(f'{self.store.slug} order={order.pk} addon_net_income_transaction={settled.income_transaction_id}:'
+              f'{settled.amount} refund_replay={refund.pk}', flush=True)
+
+    def exercise_room_main_refund_after_addon(self, staff, message, transfer, addon_refund, addon_url, addon_receipt,
+                                            *, other_payment=None):
+        order = Order.objects.get(pk=self.order_id)
+        affected = self.teammate or self.replacement
+        segment = (OrderParticipationSegment.objects.get(attribution__order=order, provider_account=affected)
+                   if self.teammate else transfer.next_segment)
+        retained = 3000 if self.teammate else 3200
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'client_request_id': 'room-main-case-after-addon',
+            'reason': '另行处理主单的部分退款', 'affected_provider_account_ids': [affected.pk],
+            'affected_segment_ids': [segment.pk]}, format='json'))
+        self.assertIsNone(AfterSale.objects.get(pk=case['id']).addon_payment_id)
+        admin = f'/api/admin/aftersales/{case["id"]}/'
+        if self.teammate:
+            whole = staff.get(admin + 'negotiation-preview/', {'refund_units': self.receipt.deal_units})
+            self.assertEqual((whole.status_code, whole.data['msg']), (400, '另一席仍在履约，本次须为主单部分退款'))
+        preview = self.ok(staff.get(admin + 'negotiation-preview/', {'refund_units': 1000}))
+        self.assertTrue(preview['agreement_available'], preview)
+        self.assertTrue(preview['execution_available'], preview)
+        self.assertEqual([(term['account_id'], term['retained_units']) for term in preview['provider_terms']],
+                         [(affected.pk, retained)])
+        proposed = self.ok(staff.post(admin + 'negotiation-proposal/', {
+            'request_id': 'room-main-proposal-after-addon', 'expected_version': 0, 'refund_units': 1000,
+            'provider_terms': [{'account_id': affected.pk, 'retained_units': retained}],
+            'explanation': '退部分主服务及关联积分'}, format='json'))
+        decision = f'/api/orders/orders/{order.pk}/negotiation-proposal/'
+        for actor in (self.buyer, affected):
+            self.ok(self.api(actor).post(decision, {'proposal_id': proposed['id'], 'accepted': True}, format='json'))
+        execute = admin + 'negotiation-execution/'
+        payload = {'proposal_id': proposed['id'], 'client_request_id': 'room-main-refund-after-addon'}
+        original_run = addon_refund.funding_release_run
+        points_before = MemberProfile.objects.get(account=self.buyer).points_balance
+        recorded = self.ok(staff.post(execute, payload, format='json'))
+        posting = PointsNegotiationPosting.objects.get(pk=recorded['execution_id'])
+        main = posting.points_refund
+        self.assertEqual((main.equivalent_units, main.coin_transaction.amount, main.points_ledger.amount),
+                         (1000, 600, 1000))
+        self.assertEqual(posting.funding_release_evidence.expected_release, 400)
+        other_paid = other_payment.intent.amount if other_payment else 0
+        self.assertEqual((Wallet.objects.get(account=self.buyer).balance,
+                          MemberProfile.objects.get(account=self.buyer).points_balance),
+                         (self.balance_before - other_paid + 100, points_before + 1000))
+        self.assertEqual(order.room.pk, self.room_id)
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        payment = addon_refund.payment
+        reporting = [(self.original, transfer.previous_segment_id), (self.replacement, transfer.next_segment_id)]
+        if self.teammate:
+            order.refresh_from_db()
+            self.assertEqual((order.status, order.payment_status),
+                             (Order.Status.IN_SERVICE, Order.PaymentStatus.PARTIALLY_REFUNDED))
+            self.confirm_room_after_other_seat_refund(order, posting.operator)
+            ended = self.api(self.teammate)
+            self.ok(ended.post(f'/api/orders/orders/{order.pk}/participation-evidence/',
+                {'segment_id': segment.pk, 'completion_image': release_fixture.screenshot(),
+                 'client_request_id': 'refunded-room-ending-evidence'}, format='multipart'))
+            reporting.append((self.teammate, segment.pk))
+        affected_payment = other_payment if self.teammate else payment
+        if affected_payment:
+            self.confirm_completed_room_addon(affected_payment, affected)
+        reports = [self.approve_report(account, segment_id) for account, segment_id in reporting]
+        due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
+        with patch('django.utils.timezone.now', return_value=due):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        order.refresh_from_db()
+        provider_income = ([(self.original.pk, 1600), (self.replacement.pk, 2100), (self.teammate.pk, 3000)]
+                           if self.teammate else [(self.original.pk, 3200), (self.replacement.pk, 3200)])
+        funding = 1000 if self.teammate else 700
+        addon_income = [(self.replacement.pk, 200)]
+        if other_payment:
+            funding -= 200
+            addon_income.append((self.teammate.pk, 800))
+            other_settlement = other_payment.segment_settlements.select_related('income_transaction__wallet').get()
+            self.assertEqual((other_settlement.segment_id, other_settlement.amount,
+                              other_settlement.income_transaction.wallet.account_id), (segment.pk, 800, self.teammate.pk))
+            self.assertEqual((other_payment.consumption.paid_units, other_payment.consumption.refunded_units), (1000, 0))
+            self.assertEqual(list(other_payment.allocations.values_list('kind', 'amount', 'refunded_amount')),
+                             [('PREPAID', 1000, 0)])
+            self.assertFalse(other_payment.refund_records.exists())
+        self.assertEqual((order.provider_income, order.settlement_store_funding),
+                         (sum(amount for _, amount in provider_income), funding))
+        settled_addon = payment.segment_settlements.select_related('income_transaction__wallet').get()
+        self.assertEqual((settled_addon.segment_id, settled_addon.amount,
+                          settled_addon.income_transaction.wallet.account_id), (transfer.next_segment_id, 200, self.replacement.pk))
+        self.assertEqual((payment.consumption.paid_units, payment.consumption.refunded_units), (1000, 500))
+        self.assertCountEqual(order.transactions.filter(tx_type=Transaction.TxType.INCOME)
+                              .values_list('wallet__account_id', 'amount'),
+                              [*provider_income, *addon_income])
+        self.assertEqual(self.ok(staff.post(execute, payload, format='json'))['execution_id'], posting.pk)
+        self.assertEqual(self.ok(staff.post(addon_url, {}, format='json')), addon_receipt)
+        self.assertEqual((order.refund_records.count(), payment.refund_records.count()), (1, 1))
+        self.assertEqual(OrderAddonFundingReleaseRun.objects.get(refund=addon_refund).points_addon_hash,
+                         original_run.points_addon_hash)
+        print(f'{self.store.slug} room={self.room_id} order={order.pk} addon_refund={addon_refund.pk} '
+              f'main_refund={main.refund_id} main_wallet_tx={main.coin_transaction_id} points_tx={main.points_ledger_id} '
+              f'settled={[amount for _, amount in provider_income + addon_income]} funding={funding}', flush=True)
+
+    def confirm_completed_room_addon(self, payment, provider):
+        path = f'/orders/{self.order_id}/addons/payments/{payment.pk}/completion/'
+        completion = self.ok(self.api(self.staff).post('/api/admin' + path,
+            {'request_id': 'room-addon-work-after-main-refund', 'completed_work': '已核实剩余加购服务履行完毕'},
+            format='json'))
+        for actor in (self.buyer, provider):
+            accepted = self.ok(self.api(actor).post(f'/api/orders{path}{completion["id"]}/decision/',
+                {'accepted': True}, format='json'))
+        self.assertEqual(accepted['status'], 'ACCEPTED')
+
+    def exercise_refunded_points_room_preview(self, *, deposit_recovery=False):
+        former, replacement, transfer = self.transfer_and_enter_room()
+        self.exercise_paid_points_room_confirmation(self.replacement, former=former)
+        permissions = ['order:refund', 'report:view']
+        if deposit_recovery:
+            permissions += ['escort:view', 'escort:deposit_topup']
+        staff, _, message = self.order_consultation(extra_permissions=permissions)
+        refund_units = 4500 if deposit_recovery else 1000
+        retained = 0 if deposit_recovery else 3200
+        if deposit_recovery:
+            profile = EscortProfile.objects.get(account=self.replacement)
+            profile.deposit_mode, profile.deposit_paid, profile.deposit_required = 'CASH', 0, 1000
+            profile.save(update_fields=['deposit_mode', 'deposit_paid', 'deposit_required'])
+            self.ok(staff.post(f'/api/admin/escorts/{profile.pk}/deposit-topups/', {
+                'amount': 1000, 'reference': 'ROOM-NET-PREVIEW-CASH', 'reason': '登记隔离测试押金',
+                'client_request_id': 'room-net-preview-deposit'}, format='multipart'))
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        case = self.ok(staff.post('/api/admin/aftersales/open-negotiation/', {
+            **self.consultation_payload(message), 'reason': '主服务部分退款',
+            'affected_segment_ids': [transfer.next_segment_id]}, format='json'))
+        admin = f'/api/admin/aftersales/{case["id"]}/'
+        proposed = self.ok(staff.post(admin + 'negotiation-proposal/', {
+            'request_id': 'room-net-preview-proposal', 'expected_version': 0, 'refund_units': refund_units,
+            'provider_terms': [{'account_id': self.replacement.pk, 'retained_units': retained}],
+            'explanation': '由接替人承担本段主服务的部分退款'}, format='json'))
+        path = f'/api/orders/orders/{self.order_id}/'
+        for actor in (self.api(self.buyer), replacement):
+            self.ok(actor.post(path + 'negotiation-proposal/',
+                {'proposal_id': proposed['id'], 'accepted': True}, format='json'))
+        receipt = self.ok(staff.post(admin + 'negotiation-execution/',
+            {'proposal_id': proposed['id'], 'client_request_id': 'room-net-preview-refund'}, format='json'))
+        posting = PointsNegotiationPosting.objects.get(pk=receipt['execution_id'])
+        self.assertEqual((posting.points_refund.coin_transaction.amount, posting.points_refund.points_ledger.amount),
+                         (refund_units * 6 // 10, refund_units))
+        deposit_share = posting.shares.get(account=self.replacement)
+        self.assertEqual(deposit_share.deposit_deduction, 300 if deposit_recovery else 0)
+        original_report = self.approve_report(self.original, transfer.previous_segment_id)
+        replacement_report = self.approve_report(self.replacement, transfer.next_segment_id)
+
+        preview_url = f'/api/admin/orders/{self.order_id}/segment-settlement-plan/'
+        self.assertEqual(replacement.get(preview_url).status_code, 403)
+        order = Order.objects.get(pk=self.order_id)
+        with (connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes),
+              connections['default'].execute_wrapper(self.reject_detail_writes)):
+            plan = self.ok(self.api(self.staff).get(preview_url))
+        self.assertEqual({part['segment_id']: (part['account_id'], part['basis'], part['fee'], part['income'])
+                          for part in plan['segments']}, {
+            transfer.previous_segment_id: (self.original.pk, 4000, 800, 3200),
+            transfer.next_segment_id: (self.replacement.pk, 6000, 1800, retained),
+        })
+        self.assertEqual({row['account_id']: row['income'] for row in plan['persons']},
+                         {self.original.pk: 3200, self.replacement.pk: retained})
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
+        if deposit_recovery:
+            from django.contrib.auth import get_user_model
+            from orders.points_negotiation_execution import _verify_posting_core_locked
+            from orders.points_transfer_refund_access import after_transfer, verification_scope
+
+            username = f'isolated-missing-platform-{uuid4().hex}'
+            writes = []
+
+            def observe_writes(execute, sql, params, many, context):
+                verb = sql.lstrip().split(maxsplit=1)[0].upper()
+                if verb in ('INSERT', 'UPDATE', 'DELETE', 'REPLACE'):
+                    writes.append(verb)
+                return execute(sql, params, many, context)
+
+            with (override_settings(PLATFORM_SYSTEM_USERNAME=username),
+                  connections[self.store.database_alias].execute_wrapper(observe_writes),
+                  connections['default'].execute_wrapper(observe_writes)):
+                denied = self.api(self.staff).get(preview_url)
+            self.assertEqual(denied.status_code, 409, denied.data)
+            self.assertEqual(writes, [], denied.data)
+            self.assertFalse(get_user_model().objects.filter(username=username).exists())
+            # Enter the read scope with intact receipt evidence, then check the
+            # posting verifier itself with the configured account missing.
+            with (transaction.atomic(using=self.store.database_alias),
+                  after_transfer(order.pk, phase='report', read_only=True) as locked,
+                  verification_scope(locked)):
+                with (override_settings(PLATFORM_SYSTEM_USERNAME=username),
+                      connections[self.store.database_alias].execute_wrapper(observe_writes),
+                      connections['default'].execute_wrapper(observe_writes)):
+                    with self.assertRaisesMessage(ValidationError, '陪玩退款押金凭证异常'):
+                        _verify_posting_core_locked(posting)
+                transaction.set_rollback(True, using=self.store.database_alias)
+            self.assertEqual(writes, [])
+            self.assertEqual(deposit_share.deposit_deficit.source_store_transaction.wallet.user.username,
+                             settings.PLATFORM_SYSTEM_USERNAME)
+            print(f'{self.store.slug} order={order.pk} refund={posting.points_refund.refund_id} '
+                  f'deposit={deposit_share.deposit_deduction} missing_platform_status={denied.status_code}', flush=True)
+            return
+        due = max(original_report.submitted_at, replacement_report.submitted_at) + timedelta(hours=order.service_freeze_hours)
+        with patch('django.utils.timezone.now', return_value=due):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+        self.assertCountEqual(order.transactions.filter(tx_type=Transaction.TxType.INCOME)
+                              .values_list('wallet__account_id', 'amount'), [(self.original.pk, 3200), (self.replacement.pk, 3200)])
+        print(f'{self.store.slug} order={order.pk} room={order.room.pk} refund={posting.points_refund.refund_id} '
+              f'preview={[(part["segment_id"], part["income"]) for part in plan["segments"]]}', flush=True)
+
+    def confirm_room_after_other_seat_refund(self, order, reviewer):
+        path = f'/api/orders/orders/{order.pk}/'
+        current, ended = self.api(self.replacement), self.api(self.teammate)
+        submission = path + 'room/completion-requests/'
+        payload = {'description': '本人剩余履约已完成', 'client_request_id': 'room-confirm-after-other-seat-refund'}
+        self.assertEqual(ended.post(submission, payload, format='json').status_code, 404)
+        self.assertEqual(current.post(submission, payload, format='json').status_code, 409)
+        self.assert_room_provider_actions(current, 'in_progress', ['COMPLETE'])
+        self.ok(current.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'continuing-room-evidence'}, format='multipart'))
+        self.assert_room_provider_actions(current, 'in_progress', [])
+        application = self.ok(current.post(submission, payload, format='json'))
+        self.assertEqual(application['participants'], [self.replacement.pk])
+        wait = self.review_paid_room_request(reviewer, application['id'])
+        confirmed = self.ok(self.api(self.buyer).post(f'{submission}{wait.request_id}/confirm/',
+            {'client_request_id': 'room-boss-confirms-continuing-seat'}, format='json'))
+        self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.settled_at), (Order.Status.COMPLETED, None))
+
+    def assert_room_addon_unavailable_before_entry(self):
+        buyer = self.api(self.buyer)
+        path = f'/api/orders/orders/{self.order_id}/'
+        room = self.ok(buyer.get(path + 'room/'))
+        self.assertEqual(room['order_status'], Order.Status.GRABBED)
+        self.room_id = room['id']
+        selection = {'addon_id': self.room_addon.pk, 'unit': 'HOUR', 'quantity': 1,
+                     'configuration_version': 1, 'provider_account_id': self.original.pk}
+        quote = buyer.post(path + 'addons/quote/', selection, format='json')
+        self.assertEqual(quote.status_code, 409, quote.data)
+        intent = buyer.post(path + 'addons/intents/', {**selection, 'expected_amount': 1000,
+            'request_id': 'room-before-entry', 'gift_balance_amount': 0, 'compensation_balance_amount': 0}, format='json')
+        self.assertEqual(intent.status_code, 409, intent.data)
+        self.assertFalse(Order.objects.get(pk=self.order_id).addon_intents.exists())
+
+    def exercise_paid_transfer_room_addon(self):
+        original, replacement, change = self.transfer_and_enter_room()
+        path = f'/api/orders/orders/{self.order_id}/'
+        former_room = self.ok(original.get(path + 'room/'))
+        current_room = self.ok(replacement.get(path + 'room/'))
+        self.assertEqual((former_room['id'], former_room['role']), (self.room_id, 'FORMER_PROVIDER'))
+        self.assertEqual((current_room['id'], current_room['role']), (self.room_id, 'PROVIDER'))
+        payment = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
+        replay = self.pay_consultation_addon(self.replacement, addon=self.room_addon)
+        self.assertEqual(replay.pk, payment.pk)
+        self.assertEqual((payment.intent.segment_id, payment.intent.provider_id), (change.next_segment_id, self.replacement.pk))
+        self.assertEqual((change.previous_segment.financial_snapshot.commission_rate,
+                          payment.intent.commission_snapshot['rate']), (20, 30))
+        self.assertEqual((payment.principal, payment.commission_fee, payment.provider_income,
+                          payment.buyer_transaction.amount), (1000, 300, 700, -1000))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        self.exercise_paid_points_room_confirmation(self.replacement, former=original)
+        history = self.ok(self.api(self.buyer).get(path + 'addons/intents/'))['items']
+        self.assertEqual([(row['payment_id'], row['segment_id']) for row in history], [(payment.pk, change.next_segment_id)])
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        self.receipt.refresh_from_db()
+        self.assertEqual((self.receipt.paid_units, self.receipt.points_hundredths), (6000, 10000))
+        print(f'{self.store.slug} room={self.room_id} order={self.order_id} addon={payment.pk} '
+              f'segment={change.next_segment_id} wallet_tx={payment.buyer_transaction_id} addon_income_pending=700', flush=True)
+
+        first_report = self.approve_report(self.original, change.previous_segment_id)
+        with patch('django.utils.timezone.now', return_value=first_report.submitted_at + timedelta(minutes=15)):
+            second_report = self.approve_report(self.replacement, change.next_segment_id)
+        order = Order.objects.get(pk=self.order_id)
+        freeze = timedelta(hours=order.service_freeze_hours)
+        income = order.transactions.filter(tx_type=Transaction.TxType.INCOME)
+        with patch('django.utils.timezone.now', return_value=first_report.submitted_at + freeze):
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        self.assertEqual(list(income.values_list('wallet__account_id', 'amount')), [(self.original.pk, 3200)])
+        self.assertFalse(payment.segment_settlements.exists())
+        with patch('django.utils.timezone.now', return_value=second_report.submitted_at + freeze):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        order.refresh_from_db()
+        addon_income = payment.segment_settlements.select_related('income_transaction').get()
+        self.assertEqual((addon_income.segment_id, addon_income.amount, addon_income.income_transaction.wallet.account_id),
+                         (change.next_segment_id, 700, self.replacement.pk))
+        self.assertCountEqual(income.values_list('wallet__account_id', 'amount'),
+                              [(self.original.pk, 3200), (self.replacement.pk, 4200), (self.replacement.pk, 700)])
+        self.assertEqual((order.settlement_store_funding, order.settlement_addon_contribution), (1100, 300))
+        self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 6000)
+        self.assertEqual((payment.consumption.paid_units, payment.consumption.refunded_units), (1000, 0))
+        print(f'{self.store.slug} room={self.room_id} order={order.pk}: addon_income_tx={addon_income.income_transaction_id} '
+              f'provider_income=3200+4200+700 funding={order.settlement_store_funding}', flush=True)
+
+    def transfer_and_enter_room(self):
+        share = (2000, 3000) if self.teammate else (4000, 6000)
+        self.ok(self.transfer(self.api(self.staff), share=share))
+        change = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        original, replacement = self.api(self.original), self.api(self.replacement)
+        path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(original.post(path + 'participation-evidence/', {'segment_id': change.previous_segment_id,
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'paid-room-old-evidence'},
+            format='multipart'))
+        self.assert_room_provider_actions(replacement, 'in_progress', ['START_PARTICIPATION'])
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
+        self.join_replacement(replacement, change)
+        return original, replacement, change
+
+    def exercise_paid_room_addon_handover(self):
+        payment = self.pay_consultation_addon(self.original, addon=self.room_addon)
+        former, replacement, transfer = self.transfer_and_enter_room()
+        path = f'/api/orders/orders/{self.order_id}/'
+        boss, staff = self.api(self.buyer), self.api(self.staff)
+        self.assertEqual((self.ok(former.get(path + 'room/'))['role'],
+                          self.ok(replacement.get(path + 'room/'))['id']), ('FORMER_PROVIDER', self.room_id))
+        # Preserve the case of a room already on the clock before deployment.
+        with patch('orders.room_completion_review._addon_handover_blocker', return_value=None):
+            wait, _ = self.prepare_verified_paid_points_room(self.replacement, former=former)
+        confirm = f'{path}room/completion-requests/{wait.request_id}/confirm/'
+        key = {'client_request_id': 'room-confirm-after-addon-handover'}
+        blocked = boss.post(confirm, key, format='json')
+        self.assertEqual(blocked.status_code, 409, blocked.data)
+        wait.refresh_from_db()
+        self.assertEqual(wait.status, 'RUNNING')
+
+        handover_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/handovers/'
+        payload = {'request_id': 'room-existing-addon-handover', 'target_provider_account_id': self.replacement.pk,
+                   'retained_basis_raw': 400, 'completed_work': '原陪玩已完成前段加购',
+                   'remaining_work': '接替陪玩完成剩余加购'}
+        proposal = self.ok(staff.post(handover_url, payload, format='json'))
+        decision = f'{path}addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
+        for actor in (boss, former):
+            self.assertEqual(self.ok(actor.post(decision, {'accepted': True}, format='json'))['status'], 'PENDING')
+        accepted, resume = Event(), Event()
+        handover_table = OrderAddonHandover._meta.db_table
+
+        def hold_acceptance(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if sql.startswith(f'UPDATE `{handover_table}`') and 'ACCEPTED' in (params or ()):
+                accepted.set()
+                self.assertTrue(resume.wait(8))
+            return result
+
+        table = Order._meta.db_table
+        boss_attempts, retry_attempts = Queue(), Queue()
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            signing = pool.submit(self.independent_request,
+                lambda: replacement.post(decision, {'accepted': True}, format='json'), hold_acceptance)
+            try:
+                self.assertTrue(accepted.wait(8), '未观察到最后一人写入接替确认')
+                confirming = pool.submit(self.independent_request, lambda: boss.post(confirm, key, format='json'),
+                    self.observe_lock_attempt(boss_attempts, table, 'for update', account_id=self.order_id))
+                self.wait_for_lock(confirming, boss_attempts, table=table)
+                competing = pool.submit(self.independent_request,
+                    lambda: staff.post(handover_url, payload, format='json'),
+                    self.observe_lock_attempt(retry_attempts, table, 'for update', account_id=self.order_id))
+                waited = self.wait_for_lock(competing, retry_attempts, table=table)
+            finally:
+                resume.set()
+            self.assertEqual(self.ok(signing.result(timeout=10))['status'], 'ACCEPTED')
+            self.assertEqual(self.ok(confirming.result(timeout=10))['confirmation']['status'], 'CONFIRMED')
+            replay = self.ok(competing.result(timeout=10))
+        self.assertEqual((replay['id'], replay['status']), (proposal['id'], 'ACCEPTED'))
+        handover = OrderAddonHandover.objects.get(pk=proposal['id'])
+        expected_addon = [(transfer.previous_segment_id, 320), (transfer.next_segment_id, 420)]
+        self.assertCountEqual(handover.shares.values_list('segment_id', 'income'), expected_addon)
+        self.assertEqual((handover.funding_release_run.required_amount, handover.funding_release_run.released_amount),
+                         (1140, 60))
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual((order.status, order.room.pk, order.settled_at), (Order.Status.COMPLETED, self.room_id, None))
+        income = order.transactions.filter(tx_type=Transaction.TxType.INCOME)
+        self.assertFalse(income.exists())
+
+        original_report = self.approve_report(self.original, transfer.previous_segment_id)
+        current_report = self.approve_report(self.replacement, transfer.next_segment_id)
+        due = max(original_report.submitted_at, current_report.submitted_at) + timedelta(hours=order.service_freeze_hours)
+        with patch('django.utils.timezone.now', return_value=due):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        self.assertCountEqual(payment.segment_settlements.values_list('segment_id', 'amount'), expected_addon)
+        self.assertCountEqual(income.values_list('wallet__account_id', 'amount'),
+            [(self.original.pk, 3200), (self.replacement.pk, 4200),
+             (self.original.pk, 320), (self.replacement.pk, 420)])
+        order.refresh_from_db()
+        self.assertEqual(order.settlement_store_funding, 1140)
+        self.assertEqual((payment.consumption.paid_units, payment.consumption.refunded_units), (1000, 0))
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        replay = self.ok(staff.post(handover_url, payload, format='json'))
+        self.assertEqual((replay['id'], replay['status']), (handover.pk, 'ACCEPTED'))
+        conflict = staff.post(handover_url, {**payload, 'retained_basis_raw': 300}, format='json')
+        self.assertEqual((conflict.status_code, conflict.data['msg']), (400, '请求编号已用于其他换人方案'))
+        self.assertEqual((payment.handovers.count(), OrderAddonFundingReleaseRun.objects.filter(handover=handover).count(),
+                          income.count(), Wallet.objects.get(account=self.buyer).balance),
+                         (1, 1, 4, self.balance_before - 1000))
+        print(f'{self.store.slug} room={self.room_id} order={order.pk} addon={payment.pk} '
+              f'addon_wallet_tx={payment.buyer_transaction_id} handover={handover.pk} '
+              f'addon_income={[amount for _, amount in expected_addon]} funding={order.settlement_store_funding} '
+              f'waiting_session={waited}',
+              flush=True)
+
+    def exercise_paid_transfer_room_confirmation(self):
+        original, _, _ = self.transfer_and_enter_room()
+        self.exercise_paid_points_room_confirmation(self.replacement, former=original)
+
+    def exercise_paid_room_waits_for_addon_handover(self):
+        from orders.models import OrderRoomCompletionRequest, OrderRoomConfirmation
+        from orders.room_auto_confirmation import process_one
+
+        payment = self.pay_consultation_addon(self.original, addon=self.room_addon)
+        former, replacement, _ = self.transfer_and_enter_room()
+        path = f'/api/orders/orders/{self.order_id}/'
+        self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'room-handover-ready-image'}, format='multipart'))
+        submit_url = path + 'room/completion-requests/'
+        application = {'description': '已完成现履约段', 'client_request_id': 'room-handover-ready'}
+        attempts = OrderRoomCompletionRequest.objects.filter(room_id=self.room_id)
+        response = replacement.post(submit_url, application, format='json')
+        self.assertEqual((response.status_code, response.data['msg']), (409, '原陪玩已转出，请先安排加购接替'))
+        self.assertFalse(attempts.exists())
+
+        staff = self.api(self.staff)
+        proposal = self.ok(staff.post(f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/handovers/', {
+            'request_id': 'room-handover-before-review', 'target_provider_account_id': self.replacement.pk,
+            'retained_basis_raw': 400, 'completed_work': '原陪玩完成前段', 'remaining_work': '接替人负责剩余加购'},
+            format='json'))
+        response = replacement.post(submit_url, application, format='json')
+        self.assertEqual((response.status_code, response.data['msg']), (409, '加购接替正在等待三方确认'))
+        self.assertFalse(attempts.exists())
+
+        # A request left pending under the previous room rule still requires review.
+        old_request = attempts.create(room_id=self.room_id, submitted_by=self.replacement,
+            request_id='room-before-handover-gate', description=application['description'], participants=[self.replacement.pk])
+        reviewer_user = make_console_user(['order:view', 'support:edit'])
+        reviewer = get_or_create_account_for_legacy_user(reviewer_user)
+        reviewer_user.admin_membership.account = reviewer
+        reviewer_user.admin_membership.save(update_fields=['account'])
+        review_url = f'/api/admin/room-completion-requests/{old_request.pk}/review/'
+        review = {'decision': 'VERIFIED', 'note': '已核实当前履约段', 'client_request_id': 'review-room-handover-ready'}
+        response = self.api(reviewer).post(review_url, review, format='json')
+        self.assertEqual((response.status_code, response.data['msg']), (409, '加购接替正在等待三方确认'))
+        old_request.refresh_from_db()
+        self.assertEqual(old_request.status, 'PENDING')
+        self.assertFalse(OrderRoomConfirmation.objects.filter(request=old_request).exists())
+
+        decision = f'{path}addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
+        for actor in (self.api(self.buyer), former, replacement):
+            self.ok(actor.post(decision, {'accepted': True}, format='json'))
+        checked = self.ok(self.api(reviewer).post(review_url, review, format='json'))
+        self.assertEqual(checked['status'], 'VERIFIED')
+        wait = OrderRoomConfirmation.objects.get(request=old_request)
+        self.assertGreater(wait.started_at, OrderAddonHandover.objects.get(pk=proposal['id']).accepted_at)
+        self.assertEqual(wait.deadline - wait.started_at, timedelta(minutes=self.room_confirmation_minutes))
+        with patch('django.utils.timezone.now', return_value=wait.deadline):
+            self.assertEqual(process_one(wait.pk), 'confirmed')
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual((order.status, order.settled_at), (Order.Status.COMPLETED, None))
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} room={self.room_id} order={order.pk} addon={payment.pk} handover={proposal["id"]} '
+              f'wait={wait.pk} minutes={wait.config_minutes}', flush=True)
+
+    def assert_room_provider_actions(self, client, status, actions, *, submitted=None):
+        path = f'/api/orders/orders/{self.order_id}/'
+        listing = f'/api/orders/orders/?status={status}&role=provider&page=1&page_size=20'
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(client.get(path))
+            rows = self.ok(client.get(listing))['list']
+        listed = next(row for row in rows if row['id'] == self.order_id)
+        for order in (detail, listed):
+            self.assertEqual(order['allowed_actions'], actions)
+            if submitted is not None:
+                progress = order['team_progress']
+                self.assertEqual((progress['submitted_count'], progress['total_count']), (submitted, 2))
+
+    def prepare_verified_paid_points_room(self, provider, *, former=None):
+        current = self.api(provider)
+        path = f'/api/orders/orders/{self.order_id}/'
+        submission = path + 'room/completion-requests/'
+        payload = {'description': '当前履约已经完成', 'client_request_id': 'paid-room-completion-request'}
+        if former:
+            self.assertEqual(former.post(submission, payload, format='json').status_code, 404)
+        self.assert_room_provider_actions(current, 'in_progress', ['COMPLETE'],
+            submitted=0 if self.teammate else None)
+        self.assertEqual(current.post(submission, payload, format='json').status_code, 409)
+        self.ok(current.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'paid-room-current-evidence'}, format='multipart'))
+        self.assert_room_provider_actions(current, 'in_progress', [],
+            submitted=1 if self.teammate else None)
+        actors = [provider.pk]
+        if self.teammate:
+            self.assertEqual(current.post(submission, payload, format='json').status_code, 409)
+            teammate = self.api(self.teammate)
+            self.assert_room_provider_actions(teammate, 'in_progress', ['COMPLETE'], submitted=1)
+            self.ok(teammate.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+                'client_request_id': 'paid-room-continuing-evidence'}, format='multipart'))
+            self.assert_room_provider_actions(current, 'in_progress', [], submitted=2)
+            self.assert_room_provider_actions(teammate, 'in_progress', [], submitted=2)
+            actors.append(self.teammate.pk)
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual(order.status, Order.Status.IN_SERVICE)
+        requested = self.ok(current.post(submission, payload, format='json'))
+        self.assertEqual(requested['participants'], sorted(actors))
+        self.assertEqual(self.ok(current.post(submission, payload, format='json'))['id'], requested['id'])
+        reviewer = make_console_user(['order:view', 'support:edit'])
+        reviewer_account = get_or_create_account_for_legacy_user(reviewer)
+        reviewer.admin_membership.account = reviewer_account
+        reviewer.admin_membership.save(update_fields=['account'])
+        return self.review_paid_room_request(reviewer_account, requested['id']), reviewer_account
+
+    def review_paid_room_request(self, reviewer_account, room_request_id):
+        from orders.models import OrderRoomConfirmation
+
+        self.ok(self.api(reviewer_account).post(f'/api/admin/room-completion-requests/{room_request_id}/review/',
+            {'decision': 'VERIFIED', 'note': '已核实当前履约段',
+             'client_request_id': f'paid-room-review-{room_request_id}'}, format='json'))
+        wait = OrderRoomConfirmation.objects.get(request_id=room_request_id)
+        self.assertEqual(wait.status, 'RUNNING')
+        return wait
+
+    def exercise_paid_points_room_confirmation(self, provider=None, *, former=None):
+        from orders.room_auto_confirmation import process_one
+
+        wait, _ = self.prepare_verified_paid_points_room(provider or self.original, former=former)
+        order = Order.objects.get(pk=self.order_id)
+        if self.teammate:
+            funding = self.ok(self.finance_client.get(f'/api/admin/platform/points-funding/{self.store.slug}/orders/{order.pk}'))
+            self.assertGreater(funding['remaining_units'], 0)
+            self.assertEqual(funding['allocated_units'], 0)
+            with patch('django.utils.timezone.now', return_value=wait.deadline):
+                self.assertEqual(process_one(wait.pk), 'confirmed')
+                self.assertEqual(process_one(wait.pk), 'skip')
+            wait.refresh_from_db()
+            self.assertEqual((wait.status, wait.confirmed_by_id), ('AUTO', None))
+        else:
+            boss = self.api(self.buyer)
+            confirm = f'/api/orders/orders/{order.pk}/room/completion-requests/{wait.request_id}/confirm/'
+            receipt = {'client_request_id': 'paid-room-boss-confirm'}
+            self.assertEqual(self.ok(boss.post(confirm, receipt, format='json'))['confirmation']['status'], 'CONFIRMED')
+            self.assertEqual(self.ok(boss.post(confirm, receipt, format='json'))['confirmation']['status'], 'CONFIRMED')
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.COMPLETED)
+        self.assertIsNone(order.settled_at)
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} order={order.pk}: paid points room, transferred={former is not None}, '
+              f'{"auto" if self.teammate else "boss"} confirmation passed before report income', flush=True)
+
+    def exercise_paid_points_room_objections(self):
+        from orders.room_auto_confirmation import process_one
+
+        former, _, _ = self.transfer_and_enter_room()
+        wait, reviewer = self.prepare_verified_paid_points_room(self.replacement, former=former)
+        boss = self.api(self.buyer)
+        path = f'/api/orders/orders/{self.order_id}/room/objections/'
+        opened_at = wait.started_at + timedelta(minutes=20)
+        resolved_at = wait.started_at + timedelta(minutes=80)
+        payload = {'reason': '核对刚提交的结单凭证', 'client_request_id': 'room-objection-at-twenty'}
+        with patch('django.utils.timezone.now', return_value=opened_at):
+            opened = self.ok(boss.post(path, payload, format='json'))
+            self.assertEqual(self.ok(boss.post(path, payload, format='json'))['id'], opened['id'])
+        wait.refresh_from_db()
+        self.assertEqual((wait.status, wait.deadline, opened['remaining_microseconds']), ('PAUSED', None, 2_400_000_000))
+        self.assertEqual(Message.objects.filter(recipient_account=reviewer, title='房间异议待处理').count(), 1)
+        with patch('django.utils.timezone.now', return_value=resolved_at):
+            self.assertEqual(process_one(wait.pk), 'skip')
+            self.ok(self.resolve_paid_room_objection(reviewer, opened['id'], confirmation_ready=True))
+            operator = make_console_user(['dictionary:edit'])
+            editor = get_or_create_account_for_legacy_user(operator)
+            operator.admin_membership.account = editor
+            operator.admin_membership.save(update_fields=['account'])
+            updated = self.ok(self.api(editor).put('/api/admin/config/room-confirmation/',
+                {'minutes': 15, 'version': wait.config_version}, format='json'))
+            self.assertEqual(updated, {'minutes': 15, 'version': 2})
+        wait.refresh_from_db()
+        self.assertEqual((wait.status, wait.config_minutes, wait.config_version, wait.deadline),
+                         ('RUNNING', 60, 1, resolved_at + timedelta(minutes=40)))
+        with patch('django.utils.timezone.now', return_value=wait.deadline - timedelta(microseconds=1)):
+            self.assertEqual(process_one(wait.pk), 'not_due')
+
+        with patch('django.utils.timezone.now', return_value=wait.deadline):
+            late_payload = {'reason': '到期时仍需核对', 'client_request_id': 'room-objection-at-deadline'}
+            attempts = Queue()
+            table = Order._meta.db_table
+            observer = self.observe_lock_attempt(attempts, table, 'for update', account_id=self.order_id)
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                with transaction.atomic(using=self.store.database_alias):
+                    late = self.ok(boss.post(path, late_payload, format='json'))
+                    competing = pool.submit(self.independent_request, lambda: process_one(wait.pk), observer)
+                    waited = self.wait_for_lock(competing, attempts, table=table)
+                self.assertEqual(competing.result(timeout=10), 'skip')
+            wait.refresh_from_db()
+            self.assertEqual((wait.status, wait.remaining_microseconds), ('PAUSED', 0))
+            self.ok(self.resolve_paid_room_objection(reviewer, late['id'], confirmation_ready=True))
+            self.assert_room_auto_confirmation_wins(path, wait.pk)
+        wait.refresh_from_db()
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual((wait.status, order.status, order.settled_at), ('AUTO', Order.Status.COMPLETED, None))
+        self.assertEqual(order.status_logs.filter(to_status=Order.Status.COMPLETED).count(), 1)
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} order={order.pk} wait={wait.pk} objection={opened["id"]},{late["id"]} '
+              f'paused_for=40m waiting_session={waited} configuration=60m-v1 then 15m-v2', flush=True)
+
+    def resolve_paid_room_objection(self, reviewer, objection_id, *, confirmation_ready):
+        return self.api(reviewer).post(f'/api/admin/room-objections/{objection_id}/resolve/',
+            {'resolution': '已核对履约凭证与人员', 'client_request_id': f'resolve-{objection_id}',
+             'confirmation_ready': confirmation_ready}, format='json')
+
+    def assert_room_auto_confirmation_wins(self, path, wait_id):
+        from orders.room_auto_confirmation import process_one
+        from orders.room_boss_confirmation import complete_confirmation_locked
+
+        completed, release = Event(), Event()
+
+        def hold_order(*args, **kwargs):
+            order = complete_confirmation_locked(*args, **kwargs)
+            completed.set()
+            self.assertTrue(release.wait(8))
+            return order
+
+        boss = self.api(self.buyer)
+        table = Order._meta.db_table
+        attempts = Queue()
+        observe = self.observe_lock_attempt(attempts, table, 'for update', account_id=self.order_id)
+        with patch('orders.room_auto_confirmation.complete_confirmation_locked', side_effect=hold_order):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                confirming = pool.submit(self.independent_request, lambda: process_one(wait_id),
+                                         self.observe_lock_attempt(Queue(), table, 'for update'))
+                try:
+                    self.assertTrue(completed.wait(6))
+                    competing = pool.submit(self.independent_request, lambda: boss.post(path,
+                        {'reason': '结单时另提异议', 'client_request_id': 'room-objection-auto-first'}, format='json'), observe)
+                    waited = self.wait_for_lock(competing, attempts, table=table)
+                finally:
+                    release.set()
+                self.assertEqual(confirming.result(timeout=10), 'confirmed')
+                result = competing.result(timeout=10)
+        self.assertEqual(result.status_code, 400, result.data)
+        self.assertEqual(result.data['msg'], '订单当前不能提出房间异议')
+        self.assertEqual(process_one(wait_id), 'skip')
+        print(f'{self.store.slug} order={self.order_id} auto-first waiting_session={waited}', flush=True)
+
+    def exercise_paid_points_room_transfer_during_objection(self):
+        from orders.room_auto_confirmation import process_one
+
+        old_wait, reviewer = self.prepare_verified_paid_points_room(self.original)
+        path = f'/api/orders/orders/{self.order_id}/'
+        submission = path + 'room/completion-requests/'
+        boss, replacement = self.api(self.buyer), self.api(self.replacement)
+        room_id = self.ok(boss.get(path + 'room/'))['id']
+        staff = self.api(self.staff)
+        table = Order._meta.db_table
+        attempts = Queue()
+        observe = self.observe_lock_attempt(attempts, table, 'for update', account_id=self.order_id)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with transaction.atomic(using=self.store.database_alias):
+                objection = self.ok(boss.post(path + 'room/objections/',
+                    {'reason': '正在核对本次履约', 'client_request_id': 'before-room-transfer'}, format='json'))
+                competing = pool.submit(self.independent_request, lambda: self.transfer(staff, share=(2000, 3000)), observe)
+                waited = self.wait_for_lock(competing, attempts, table=table)
+            self.ok(competing.result(timeout=10))
+        order = Order.objects.get(pk=self.order_id)
+        old_wait.refresh_from_db()
+        self.assertEqual((old_wait.status, old_wait.invalidation_reason, old_wait.deadline),
+                         ('INVALIDATED', 'TRANSFER', None))
+        self.assertEqual(process_one(old_wait.pk), 'skip')
+        self.assertTrue(order.room.objections.filter(pk=objection['id'], status='OPEN').exists())
+        self.assertEqual(self.ok(boss.get(path + 'room/'))['id'], room_id)
+        original = self.api(self.original)
+        self.assertEqual(self.ok(original.get(path + 'room/'))['role'], 'FORMER_PROVIDER')
+
+        change = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        self.join_replacement(replacement, change)
+        self.assert_room_provider_actions(replacement, 'in_progress', ['COMPLETE'], submitted=1)
+        self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'after-objection-transfer-evidence'}, format='multipart'))
+        payload = {'description': '当前两人履约完毕', 'client_request_id': 'after-objection-transfer'}
+        self.assertEqual(replacement.post(submission, payload, format='json').status_code, 409)
+        self.assertEqual(self.resolve_paid_room_objection(reviewer, objection['id'],
+                         confirmation_ready=True).status_code, 409)
+        self.ok(self.resolve_paid_room_objection(reviewer, objection['id'], confirmation_ready=False))
+        requested = self.ok(replacement.post(submission, payload, format='json'))
+        self.assertCountEqual(requested['participants'], [self.replacement.pk, self.teammate.pk])
+        with patch('django.utils.timezone.now', return_value=old_wait.started_at + timedelta(minutes=25)):
+            new_wait = self.review_paid_room_request(reviewer, requested['id'])
+        old_wait.refresh_from_db()
+        self.assertEqual(old_wait.status, 'INVALIDATED')
+        self.assertEqual(new_wait.deadline - new_wait.started_at, timedelta(minutes=30))
+        self.assertGreater(new_wait.started_at, old_wait.started_at)
+        confirmation = {'client_request_id': 'after-objection-transfer-confirm'}
+        with patch('django.utils.timezone.now', return_value=new_wait.started_at + timedelta(minutes=1)):
+            self.assertEqual(boss.post(f'{submission}{old_wait.request_id}/confirm/',
+                             confirmation, format='json').status_code, 409)
+            confirmed = self.ok(boss.post(f'{submission}{new_wait.request_id}/confirm/', confirmation, format='json'))
+        self.assertEqual(confirmed['confirmation']['status'], 'CONFIRMED')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.settled_at), (Order.Status.COMPLETED, None))
+        self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+        print(f'{self.store.slug} room={room_id} order={order.pk} objection={objection["id"]} '
+              f'invalidated_wait={old_wait.pk} new_wait={new_wait.pk} transfer_waiting_session={waited}', flush=True)
+
+    def exercise_paid_team_transfer_completion_actions(self):
+        self.ok(self.transfer(self.api(self.staff), share=(2000, 3000)))
+        change = OrderOriginalShareTransfer.objects.get(previous_segment__attribution__order_id=self.order_id)
+        original, continuing, replacement = (self.api(account) for account in
+                                             (self.original, self.teammate, self.replacement))
+        path = f'/api/orders/orders/{self.order_id}/'
+        listing = '/api/orders/orders/?status=in_progress&role=provider&page=1&page_size=20'
+        self.ok(original.post(path + 'participation-evidence/', {'segment_id': change.previous_segment_id,
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'paid-team-original-evidence'},
+            format='multipart'))
+
+        def read_actions(client, expected, submitted):
+            with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+                detail = self.ok(client.get(path))
+                rows = self.ok(client.get(listing))['list']
+                listed = next(row for row in rows if row['id'] == self.order_id)
+            for row in (detail, listed):
+                self.assertEqual(row['allowed_actions'], expected)
+                progress = row['team_progress']
+                self.assertEqual((progress['submitted_count'], progress['total_count']), (submitted, 2))
+                self.assertCountEqual([member['id'] for member in progress['members']],
+                                      [self.teammate.pk, self.replacement.pk])
+
+        read_actions(continuing, ['COMPLETE'], 0)
+        read_actions(replacement, ['START_PARTICIPATION'], 0)
+        self.join_replacement(replacement, change)
+        read_actions(replacement, ['COMPLETE'], 0)
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
+        self.ok(continuing.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'paid-team-continuing-completion'}, format='multipart'))
+        read_actions(continuing, [], 1)
+        read_actions(replacement, ['COMPLETE'], 1)
+        self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'paid-team-replacement-completion'}, format='multipart'))
+        self.assertEqual(Order.objects.get(pk=self.order_id).status, Order.Status.COMPLETED)
+        change.next_segment.refresh_from_db()
+        self.assertTrue(change.next_segment.completion_image)
+        print(f'{self.store.slug} order={self.order_id} PAID team: current segments showed 0/2 and 1/2, '
+              'only unfinished providers could complete, both screenshots saved', flush=True)
+
+    def approve_report(self, account, segment_id, *, verify_detail=False):
         report_url = f'/api/orders/orders/{self.order_id}/segment-report/'
         provider = self.api(account)
         staff = self.api(self.staff)
@@ -2358,9 +3612,19 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         ):
             self.ok(provider.post(report_url, {'segment_id': segment_id, 'action': action,
                 'client_request_id': str(uuid4()), **payload}, format=request_format))
+        if verify_detail:
+            with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+                detail = self.ok(staff.get(f'/api/admin/orders/{self.order_id}/'))
+            segment = next(row for row in detail['original_attribution']['segments'] if row['id'] == segment_id)
+            self.assertEqual(segment['segment_report']['status'], 'PENDING')
         self.ok(staff.post(f'/api/admin/orders/{self.order_id}/segments/{segment_id}/report-review/',
             {'action': 'approve', 'version': 1}, format='json'))
         return OrderSegmentReportSubmission.objects.get(report__segment_id=segment_id, version=1)
+
+    def reject_detail_writes(self, execute, sql, params, many, context):
+        verb = sql.lstrip().split(maxsplit=1)[0].upper()
+        self.assertNotIn(verb, ('INSERT', 'UPDATE', 'DELETE', 'REPLACE'), '详情读取不得写入本店记录')
+        return execute(sql, params, many, context)
 
     def assert_preview(self, order, change, first_due, second_due):
         detail_url = f'/api/admin/orders/{order.pk}/'
@@ -2368,18 +3632,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(self.api(self.original).get(url).status_code, 403)
         alias = self.store.database_alias
 
-        def reject_writes(execute, sql, params, many, context):
-            verb = sql.lstrip().split(maxsplit=1)[0].upper()
-            self.assertNotIn(verb, ('INSERT', 'UPDATE', 'DELETE', 'REPLACE'), '预览禁止写入本店记录')
-            return execute(sql, params, many, context)
-
         with patch('django.utils.timezone.now', return_value=first_due - timedelta(seconds=1)):
             staff = self.api(self.staff)
-            with connections[alias].execute_wrapper(reject_writes):
+            with connections[alias].execute_wrapper(self.reject_detail_writes):
                 preview = self.ok(staff.get(url))
             with override_settings(ORDINARY_SERVICE_FUNDING_ENABLED=True, ORDINARY_TRANSFER_REFUND_MYSQL_ENABLED=True,
                                    NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True):
-                with connections[alias].execute_wrapper(reject_writes):
+                with connections[alias].execute_wrapper(self.reject_detail_writes):
                     self.assertEqual(preview, self.ok(staff.get(url)))
                 detail = self.ok(staff.get(detail_url))
                 segments = detail['original_attribution']['segments']
@@ -2399,7 +3658,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
         with transaction.atomic(using=alias):
             OrderFinancialLock.objects.filter(pk=1).update(id=2)
-            with connections[alias].execute_wrapper(reject_writes):
+            with connections[alias].execute_wrapper(self.reject_detail_writes):
                 unavailable = self.api(self.staff).get(url)
             self.assertEqual(unavailable.status_code, 409, unavailable.data)
             self.assertIn('订单资金互斥记录缺失', unavailable.data['msg'])
@@ -2420,6 +3679,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             return original.post(path + 'participation-evidence/', {'segment_id': segment_id,
                 'completion_image': release_fixture.screenshot(), 'client_request_id': evidence_key}, format='multipart')
 
+        self.assert_released_evidence_available(original, path, change.previous_segment_id)
         self.ok(submit_evidence(change.previous_segment_id))
         original_segment = change.previous_segment
         completion_image = original_segment.completion_image.name
@@ -2432,7 +3692,27 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((receipt.scope, receipt.response),
                          ('order.segment-completion-evidence', {'order_id': self.order_id, 'action': 'evidence'}))
         replacement = self.api(self.replacement)
+        listing = '/api/orders/orders/?status=in_progress&role=provider&page=1&page_size=20'
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            detail = self.ok(replacement.get(path))
+            listed = next(row for row in self.ok(replacement.get(listing))['list'] if row['id'] == self.order_id)
+            for row in (detail, listed):
+                self.assertIn('START_PARTICIPATION', row['allowed_actions'])
+                self.assertNotIn('COMPLETE', row['allowed_actions'])
+            prior = self.ok(original.get(path))
+            self.assertNotIn('START_PARTICIPATION', prior['allowed_actions'])
         self.join_replacement(replacement, change)
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            joined = self.ok(replacement.get(path))
+        segment = next(row for row in joined['my_participation_segments'] if row['id'] == change.next_segment_id)
+        self.assertTrue(segment['started_at'])
+        self.assertTrue(segment['entry_image_url'])
+        self.assertNotIn('START_PARTICIPATION', joined['allowed_actions'])
+        self.assertIn('COMPLETE', joined['allowed_actions'])
+        with connections[self.store.database_alias].execute_wrapper(self.reject_detail_writes):
+            listed = next(row for row in self.ok(replacement.get(listing))['list'] if row['id'] == self.order_id)
+            self.assertIn('COMPLETE', listed['allowed_actions'])
+            self.assertNotIn('COMPLETE', self.ok(original.get(path))['allowed_actions'])
         self.ok(replacement.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'points-transfer-complete'}, format='multipart'))
         original_report = self.approve_report(self.original, change.previous_segment_id)

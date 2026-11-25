@@ -40,6 +40,21 @@ def _snapshot():
     return hashlib.sha256(encoded.encode('utf-8')).hexdigest()
 
 
+def _record_catalog_text_receipts(serializer, kind, previous, saved):
+    fields = {
+        'service': {'rules': 'SERVICE_RULES', 'details_html': 'SERVICE_DETAILS'},
+        'gameplay': {'rules': 'GAMEPLAY_RULES', 'details_html': 'GAMEPLAY_DETAILS'},
+    }.get(kind)
+    if not fields:
+        return
+    from console.serializers import _record_content_field
+    content_type = 'service_item' if kind == 'service' else 'gameplay'
+    for field, compliance_field in fields.items():
+        if field in serializer.validated_data and (
+                previous is None or serializer.validated_data[field] != previous[field]):
+            _record_content_field(serializer, content_type, saved, compliance_field)
+
+
 class PlatformSetupCatalogView(PlatformSetupBase):
     def get(self, request, pk, kind):
         if not self.allowed(request):
@@ -89,18 +104,28 @@ class PlatformSetupCatalogView(PlatformSetupBase):
             if target_id and row is None:
                 raise SetupError('目录记录不存在', 404, 'CONFIG_NOT_FOUND')
             serializer = serializer_type(row, data=request.data['configuration'], partial=row is not None,
-                                         context={'request': request})
+                                         context={'request': request,
+                                                  'compliance_receipts_recorded_externally': True})
             try:
                 serializer.is_valid(raise_exception=True)
+                previous = None if row is None else {
+                    field: getattr(row, field) for field in ('rules', 'details_html')
+                }
                 saved = serializer.save()
+                _record_catalog_text_receipts(serializer, kind, previous, saved)
             except ValidationError as exc:
                 raise SetupError(str(exc.detail), 400, 'CONFIG_INVALID') from exc
             after = _snapshot()
+            configuration = dict(request.data['configuration'])
+            configuration_json = json.dumps(configuration, cls=DjangoJSONEncoder, sort_keys=True,
+                                            separators=(',', ':'), ensure_ascii=False)
             AdminAuditLog.objects.create(operator_name=f'平台超级管理员：{actor.username}'[:150],
                 method='PUT', path=request.path[:255], resource=f'initial-catalog-{kind}',
                 object_id=str(saved.pk), request_body={'before_version': before, 'after_version': after,
-                    'configuration': dict(request.data['configuration']), 'actor_kind': 'platform',
-                    'platform_account_id': str(actor.pk), 'operation_id': operation_id}, status_code=200)
+                    'configuration_fields': sorted(configuration),
+                    'configuration_sha256': hashlib.sha256(configuration_json.encode('utf-8')).hexdigest(),
+                    'actor_kind': 'platform', 'platform_account_id': str(actor.pk),
+                    'operation_id': operation_id}, status_code=200)
             return {'kind': kind, 'id': saved.pk, 'version': after, 'item': serializer.data}
 
         return self.mutate(request, pk, f'catalog_{kind}', change)

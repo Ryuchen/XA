@@ -80,6 +80,40 @@ def raw_to_fen(amount):
     return int(amount) * 100 // (10 * 10)
 
 
+def recharge_snapshot_matches(activity):
+    """Whether the attribution still matches its immutable recharge evidence."""
+    recharge = activity.recharge
+    if not recharge or not recharge.recharge_tx_id:
+        return False
+    snapshot = activity.source_snapshot
+    return (
+        snapshot.get('recharge_tx_id') == recharge.recharge_tx_id
+        and snapshot.get('source_amount_raw') == recharge.amount
+        and snapshot.get('buyer_account_id') == recharge.account_id
+        and snapshot.get('trade_no') == recharge.trade_no
+        and activity.performed_at == recharge.recharge_tx.created_at
+    )
+
+
+def recharge_source_amount_fen(activity):
+    """Return None unless both the source record and attribution are proved."""
+    if activity.kind != 'RECHARGE' or not recharge_snapshot_matches(activity):
+        return None
+    if not eligible_recharges().filter(pk=activity.recharge_id).exists():
+        return None
+    return raw_to_fen(activity.recharge.amount)
+
+
+def sum_known(values):
+    """Sum financial values without turning an unknown component into zero."""
+    values = list(values)
+    return None if any(value is None for value in values) else sum(values)
+
+
+def add_known(current, value):
+    return None if current is None or value is None else current + value
+
+
 def plan_snapshot(plan):
     return {**{key: getattr(plan, key) for key in PLAN_FIELDS}, 'id': plan.pk,
             'position': plan.position_id, 'position_code': plan.position.code,
@@ -261,17 +295,19 @@ def calculate_payroll(month):
             warnings.append(f'充值记录 {", ".join(map(str, invalid_ids))} 的原始凭证待核对，不能将未知充值业绩当作0')
     recharge_ids = {row.recharge_id for row in activities if row.kind == 'RECHARGE'}
     eligible_ids = set(eligible_recharges().filter(pk__in=recharge_ids).values_list('pk', flat=True))
+    invalid_recharge_activity_ids = set()
+    invalid_recharge_recognition_ids = set()
     for activity in activities:
         if activity.kind != 'RECHARGE':
             continue
-        snapshot = activity.source_snapshot
-        recharge = activity.recharge
-        if (activity.recharge_id not in eligible_ids or not recharge
-                or snapshot.get('recharge_tx_id') != recharge.recharge_tx_id
-                or snapshot.get('source_amount_raw') != recharge.amount
-                or snapshot.get('buyer_account_id') != recharge.account_id
-                or snapshot.get('trade_no') != recharge.trade_no
-                or activity.performed_at != recharge.recharge_tx.created_at):
+        if activity.recharge_id not in eligible_ids or not recharge_snapshot_matches(activity):
+            invalid_recharge_activity_ids.add(activity.pk)
+            if activity.recognition_month:
+                invalid_recharge_recognition_ids.add(activity.pk)
+                unknown_day = max(month, timezone.localdate(activity.created_at))
+            else:
+                unknown_day = timezone.localdate(activity.performed_at)
+            daily_costs[unknown_day.isoformat()] = None
             warnings.append(f'充值业绩记录 {activity.pk} 的原始凭证不一致，请核对后再确认工资')
     assigned = {row.account_id for row in assignments}
     late_addons, blocked_addons, late_store_orders, reemployment_performance = {}, set(), {}, {}
@@ -302,6 +338,7 @@ def calculate_payroll(month):
                     assignment_id=assignment.pk, plan_name=plan['name'], position_name=plan['position_name'],
                     dispatch_day_amount_fen=0, dispatch_night_amount_fen=0, dispatch_unclassified_amount_fen=0,
                     recharge_amount_fen=0, aftersale_count=0, exam_count=0, warnings=[],
+                    evidence_complete=True, unknown_salary_activity_ids=[],
                     plan_snapshot=plan, late_adjustments=[], addon_sources=[], late_addon_sources=[],
                     late_store_order_sources=[], reemployment_performance_sources=[])
         personal_by_day = defaultdict(int)
@@ -309,17 +346,28 @@ def calculate_payroll(month):
             personal_by_day.update(personal_events_by_day[assignment.account_id])
         last_earned = 0
         for activity in sorted(by_person[assignment.account_id], key=lambda row: (row.performed_at, row.pk)):
+            invalid_recharge = activity.pk in invalid_recharge_activity_ids
+            if invalid_recharge:
+                line['evidence_complete'] = False
+                line['unknown_salary_activity_ids'].append(activity.pk)
+                line['recharge_amount_fen'] = None
+                line['warnings'].append(f'充值业绩记录 {activity.pk} 的原始凭证待核对，相关金额未知')
             if activity.recognition_month:
+                if invalid_recharge:
+                    line['late_adjustments_fen'] = None
+                    recognized_day = max(month, timezone.localdate(activity.created_at)).isoformat()
+                    daily_costs[recognized_day] = None
+                    continue
                 terms = activity.source_snapshot['late_compensation']
                 if refund_accounting and activity.kind == 'DISPATCH':
                     from .payroll_late_dispatch import current_terms
                     terms = current_terms(activity, cutoff=timezone.now())
                 amount = terms['amount_fen']
-                line['late_adjustments_fen'] += amount
+                line['late_adjustments_fen'] = add_known(line['late_adjustments_fen'], amount)
                 line['late_adjustments'].append({'activity_id': activity.pk, 'kind': activity.kind,
                     'source_key': activity.source_key, **terms})
                 recognized_day = max(month, timezone.localdate(activity.created_at)).isoformat()
-                daily_costs[recognized_day] += amount
+                daily_costs[recognized_day] = add_known(daily_costs[recognized_day], amount)
                 continue
             day = timezone.localdate(activity.performed_at).isoformat()
             if activity.kind == 'DISPATCH':
@@ -333,22 +381,31 @@ def calculate_payroll(month):
                     line['dispatch_night_amount_fen'] += amount
                 else:
                     line['dispatch_day_amount_fen'] += amount
-            elif activity.kind == 'RECHARGE':
-                line['recharge_amount_fen'] += raw_to_fen(activity.recharge.amount)
+            elif activity.kind == 'RECHARGE' and not invalid_recharge:
+                line['recharge_amount_fen'] = add_known(
+                    line['recharge_amount_fen'], raw_to_fen(activity.recharge.amount))
             elif activity.kind == 'AFTERSALE':
                 line['aftersale_count'] += 1
             elif activity.kind == 'EXAM':
                 line['exam_count'] += 1
-            earned = (round_ratio(line['dispatch_day_amount_fen'], plan['dispatch_day_bps'], 10000)
-                      + round_ratio(line['dispatch_night_amount_fen'], plan['dispatch_night_bps'], 10000)
-                      + round_ratio(line['recharge_amount_fen'], plan['recharge_bps'], 10000)
-                      + line['aftersale_count'] * plan['aftersale_fee_fen']
-                      + line['exam_count'] * (plan['exam_fee_fen'] - round_ratio(plan['exam_fee_fen'], plan.get('exam_commission_bps', 0), 10000)))
-            if refund_accounting:
+            recharge_commission = (None if line['recharge_amount_fen'] is None else
+                                   round_ratio(line['recharge_amount_fen'], plan['recharge_bps'], 10000))
+            earned = sum_known((
+                round_ratio(line['dispatch_day_amount_fen'], plan['dispatch_day_bps'], 10000),
+                round_ratio(line['dispatch_night_amount_fen'], plan['dispatch_night_bps'], 10000),
+                recharge_commission,
+                line['aftersale_count'] * plan['aftersale_fee_fen'],
+                line['exam_count'] * (plan['exam_fee_fen'] - round_ratio(
+                    plan['exam_fee_fen'], plan.get('exam_commission_bps', 0), 10000)),
+            ))
+            if refund_accounting and earned is not None:
                 # Dispatch is attributed below to actual payment/refund dates.
                 earned -= (round_ratio(line['dispatch_day_amount_fen'], plan['dispatch_day_bps'], 10000)
                            + round_ratio(line['dispatch_night_amount_fen'], plan['dispatch_night_bps'], 10000))
-            daily_costs[day] += earned - last_earned
+            if earned is None or last_earned is None:
+                daily_costs[day] = None
+            else:
+                daily_costs[day] = add_known(daily_costs[day], earned - last_earned)
             last_earned = earned
         for activity, event in sorted(addon_sources_by_account[assignment.account_id],
                                       key=lambda item: (item[1]['occurred_at'], item[1]['id'])):
@@ -365,7 +422,8 @@ def calculate_payroll(month):
             after = (round_ratio(line['dispatch_day_amount_fen'], plan['dispatch_day_bps'], 10000)
                      + round_ratio(line['dispatch_night_amount_fen'], plan['dispatch_night_bps'], 10000))
             if not refund_accounting:
-                daily_costs[timezone.localdate(event['occurred_at']).isoformat()] += after - before
+                day = timezone.localdate(event['occurred_at']).isoformat()
+                daily_costs[day] = add_known(daily_costs[day], after - before)
             line['addon_sources'].append({'payment_id': event['id'], 'activity_id': activity.pk,
                                           'order_id': activity.order_id, 'net_fen': amount, 'bucket': bucket})
         if refund_accounting:
@@ -399,18 +457,18 @@ def calculate_payroll(month):
                     raise serializers.ValidationError('派单退款超过当月对应付款，请核对工资凭证')
                 before = round_ratio(buckets[bucket], rate, 10000)
                 buckets[bucket] += event['amount_fen']
-                daily_costs[timezone.localdate(event['occurred_at']).isoformat()] += (
-                    round_ratio(buckets[bucket], rate, 10000) - before)
+                day = timezone.localdate(event['occurred_at']).isoformat()
+                daily_costs[day] = add_known(daily_costs[day], round_ratio(buckets[bucket], rate, 10000) - before)
         for source in late_addons.get(assignment.account_id, []):
-            line['late_adjustments_fen'] += source['amount_fen']
+            line['late_adjustments_fen'] = add_known(line['late_adjustments_fen'], source['amount_fen'])
             line['late_addon_sources'].append(source)
             effective_day = min(max(timezone.localdate(), month), month.replace(day=calendar.monthrange(month.year, month.month)[1]))
-            daily_costs[effective_day.isoformat()] += source['amount_fen']
+            daily_costs[effective_day.isoformat()] = add_known(daily_costs[effective_day.isoformat()], source['amount_fen'])
         for source in late_store_orders.get(assignment.account_id, []):
-            line['late_adjustments_fen'] += source['amount_fen']
+            line['late_adjustments_fen'] = add_known(line['late_adjustments_fen'], source['amount_fen'])
             line['late_store_order_sources'].append(source)
             effective_day = min(max(timezone.localdate(), month), month.replace(day=calendar.monthrange(month.year, month.month)[1]))
-            daily_costs[effective_day.isoformat()] += source['amount_fen']
+            daily_costs[effective_day.isoformat()] = add_known(daily_costs[effective_day.isoformat()], source['amount_fen'])
         line['base_fen'] = plan['base_fen']
         personal = (sum(personal_by_day.values()) if refund_accounting else
                     line['dispatch_day_amount_fen'] + line['dispatch_night_amount_fen']
@@ -427,53 +485,80 @@ def calculate_payroll(month):
                 for day, amount in sorted(basis_by_day.items()):
                     cumulative += amount
                     earned = round_ratio(plan['performance_fen'], max(0, min(plan['target_fen'], cumulative)), plan['target_fen'])
-                    daily_costs[day] += earned - previous
+                    daily_costs[day] = add_known(daily_costs[day], earned - previous)
                     previous = earned
         line['dispatch_commission_fen'] = (round_ratio(line['dispatch_day_amount_fen'], plan['dispatch_day_bps'], 10000)
                                           + round_ratio(line['dispatch_night_amount_fen'], plan['dispatch_night_bps'], 10000))
         if line['dispatch_unclassified_amount_fen']:
             line['warnings'].append('夜班起止时间未配置，派单提成尚不能核算或确认')
-        line['recharge_commission_fen'] = round_ratio(line['recharge_amount_fen'], plan['recharge_bps'], 10000)
+        line['recharge_commission_fen'] = (None if line['recharge_amount_fen'] is None else
+                                           round_ratio(line['recharge_amount_fen'], plan['recharge_bps'], 10000))
         line['aftersale_commission_fen'] = line['aftersale_count'] * plan['aftersale_fee_fen']
         line['exam_gross_fen'] = line['exam_count'] * plan['exam_fee_fen']
         # The exam fee is quoted per examination. Round each unit deduction,
         # then sum units, so the same verified exams always cost the same.
         line['exam_deduction_fen'] = line['exam_count'] * round_ratio(plan['exam_fee_fen'], plan.get('exam_commission_bps', 0), 10000)
         line['exam_commission_fen'] = line['exam_gross_fen'] - line['exam_deduction_fen']
-        line['total_fen'] = sum(line[key] for key in ('base_fen', 'performance_fen', 'dispatch_commission_fen',
-            'recharge_commission_fen', 'aftersale_commission_fen', 'exam_commission_fen', 'late_adjustments_fen'))
+        line['total_fen'] = sum_known(line[key] for key in (
+            'base_fen', 'performance_fen', 'dispatch_commission_fen',
+            'recharge_commission_fen', 'aftersale_commission_fen',
+            'exam_commission_fen', 'late_adjustments_fen'))
         version_rows = reemployment_performance.get(assignment.account_id, [])
         credit = sum(max(0, row['delta_fen']) for row in version_rows)
-        available = line['total_fen'] + credit
+        available = None if line['total_fen'] is None else line['total_fen'] + credit
         deducted = 0
         for row in version_rows:
             requested = max(0, -row['delta_fen'])
-            applied = min(available, requested)
-            available -= applied
-            deducted += applied
+            if available is None:
+                applied = None
+                waived = None
+            else:
+                applied = min(available, requested)
+                available -= applied
+                deducted += applied
+                waived = requested - applied
             line['reemployment_performance_sources'].append({**row,
-                'applied_fen': row['delta_fen'] if row['delta_fen'] >= 0 else -applied,
-                'waived_fen': requested - applied})
-        line['late_adjustments_fen'] += credit - deducted
-        line['total_fen'] = available
+                'applied_fen': (row['delta_fen'] if row['delta_fen'] >= 0 else -applied)
+                              if applied is not None else None,
+                'waived_fen': waived})
+        if available is None:
+            line['late_adjustments_fen'] = None
+            line['total_fen'] = None
+        else:
+            line['late_adjustments_fen'] = add_known(line['late_adjustments_fen'], credit - deducted)
+            line['total_fen'] = available
         if version_rows:
             effective_day = min(max(timezone.localdate(), month), month.replace(day=calendar.monthrange(month.year, month.month)[1]))
-            daily_costs[effective_day.isoformat()] += credit - deducted
+            daily_costs[effective_day.isoformat()] = add_known(daily_costs[effective_day.isoformat()], credit - deducted)
         if refund_accounting:
-            from .payroll_refund_ledger import _plan
-            line['refund_deduction_plan'] = _plan(assignment.account_id, month, line['total_fen'])
-            line['late_adjustments_fen'] += line['refund_deduction_plan']['revision_credit_fen']
-            line['total_fen'] = line['refund_deduction_plan']['net_fen']
             today = timezone.localdate()
             effective_day = min(max(today, month), month.replace(day=calendar.monthrange(month.year, month.month)[1]))
-            daily_costs[effective_day.isoformat()] += (line['refund_deduction_plan']['revision_credit_fen']
-                                                       - line['refund_deduction_plan']['deducted_fen'])
+            if line['total_fen'] is None:
+                line['refund_deduction_plan'] = None
+                line['late_adjustments_fen'] = None
+                daily_costs[effective_day.isoformat()] = None
+            else:
+                from .payroll_refund_ledger import _plan
+                line['refund_deduction_plan'] = _plan(assignment.account_id, month, line['total_fen'])
+                line['late_adjustments_fen'] = add_known(
+                    line['late_adjustments_fen'], line['refund_deduction_plan']['revision_credit_fen'])
+                line['total_fen'] = line['refund_deduction_plan']['net_fen']
+                daily_costs[effective_day.isoformat()] = add_known(
+                    daily_costs[effective_day.isoformat()],
+                    line['refund_deduction_plan']['revision_credit_fen'] - line['refund_deduction_plan']['deducted_fen'])
         warnings.extend(f"{line['account_name']}：{message}" for message in line['warnings'])
         for number in range(1, calendar.monthrange(month.year, month.month)[1] + 1):
-            daily_costs[month.replace(day=number).isoformat()] += (plan['base_fen'] * number // calendar.monthrange(month.year, month.month)[1]
-                - plan['base_fen'] * (number - 1) // calendar.monthrange(month.year, month.month)[1])
+            day = month.replace(day=number).isoformat()
+            base_increment = (plan['base_fen'] * number // calendar.monthrange(month.year, month.month)[1]
+                              - plan['base_fen'] * (number - 1) // calendar.monthrange(month.year, month.month)[1])
+            daily_costs[day] = add_known(daily_costs[day], base_increment)
         lines.append(line)
-    totals = {key: sum(line[key] for line in lines) for key in TOTAL_FIELDS}
+    totals = {key: sum_known(line[key] for line in lines) for key in TOTAL_FIELDS}
+    if invalid_recharge_activity_ids:
+        totals['recharge_commission_fen'] = None
+        totals['total_fen'] = None
+    if invalid_recharge_recognition_ids:
+        totals['late_adjustments_fen'] = None
     totals['employee_count'] = len(lines)
     if not assignments:
         warnings.append('该月尚未安排任何人员薪资')
@@ -502,8 +587,10 @@ def _allocate_month_salary(total, month, first, last):
 
 def snapshot_salary(snapshot, month, first, last):
     if 'daily_costs' in snapshot:
-        return sum(row['amount_fen'] for row in snapshot['daily_costs'] if first.isoformat() <= row['day'] <= last.isoformat())
-    return _allocate_month_salary(snapshot['totals']['total_fen'], month, first, last)
+        return sum_known(row['amount_fen'] for row in snapshot['daily_costs']
+                         if first.isoformat() <= row['day'] <= last.isoformat())
+    total = snapshot['totals']['total_fen']
+    return None if total is None else _allocate_month_salary(total, month, first, last)
 
 
 def refunded_referral_cost(order):
@@ -759,13 +846,19 @@ def operating_roi(first, last):
         run = PayrollRun.objects.filter(month=month).first()
         if run:
             value = snapshot_salary(run.snapshot, month, first, last)
-            salary_cost += value
-            estimated_salary_cost += value
+            salary_cost = add_known(salary_cost, value)
+            estimated_salary_cost = add_known(estimated_salary_cost, value)
+            if value is None:
+                invalid_salary.append({
+                    'month': month.strftime('%Y-%m'),
+                    'warnings': ['已确认工资快照中的薪资金额未知，请核对后再查看经营ROI'],
+                })
         else:
             unconfirmed.append(month.strftime('%Y-%m'))
             preview = calculate_payroll(month)
             if preview['can_confirm']:
-                estimated_salary_cost += snapshot_salary(preview, month, first, last)
+                estimated_salary_cost = add_known(
+                    estimated_salary_cost, snapshot_salary(preview, month, first, last))
             else:
                 invalid_salary.append({'month': month.strftime('%Y-%m'), 'warnings': preview['warnings']})
         month = month + timedelta(days=calendar.monthrange(month.year, month.month)[1])
@@ -783,7 +876,8 @@ def operating_roi(first, last):
     continuation_units, invalid_continuation_rewards = continuation_reward_cost(start, end)
     continuation_cost = raw_to_fen(continuation_units)
     complete = (net_consumption is not None and not cost_review and not unknown and not unknown_referral
-                and not unknown_subsidy and not invalid_continuation_rewards and not unconfirmed and not missing_ad_dates)
+                and not unknown_subsidy and not invalid_continuation_rewards and not unconfirmed
+                and not invalid_salary and not missing_ad_dates)
     total_cost = provider_cost + referral_cost + subsidy_cost + gift_compensation_cost + continuation_cost + salary_cost + ad_spend + other_cost if complete else None
     profit = net_consumption - total_cost if total_cost is not None else None
     warnings = []
@@ -803,6 +897,8 @@ def operating_roi(first, last):
         warnings.append('部分续单奖励凭证与钱包流水不一致，经营ROI待核对')
     if unconfirmed:
         warnings.append('查询范围内存在未确认薪资月份；提供有明确人员安排的暂估结果，不将未知薪资当作零成本')
+    if invalid_salary:
+        warnings.append('查询范围内存在薪资金额未知的月份；员工薪资、经营成本及 ROI 待核对')
     if missing_ad_dates:
         warnings.append('查询范围内部分日期尚未录入投流成本；未投放请明确录入0元，缺失不视为已核对0成本')
     if ad_spend == 0:
@@ -859,7 +955,7 @@ def operating_roi(first, last):
                           'partly_settled_provider_evidence_scope': '仅列本次查询已核实的部分结算订单；期间入账按钱包流水时间，待结算按查询时现状，不代表全店负债或历史期末余额',
                           'verified_provider_settlement_evidence': verified_settlements,
                           'verified_provider_settlement_evidence_scope': '仅列本次查询适配且已核实的积分服务订单；期间入账按钱包流水时间，待结算和结算状态按查询时现状，不代表全店汇总或历史期末余额',
-                          'salary_cost_fen': None if unconfirmed else salary_cost,
+                          'salary_cost_fen': None if unconfirmed or invalid_salary else salary_cost,
                           'ad_spend_fen': ad_spend, 'other_cost_fen': other_cost, 'total_cost_fen': total_cost,
                           'profit_fen': profit, 'roi': profit / total_cost if total_cost else None,
                           'realized_shop_income_fen': shop_income, 'order_count': len(revenue['order_ids']),

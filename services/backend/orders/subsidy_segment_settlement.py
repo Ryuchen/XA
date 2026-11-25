@@ -3,8 +3,10 @@ from dataclasses import asdict, dataclass, replace
 
 from django.conf import settings
 from django.db.models import F
-from django.utils import timezone
 from stores.db import transaction
+
+from wallet.settlement_clocks import (clock_scope, record as record_clock,
+                                      require_clock, verify as verify_clock)
 
 from .models import OrderSegmentPersonSettlement, OrderSegmentSettlementManifest
 from .settlement import SettlementError
@@ -113,17 +115,19 @@ def verify_paid_shares_locked(order, shares):
     manifest = OrderSegmentSettlementManifest.objects.select_for_update().filter(order=order).first()
     if not manifest or bool(order.settled_at) != bool(manifest.finalized_at):
         raise SettlementError('安全箱逐段结算凭证缺失')
-    plan = _plan(order)
-    _verified_records(order, shares, manifest, plan)
+    with clock_scope(require_clock()):
+        plan = _plan(order)
+        _verified_records(order, shares, manifest, plan)
 
 
 def _finalize_locked(order, shares, manifest, plan):
     if not manifest or order.aftersales.filter(status='OPEN').exists():
         return False
+    clock = require_clock()
     records = _verified_records(order, shares, manifest, plan)
     if any(person.account_id not in records for person in plan.persons):
         return False
-    now = timezone.now()
+    now = clock.at
     zero_participants = []
     for share in shares:
         if not share.paid_at:
@@ -150,6 +154,7 @@ def _finalize_locked(order, shares, manifest, plan):
     order.settled_at = now
     order.save(update_fields=['report_ready_at', 'consumption_ready_at', 'settled_at'])
     manifest.finalized_at = now; manifest.save(update_fields=['finalized_at'])
+    record_clock(order, 'MANIFEST', manifest.pk, 'FINALIZE', clock)
     return True
 
 
@@ -158,15 +163,23 @@ def verify_locked(order, manifest, *, finalized=False):
     if not transaction.get_connection().in_atomic_block or not enabled():
         raise SettlementError('安全箱逐段结算凭证尚不可核对')
     from .financial_lock import lock_order_money
-    from .subsidies import _locked_subsidy_shares
     lock_order_money()
+    with clock_scope(require_clock()):
+        return _verify_locked_clocked(order, manifest, finalized=finalized)
+
+
+def _verify_locked_clocked(order, manifest, *, finalized=False):
+    from .subsidies import _locked_subsidy_shares
     shares = _locked_subsidy_shares(order)
     plan = _plan(order)
     records = _verified_records(order, shares, manifest, plan)
     if finalized:
+        if not order.settled_at:
+            raise SettlementError('安全箱逐段结算完成凭证待核对')
+        verify_clock(order, 'MANIFEST', manifest.pk, 'FINALIZE', order.settled_at, require_clock())
         from django.utils.dateparse import parse_datetime
         submitted = [parse_datetime(item['submitted_at']) for row in records.values() for item in row.report_versions]
-        if (not order.settled_at or manifest.finalized_at != order.settled_at
+        if (manifest.finalized_at != order.settled_at
                 or not plan.persons or any(not share.paid_at for share in shares)
                 or len(records) != len(plan.persons) or order.aftersales.filter(status='OPEN').exists()
                 or any(person.freeze_until is None for person in plan.persons)
@@ -200,17 +213,23 @@ def settle_locked(order):
     if not enabled() or order.settled_at:
         return []
     from .financial_lock import lock_order_money
+    if (order.status != order.Status.COMPLETED or order.payment_status != order.PaymentStatus.PAID
+            or order.settlement_mode != order.SettlementMode.REPORT_APPROVAL
+            or type(order.service_deposit_percent) is not int or not 0 <= order.service_deposit_percent <= 100):
+        return []
+    lock_order_money()
+    clock = require_clock()
+    with clock_scope(clock):
+        return _settle_locked_clocked(order, clock=clock)
+
+
+def _settle_locked_clocked(order, *, clock):
     from .segment_settlement import _hash, _report_versions
     from .subsidies import _locked_subsidy_shares, subsidy_funds
     from wallet.models import Transaction, get_platform_wallet
     from wallet.services import get_wallet
     from wallet.income import hold_provider_income
     from users.models import EscortProfile
-    if (order.status != order.Status.COMPLETED or order.payment_status != order.PaymentStatus.PAID
-            or order.settlement_mode != order.SettlementMode.REPORT_APPROVAL
-            or type(order.service_deposit_percent) is not int or not 0 <= order.service_deposit_percent <= 100):
-        return []
-    lock_order_money()
     shares = _locked_subsidy_shares(order)
     plan = _plan(order)
     terms = _terms(order, plan)
@@ -259,8 +278,9 @@ def settle_locked(order):
         raise SettlementError('陪玩存在历史退款押金扣减，补足情况待核对')
     if not manifest:
         manifest = OrderSegmentSettlementManifest.objects.create(order=order, plan=terms, plan_hash=_hash(terms))
+        record_clock(order, 'MANIFEST', manifest.pk, 'PLAN', clock)
     by_account = {share.assignment.provider_account_id:share for share in shares}
-    now = timezone.now()
+    now = clock.at
     paid_users = []
     for person in due:
         share = by_account.get(person.account_id)
@@ -300,11 +320,12 @@ def settle_locked(order):
                 if not debit or not credit:
                     raise SettlementError('安全箱押金配对流水缺失')
         record = OrderSegmentPersonSettlement.objects.create(manifest=manifest, account_id=person.account_id,
-            amount=person.income, segment_ids=list(person.segment_ids), report_versions=_report_versions(person),
+            amount=person.income, segment_ids=list(person.segment_ids), report_versions=_report_versions(person, clock=clock),
             income_transaction=income, deposit_debit=debit, deposit_credit=credit, settled_at=now)
+        record_clock(order, 'PERSON', record.pk, 'PERSON', clock)
         if not person.income:
             from wallet.refund_recovery_order import close_for_zero_settlement
-            close_for_zero_settlement(profile, record)
+            close_for_zero_settlement(profile, record, now=clock)
         share.income_transaction, share.expense_transaction, share.paid_at = income, expense, now
         share.save(update_fields=['income_transaction', 'expense_transaction', 'paid_at'])
         share.assignment.settled_at = now; share.assignment.save(update_fields=['settled_at'])

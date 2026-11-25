@@ -28,6 +28,9 @@ class ProviderVueRemoveOrderHTTPTest(LiveServerTestCase):
         provider.escort_profile.account = accounts[1]; provider.escort_profile.save(update_fields=['account'])
         staff.admin_membership.account = accounts[2]; staff.admin_membership.save(update_fields=['account'])
         wallet = make_wallet(boss, balance=50000); wallet.account = accounts[0]; wallet.save(update_fields=['account'])
+        from engagement.models import PointFundingLot
+        PointFundingLot.objects.create(account=accounts[0], source_key='chat-remove-prepaid',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=wallet.balance)
         service = make_service(name='隔离咨询订单', price=10000); provider.escort_profile.service_items.add(service)
         clients = [APIClient(), APIClient(), APIClient()]
         tokens = [issue_account_tokens(account)[0] for account in accounts]

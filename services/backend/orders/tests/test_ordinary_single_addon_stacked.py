@@ -28,7 +28,7 @@ class SingleStackedAddonRefundTest(APITestCase):
 
     def scenario(self, amount, *, deposit_case=False, wallet_case=False, double=False):
         from club_accounts.services import get_or_create_account_for_legacy_user
-        from orders.models import (GameCategory, Order, OrderAddonFundingReleaseRun, OrderAddonRefund,
+        from orders.models import (GameCategory, Order, OrderAddonConsumption, OrderAddonFundingReleaseRun, OrderAddonRefund,
             ServiceAddonConfiguration, ServiceAddonPriceOption)
         from orders.tests.factories import make_provider, make_service, make_user
         from stores.context import current_store, resolve_store, store_context
@@ -43,9 +43,11 @@ class SingleStackedAddonRefundTest(APITestCase):
             second = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
             self.accounts[second.pk] = get_or_create_account_for_legacy_user(second)
             second.escort_profile.account = self.accounts[second.pk]
-            second.escort_profile.save(update_fields=['account'])
+            second.escort_profile.deposit_business_cycle = self.accounts[second.pk].business_cycle
+            second.escort_profile.save(update_fields=['account', 'deposit_business_cycle'])
             self.service.billing_provider_count = 2
-            self.service.save(update_fields=['billing_provider_count'])
+            self.service.fulfillment_provider_count = 2
+            self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         boss = self.accounts[self.boss.pk]
         inviter_user = make_user()
         inviter = get_or_create_account_for_legacy_user(inviter_user)
@@ -187,6 +189,20 @@ class SingleStackedAddonRefundTest(APITestCase):
             {'refund_amount': 100, 'resolution': '不允许主单退款', 'client_request_id': 'forbidden-main-refund'}, format='json')
         self.assertNotEqual(blocked.status_code, 200, blocked.data)
         url = f'/api/admin/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/'
+        if deposit_case:
+            before_denied = get_wallet(user=self.boss, account=boss).balance
+            denied = self.client.post(url, {'request_id': 'addon-plan', 'amount_raw': amount,
+                'case_id': addon_case['id'], 'explanation': '加购协商退款'}, format='json')
+            self.assertNotEqual(denied.status_code, 200, denied.data)
+            self.assertEqual(denied.data['msg'], '陪玩待结算收益、钱包及押金不足，请先补足后退款')
+            self.assertFalse(OrderAddonRefund.objects.filter(payment_id=payment_id).exists())
+            self.assertEqual(get_wallet(user=self.boss, account=boss).balance, before_denied)
+            next_deposit = 400 if wallet_case else 1200
+            self.ok(self.client.put('/api/admin/config/deposit-targets', {
+                'cash_target': next_deposit, 'earnings_target': next_deposit + 500, 'expected_version': 1}, format='json'))
+            self.ok(self.client.post(f'/api/admin/escorts/{profile.pk}/deposit-topups/', {
+                'amount': 200, 'reason': '隔离押金补足', 'reference': 'stacked-deposit-2',
+                'client_request_id': 'stacked-deposit-2'}, format='multipart'))
         item = self.ok(self.client.post(url, {'request_id': 'addon-plan', 'amount_raw': amount,
             'case_id': addon_case['id'], 'explanation': '加购协商退款'}, format='json'))
         pending_close = self.client.post(f'/api/admin/aftersales/{addon_case["id"]}/resolve/',
@@ -202,15 +218,6 @@ class SingleStackedAddonRefundTest(APITestCase):
         self.login(self.admin)
         execute = url + f'{item["id"]}/execute/'
         before = get_wallet(user=self.boss, account=boss).balance
-        if deposit_case:
-            self.assertNotEqual(self.client.post(execute, {}, format='json').status_code, 200)
-            self.assertFalse(OrderAddonRefund.objects.filter(payment_id=payment_id).exists())
-            next_deposit = 400 if wallet_case else 1200
-            self.ok(self.client.put('/api/admin/config/deposit-targets', {
-                'cash_target': next_deposit, 'earnings_target': next_deposit + 500, 'expected_version': 1}, format='json'))
-            self.ok(self.client.post(f'/api/admin/escorts/{profile.pk}/deposit-topups/', {
-                'amount': 200, 'reason': '隔离押金补足', 'reference': 'stacked-deposit-2',
-                'client_request_id': 'stacked-deposit-2'}, format='multipart'))
         target = ('orders.ordinary_addon_after_main_release.plan_release' if deposit_case else
                   'orders.ordinary_addon_after_main_release.OrderAddonFundingRelease.objects.bulk_create')
         with patch(target,
@@ -221,23 +228,33 @@ class SingleStackedAddonRefundTest(APITestCase):
         self.assertEqual(get_wallet(user=self.boss, account=boss).balance, before)
         self.ok(self.client.post(execute, {}, format='json'))
         self.ok(self.client.post(execute, {}, format='json'))
-        refund = OrderAddonRefund.objects.get(payment_id=payment_id)
-        self.assertEqual(OrderAddonRefund.objects.filter(payment_id=payment_id).count(), 1)
+        total_addon_refund = amount
         if amount < 1000:
-            with transaction.atomic():
-                again = self.ok(self.client.post(url, {'request_id': 'second-addon-plan', 'amount_raw': 100,
-                    'case_id': addon_case['id'], 'explanation': '不允许追加'}, format='json'))
-                again_decision = f'/api/orders/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/{again["id"]}/'
-                for user in (self.boss, self.provider):
-                    self.login(user)
-                    self.ok(self.client.post(again_decision, {'accepted': True}, format='json'))
-                self.login(self.admin)
-                self.assertNotEqual(self.client.post(url + f'{again["id"]}/execute/', {}, format='json').status_code, 200)
-                transaction.set_rollback(True)
+            total_addon_refund += 100
+            buyer_before = get_wallet(user=self.boss, account=boss).balance
+            again = self.ok(self.client.post(url, {'request_id': 'second-addon-plan', 'amount_raw': 100,
+                'case_id': addon_case['id'], 'explanation': '追加已开放加购退款'}, format='json'))
+            again_decision = f'/api/orders/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/{again["id"]}/'
+            second_execute = url + f'{again["id"]}/execute/'
+            self.assertNotEqual(self.client.post(second_execute, {}, format='json').status_code, 200)
             self.assertEqual(OrderAddonRefund.objects.filter(payment_id=payment_id).count(), 1)
+            self.assertEqual(get_wallet(user=self.boss, account=boss).balance, buyer_before)
+            for user in (self.boss, self.provider):
+                self.login(user)
+                self.ok(self.client.post(again_decision, {'accepted': True}, format='json'))
+            self.login(self.admin)
+            second_result = self.ok(self.client.post(second_execute, {}, format='json'))
+            self.assertEqual(self.ok(self.client.post(second_execute, {}, format='json')), second_result)
+            refunds = list(OrderAddonRefund.objects.filter(payment_id=payment_id).order_by('pk'))
+            self.assertEqual(len(refunds), 2)
+            self.assertEqual(sum(row.amount for row in refunds), total_addon_refund)
+            self.assertEqual(get_wallet(user=self.boss, account=boss).balance, buyer_before + 100)
+        refund = OrderAddonRefund.objects.filter(payment_id=payment_id).order_by('pk').first()
+        self.assertEqual(OrderAddonRefund.objects.filter(payment_id=payment_id).count(),
+                         2 if amount < 1000 else 1)
         from orders.models import OrderAddonFundingAllocation
         self.assertEqual(dict(OrderAddonFundingAllocation.objects.filter(payment_id=payment_id).values_list(
-            'kind', 'refunded_amount')), {'GIFT': amount})
+            'kind', 'refunded_amount')), {'GIFT': total_addon_refund})
         from django.db.models import Sum
         source_rows = Order.objects.get(pk=order_id).funding_allocations.values('kind').annotate(total=Sum('refunded_amount'))
         self.assertEqual({row['kind']: row['total'] for row in source_rows}, {'PREPAID': 9000 if deposit_case else 1000})
@@ -247,7 +264,8 @@ class SingleStackedAddonRefundTest(APITestCase):
         release = OrderAddonFundingReleaseRun.objects.filter(refund=refund).first()
         if deposit_case:
             from wallet.models import RefundDepositDeficit
-            self.assertIsNone(release)
+            self.assertIsNotNone(release)
+            self.assertEqual((release.allocated_before, release.required_amount, release.released_amount), (0, 0, 0))
             self.assertEqual(sorted(RefundDepositDeficit.objects.values_list('amount', flat=True)),
                              [200, 200] if wallet_case else [200, 1000])
         else:
@@ -287,7 +305,10 @@ class SingleStackedAddonRefundTest(APITestCase):
             process_order(order_id)
             process_order(order_id)
         self.assertIsNotNone(Order.objects.get(pk=order_id).settled_at)
-        self.assertEqual(get_wallet(user=self.provider, account=owner).balance, 0 if deposit_case else 7800 - amount)
+        self.assertEqual(get_wallet(user=self.provider, account=owner).balance,
+                         0 if deposit_case else 7800 - total_addon_refund)
+        consumption = OrderAddonConsumption.objects.get(payment_id=payment_id)
+        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, total_addon_refund))
         if second:
             self.assertEqual(get_wallet(user=second, account=self.accounts[second.pk]).balance, 8000)
         self.assertEqual(get_wallet(user=inviter_user, account=inviter).balance,

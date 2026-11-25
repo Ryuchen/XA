@@ -63,16 +63,21 @@ def refund_within_aftersale_window(order, *, now=None):
     return now < deadline or order.aftersales.filter(status='OPEN', created_at__lt=deadline).exists()
 
 
-def aftersale_wait_elapsed(order):
+def aftersale_wait_elapsed(order, *, clock=None):
     deadline = aftersale_deadline(order)
-    return bool(deadline and timezone.now() >= deadline)
+    if clock is None:
+        now = timezone.now()
+    else:
+        from wallet.settlement_clocks import require_clock
+        now = require_clock(clock).at
+    return bool(deadline and now >= deadline)
 
 
-def settlement_ready(order):
-    return aftersale_wait_elapsed(order) and not order.aftersales.filter(status='OPEN').exists()
+def settlement_ready(order, *, clock=None):
+    return aftersale_wait_elapsed(order, clock=clock) and not order.aftersales.filter(status='OPEN').exists()
 
 
-def service_reports_mature(order, *, now=None):
+def service_reports_mature(order, *, now=None, clock=None):
     """All effective submissions have reached their order-snapshot freeze deadline."""
     if order.service_clock_version is None:
         return True  # Historical settlements keep their recorded clock behavior.
@@ -85,7 +90,13 @@ def service_reports_mature(order, *, now=None):
     reports = list(order.provider_reports.filter(provider_id__in=required))
     if len(reports) != len(required) or any(row.status != 'APPROVED' or not row.submitted_at for row in reports):
         return False
-    now = now or timezone.now()
+    if clock is not None:
+        if now is not None:
+            raise ValueError('报单成熟判断不能同时接受两个时钟')
+        from wallet.settlement_clocks import require_clock
+        now = require_clock(clock).at
+    else:
+        now = now or timezone.now()
     return all(row.submitted_at + timedelta(hours=order.service_freeze_hours) <= now for row in reports)
 
 
@@ -208,6 +219,7 @@ def _process_order(order_id, *, lifecycle=None):
                 return False
             confirmed = confirm_refunded_order(order.pk)
             return _confirm_refunded_addons(order, confirmed)
+    service_clock = None
     if order.status != 'COMPLETED' or not order.customer_account_id:
         return False
     negotiated = None
@@ -295,6 +307,11 @@ def _process_order(order_id, *, lifecycle=None):
         ready = order.consumption_ready_at
         clock_changed = False
     else:
+        from orders.service_settlement import supports_partial_service_settlement
+        legacy_service = supports_partial_service_settlement(order)
+        if legacy_service:
+            from wallet.settlement_clocks import require_clock
+            service_clock = require_clock()
         previous_clock = (order.report_ready_at, order.consumption_ready_at)
         ready = refresh_report_clock(order)
         clock_changed = previous_clock != (order.report_ready_at, order.consumption_ready_at)
@@ -304,37 +321,52 @@ def _process_order(order_id, *, lifecycle=None):
         order_notification_scheduled = clock_changed
         required = required_report_providers(order)
         approved = set(order.provider_reports.filter(status='APPROVED').values_list('provider_id', flat=True))
-        if not required or None in required or not aftersale_wait_elapsed(order):
+        if not required or None in required or not aftersale_wait_elapsed(order, clock=service_clock):
             return False
-        from orders.service_settlement import supports_partial_service_settlement
-        partial = supports_partial_service_settlement(order) or (
+        partial = legacy_service or (
                     order.funding_terms is not None and not order.is_gift_snapshot and not order.source_order_id)
         if partial and not order.settled_at:
-            paid = settle_order(order)
+            if service_clock is not None:
+                from wallet.settlement_clocks import clock_scope
+                with clock_scope(service_clock):
+                    paid = settle_order(order)
+            else:
+                paid = settle_order(order)
             if paid and not order_notification_scheduled:
                 transaction.on_commit(lambda: notify_order_update(order))
                 order_notification_scheduled = True
             if not order.settled_at:
                 return False
-        if not settlement_ready(order):
+        if not settlement_ready(order, clock=service_clock):
             return False
         if not required.issubset(approved):
             return False
+    if service_clock is not None:
+        from orders.service_settlement import verify_legacy_service_reports
+        verify_legacy_service_reports(order, service_clock, require_approved=True)
     previous_state = (order.settled_at, order.consumption_confirmed_at)
 
     def notify_changed_order():
         if not order_notification_scheduled and (order.settled_at, order.consumption_confirmed_at) != previous_state:
             transaction.on_commit(lambda: notify_order_update(order))
 
+    def confirmation_now():
+        return service_clock.at if service_clock is not None else timezone.now()
+
     # Legacy/non-partial orders keep their recorded settlement-clock rules;
     # confirmation below also requires the last effective report clock.
     if order.settlement_mode == 'REPORT_APPROVAL' and not order.settled_at:
-        if not service_reports_mature(order):
+        if not service_reports_mature(order, clock=service_clock):
             return False
-        settle_order(order)
+        if service_clock is not None:
+            from wallet.settlement_clocks import clock_scope
+            with clock_scope(service_clock):
+                settle_order(order)
+        else:
+            settle_order(order)
         if not order.settled_at:
             return False
-    if order.is_gift_snapshot or not ready or ready > timezone.now():
+    if order.is_gift_snapshot or not ready or ready > confirmation_now():
         notify_changed_order()
         return False
     from orders.addon_settlement import enabled as addon_settlement_enabled, has_paid_addons
@@ -389,7 +421,7 @@ def _process_order(order_id, *, lifecycle=None):
             if not funding.fully_funded or receipt.paid_units != order.amount:
                 return False
             decision = record_locked(order, paid_units=receipt.paid_units, refunded_units=0,
-                payment_vip=True, confirmation_vip=True, decided_at=timezone.now())
+                payment_vip=True, confirmation_vip=True, decided_at=confirmation_now())
         if (segment_path
                 and not needs_integrated_processing(order) and not order.source_order_id
                 and OrderOriginalShareTransfer.objects.filter(
@@ -400,7 +432,7 @@ def _process_order(order_id, *, lifecycle=None):
             from orders.refunds import refunded_amount
             verify_locked(order)
             decision = record_locked(order, paid_units=order.amount, refunded_units=refunded_amount(order),
-                payment_vip=True, confirmation_vip=True, decided_at=timezone.now())
+                payment_vip=True, confirmation_vip=True, decided_at=confirmation_now())
         if (has_paid_addons(order) and order.refund_records.count() <= 1
                 and not needs_integrated_processing(order) and not order.source_order_id
                 and not order.status_logs.filter(action='TRANSFER').exists()
@@ -412,7 +444,7 @@ def _process_order(order_id, *, lifecycle=None):
             from orders.refunds import refunded_amount
             verify_locked(order)
             decision = record_locked(order, paid_units=order.amount, refunded_units=refunded_amount(order),
-                payment_vip=True, confirmation_vip=True, decided_at=timezone.now())
+                payment_vip=True, confirmation_vip=True, decided_at=confirmation_now())
         if (negotiated and negotiated.refund_id and order.refund_records.count() == 1
                 and not needs_integrated_processing(order) and not has_paid_addons(order)
                 and not order.source_order_id and not order.status_logs.filter(action='TRANSFER').exists()
@@ -425,7 +457,7 @@ def _process_order(order_id, *, lifecycle=None):
             from .license_refund_vip_review import record_locked
             from orders.refunds import refunded_amount
             decision = record_locked(order, paid_units=order.amount, refunded_units=refunded_amount(order),
-                payment_vip=True, confirmation_vip=True, decided_at=timezone.now())
+                payment_vip=True, confirmation_vip=True, decided_at=confirmation_now())
         if decision is None and order.funding_terms['vip_enabled'] and operation.vip_enabled:
             # Every actual confirmation needs its own License decision. More
             # complex orders may remain pending review, but must never become
@@ -433,8 +465,8 @@ def _process_order(order_id, *, lifecycle=None):
             from .license_refund_vip_review import record_locked
             from orders.refunds import refunded_amount
             decision = record_locked(order, paid_units=order.amount, refunded_units=refunded_amount(order),
-                payment_vip=True, confirmation_vip=True, decided_at=timezone.now())
-        order.funding_benefits_resolved_at = decision.decided_at if decision else timezone.now()
+                payment_vip=True, confirmation_vip=True, decided_at=confirmation_now())
+        order.funding_benefits_resolved_at = decision.decided_at if decision else confirmation_now()
         order.save(update_fields=['funding_award_refunded_principal', 'funding_benefits_resolved_at'])
         from .achievement_metrics import record_achievement_event
         record_achievement_event(order)
@@ -488,7 +520,7 @@ def _process_order(order_id, *, lifecycle=None):
             from .license_refund_vip_review import record_locked
             evidence = verify_locked(order)
             deferred_principal, deferred_terms = evidence.principal, evidence.membership_terms
-            decided_at = timezone.now()
+            decided_at = confirmation_now()
             decision = record_locked(order, paid_units=order.amount, refunded_units=0,
                 payment_vip=snapshot.vip_enabled, confirmation_vip=operation.vip_enabled, decided_at=decided_at)
         elif (not order.source_order_id
@@ -515,13 +547,13 @@ def _process_order(order_id, *, lifecycle=None):
             from .services import locked_profile
             locked_profile(account)
             decision = record_locked(order, paid_units=order.amount, refunded_units=deferred_refunded,
-                payment_vip=True, confirmation_vip=True, decided_at=timezone.now())
+                payment_vip=True, confirmation_vip=True, decided_at=confirmation_now())
         if decision is None and snapshot.vip_enabled and operation.vip_enabled:
             from .license_refund_vip_review import record_locked
             from orders.refunds import refunded_amount
             deferred_refunded = refunded_amount(order)
             decision = record_locked(order, paid_units=order.amount, refunded_units=deferred_refunded,
-                payment_vip=True, confirmation_vip=True, decided_at=timezone.now())
+                payment_vip=True, confirmation_vip=True, decided_at=confirmation_now())
             if decision.outcome == 'UNKNOWN':
                 # Save the authorization fact even if optional payment-source
                 # proof cannot yet establish a safe amount for points.
@@ -544,7 +576,7 @@ def _process_order(order_id, *, lifecycle=None):
             # Preserve the real draft-only state for a later refund review.
             decision.license_evidence = {**decision.license_evidence, 'unpaid_addon_intents': True}
             decision.save(update_fields=['license_evidence'])
-        order.funding_benefits_resolved_at = timezone.now()
+        order.funding_benefits_resolved_at = confirmation_now()
         if decision:
             order.funding_benefits_resolved_at = decision.decided_at
         order.save(update_fields=['funding_benefits_resolved_at'])
@@ -568,8 +600,18 @@ def _process_order(order_id, *, lifecycle=None):
             return False
         award_order_points(order, service_confirmed=True, operation=operation)
     from orders.refunds import refunded_amount
+    returned = refunded_amount(order)
     row, new = ConsumptionConfirmation.objects.get_or_create(order=order, defaults={
-        'account': account, 'business_cycle': order.business_cycle, 'amount': order.amount,'refunded_amount':refunded_amount(order)})
+        'account': account, 'business_cycle': order.business_cycle, 'amount': order.amount,
+        'refunded_amount': returned, 'confirmed_at': confirmation_now()})
+    if service_clock is not None and (
+            row.account_id != account.pk or row.business_cycle != order.business_cycle
+            or row.amount != order.amount or row.refunded_amount != returned
+            or row.reversed_at is not None or row.reversed_by_refund_id is not None
+            or row.confirmed_at is None
+            or (order.consumption_confirmed_at and order.consumption_confirmed_at != row.confirmed_at)):
+        from orders.settlement import SettlementError
+        raise SettlementError('原实销确认记录与订单事实不一致，需人工核对')
     if not order.consumption_confirmed_at:
         order.consumption_confirmed_at = row.confirmed_at
         order.save(update_fields=['consumption_confirmed_at'])

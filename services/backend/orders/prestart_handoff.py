@@ -392,7 +392,9 @@ def reassign(order_id, data, *, operator, operator_user=None):
             raise IllegalTransitionError('多人补贴订单的分摊基数需先核对')
         from .transfer_limit import record_locked
         record_locked(order, commands)
-        now = timezone.now()
+        from wallet.refund_recovery_order import sample_unstarted_clock
+        handoff_clock = sample_unstarted_clock(order, account_ids=[old for old, _ in commands])
+        now = handoff_clock.at if handoff_clock is not None else timezone.now()
         changes = []
         notice_handoffs = []
         from site_messages.prestart_handoff_notice import enabled as handoff_notice_enabled
@@ -500,7 +502,10 @@ def reassign(order_id, data, *, operator, operator_user=None):
             except (PointsFundingPlanError, ValidationError) as exc:
                 raise IllegalTransitionError('积分订单改派后的收益或门店补资待核对') from exc
         from wallet.refund_recovery_order import cancel_unstarted, reserve_many
-        cancel_unstarted(order, account_ids=[old for old, _ in changes], reason='TRANSFERRED_UNSTARTED')
+        cancel_unstarted(
+            order, account_ids=[old for old, _ in changes],
+            reason='TRANSFERRED_UNSTARTED', now=handoff_clock,
+        )
         if recovery_enabled():
             try:
                 reserve_many([profiles[new] for _, new in changes], order)

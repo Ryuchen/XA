@@ -729,6 +729,7 @@ export function Pagination({
   pageSize = 10,
   onPageSizeChange,
   snapshotAvailable,
+  maximumPage,
 }: {
   page: number
   total: number
@@ -737,6 +738,7 @@ export function Pagination({
   pageSize?: number
   onPageSizeChange?: (value: number) => void
   snapshotAvailable?: boolean
+  maximumPage?: number
 }) {
   const state = usePageDataState()
   const available = snapshotAvailable ?? state?.hasSnapshot ?? true
@@ -773,7 +775,7 @@ export function Pagination({
         <Button
           variant="outline"
           size="sm"
-          disabled={busy || !available || page * pageSize >= total}
+          disabled={busy || !available || page * pageSize >= total || (maximumPage !== undefined && page >= maximumPage)}
           onClick={() => onChange(page + 1)}
         >
           下一页

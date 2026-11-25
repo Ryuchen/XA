@@ -67,6 +67,7 @@ import "./checkin-reservations-fidelity.css"
 import "./business/points-gifts-fidelity.css"
 import "./prototype-latest.css"
 import { BossModuleNotice, H5OrderGate, useBossBrand } from "./business/h5-module"
+import { StoreClosureCard } from "./business/closure-card"
 
 const navigation = [
   { path: "/home", title: "首页", icon: Home },
@@ -285,6 +286,7 @@ function BossApp() {
         <ContentTag id={path === "/login" ? undefined : "main-content"} tabIndex={-1} className="boss-content" data-page={location.pathname.split("/")[1]} key={session?.revision || 0}>
           <ActionFeedback />
           <BossModuleNotice />
+          <StoreClosureCard />
           <Routes>
             <Route path="/" element={<Navigate to="/home" replace />} />
             <Route path="/login" element={<LoginPage />} />

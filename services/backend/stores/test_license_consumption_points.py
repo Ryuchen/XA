@@ -548,14 +548,41 @@ class LicenseConsumptionPointsTests(TestCase):
 
     @override_settings(BOSS_FUNDING_SELECTION_ENABLED=False, ORDINARY_SERVICE_FUNDING_ENABLED=False)
     def test_pending_service_vip_review_locks_wallet_before_review_row(self):
+        from tempfile import TemporaryDirectory
+        from engagement.confirmation import process_order
         from engagement.models import LicenseRefundVipDecision, LicenseRefundVipReview
+        from orders.tests.test_release_flow import screenshot
+        from wallet.models import ProviderReport
 
-        with store_context(self.second):
-            paid = self.boss.post('/api/orders/create/', self.payload(), format='json')
-            self.assertEqual(paid.data['code'], 0, paid.data)
-            order = Order.objects.get(pk=paid.data['data']['id'])
-            with patch('stores.license_status.status_for_store', side_effect=DatabaseError('isolated VIP outage')):
-                self.assertFalse(self.mature(order))
+        def success(response):
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertEqual(response.data['code'], 0, response.data)
+            return response.data['data']
+
+        with store_context(self.second), TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
+            self.admin.defaults['HTTP_HOST'] = 'admin.esports.club'
+            role = self.staff.admin_membership.roles.get()
+            role.permissions += ['report:audit', 'report:view']
+            role.save(update_fields=['permissions'])
+            player = APIClient(
+                HTTP_HOST='xa.esports.club',
+                HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.provider)[0],
+            )
+            paid = success(self.boss.post('/api/orders/create/', self.payload(), format='json'))
+            order = Order.objects.get(pk=paid['id'])
+            order_url = f'/api/orders/orders/{order.pk}/'
+            success(player.post(order_url + 'start/', {'entry_image': screenshot()}, format='multipart'))
+            success(player.post(order_url + 'complete/', {'completion_image': screenshot()}, format='multipart'))
+            report = ProviderReport.objects.get(order=order)
+            report_url = f'/api/wallet/reports/{report.pk}/'
+            success(player.post(report_url + 'images/', {'kind': 'RESULT', 'image': screenshot()}, format='multipart'))
+            success(player.post(report_url + 'submit/'))
+            success(self.admin.post(f'/api/admin/reports/{report.pk}/approve/'))
+            matured_at = timezone.now() + timedelta(hours=80)
+            with (patch('django.utils.timezone.now', return_value=matured_at),
+                  patch('stores.license_status.status_for_store',
+                        side_effect=DatabaseError('isolated VIP outage'))):
+                self.assertFalse(process_order(order.pk))
             decision = LicenseRefundVipDecision.objects.get(order=order, outcome='UNKNOWN')
 
         self._assert_pending_vip_review_lock_order(decision, LicenseRefundVipReview, 'license-vip-review')

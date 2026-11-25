@@ -10,6 +10,7 @@ from .reservation_views import (
     ReservationListCreateView,
     ReservationRejectView,
     ReservationReplaceProviderView,
+    ReservationReplacementCandidatesView,
 )
 from .views import (
     AssignOrderView,
@@ -57,11 +58,16 @@ from .rooms import OrderRoomView
 from .room_objections import RoomObjectionView
 from .room_messages import OrderRoomMessageView
 from .room_message_images import OrderRoomMessageImageView
+from .settlement_breakdown import SettlementBreakdownView
 from .room_completion_review import RoomCompletionRequestView
 from .room_boss_confirmation import RoomBossConfirmView
 from .addon_offers import OrderAddonOffersView, OrderAddonQuoteView
 from .addon_intents import OrderAddonIntentView, OrderAddonPaymentView
-from .addon_refund import UserAddonRefundProposalListView, UserAddonRefundProposalView
+from .addon_refund import (
+    UserAddonRefundProposalListView,
+    UserAddonRefundProposalView,
+    UserOrderAddonRefundProposalListView,
+)
 from .addon_handover import UserAddonHandoverListView, UserAddonHandoverDecisionView
 from .addon_completion import UserAddonCompletionView
 from .grab_team_flow import TeamInviteView, TeamInvitationsView, TeamActionView
@@ -75,6 +81,7 @@ urlpatterns = [
     path('orders/<int:order_id>/addons/quote/', OrderAddonQuoteView.as_view()),
     path('orders/<int:order_id>/addons/intents/', OrderAddonIntentView.as_view()),
     path('orders/<int:order_id>/addons/intents/<int:intent_id>/pay/', OrderAddonPaymentView.as_view()),
+    path('orders/<int:order_id>/addons/refund-proposals/', UserOrderAddonRefundProposalListView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/refund-proposals/', UserAddonRefundProposalListView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/refund-proposals/<int:proposal_id>/', UserAddonRefundProposalView.as_view()),
     path('orders/<int:order_id>/addons/payments/<int:payment_id>/handovers/', UserAddonHandoverListView.as_view()),
@@ -116,6 +123,8 @@ urlpatterns = [
     path('gifts/receipt/', GiftReceiptView.as_view()),
     path('gifts/send/', TipOrderView.as_view()),
     path('orders/', OrderListView.as_view(), name='order-list'),
+    path('orders/<int:order_id>/settlement-breakdown/', SettlementBreakdownView.as_view(),
+         name='order-settlement-breakdown'),
     path('orders/<int:order_id>/', OrderDetailView.as_view(), name='order-detail'),
     path('orders/<int:order_id>/grab/', GrabOrderView.as_view()),
     path('orders/<int:order_id>/start/', StartOrderServiceView.as_view()),
@@ -136,6 +145,7 @@ urlpatterns = [
     path('reservations/<int:reservation_id>/confirm/', ReservationConfirmView.as_view()),
     path('reservations/<int:reservation_id>/reject/', ReservationRejectView.as_view()),
     path('reservations/<int:reservation_id>/replace-provider/', ReservationReplaceProviderView.as_view()),
+    path('reservations/<int:reservation_id>/replacement-candidates/', ReservationReplacementCandidatesView.as_view()),
     path('reservations/<int:reservation_id>/cancel/', ReservationCancelView.as_view()),
     path('reservations/<int:reservation_id>/convert/', ReservationConvertView.as_view()),
     path('reservations/<int:reservation_id>/quote/', ReservationQuoteView.as_view()),

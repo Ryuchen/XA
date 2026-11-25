@@ -924,10 +924,17 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """客服后台为陪玩开户：建 PROVIDER 账号 + 陪玩档案（钱包由信号自动创建）。"""
-        serializer = AdminCreateEscortSerializer(data=request.data)
+        from .closure_recharge_accounts import account_create_closure_refusal
+        denied = account_create_closure_refusal()
+        if denied is not None:
+            return denied
+        serializer = AdminCreateEscortSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         with transaction.atomic():
+            denied = account_create_closure_refusal()
+            if denied is not None:
+                return denied
             account = ClubAccount.objects.create_account(
                 username=data['username'],
                 password=data['password'],
@@ -980,6 +987,13 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
                 user.avatar_url = avatar_url
                 user.save(update_fields=['avatar_url'])
             Wallet.objects.filter(user=user).update(account=account)
+            from common.compliance import record_content_receipt
+            display_name_result = getattr(serializer, '_compliance_results', {}).get('PROVIDER_DISPLAY_NAME')
+            if display_name_result is not None:
+                record_content_receipt(
+                    'escort_profile', profile.pk, 'PROVIDER_DISPLAY_NAME',
+                    display_name_result, actor_account=request.account,
+                )
         return Response(
             {'code': 0, 'data': AdminEscortSerializer(profile, context={'request': request}).data},
             status=201,
@@ -2336,6 +2350,10 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         )
         if replayed:
             return Response({'code': 409, 'msg': replay_reason})
+        from .closure_new_orders import manual_order_closure_refusal
+        closure_denied = manual_order_closure_refusal(request)
+        if closure_denied is not None:
+            return closure_denied
         # ---- 入参校验 ----
         customer_id = request.data.get('customer_id')
         service_id = request.data.get('service_id')
@@ -3683,6 +3701,12 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if prior:
             return replay_response(prior)
 
+        # 原成功回执已在上方恢复；从这里开始才属于新增充值。
+        from .closure_recharge_accounts import recharge_closure_refusal
+        denied = recharge_closure_refusal()
+        if denied is not None:
+            return denied
+
         account_id = request.data.get('account_id')
         user_id = request.data.get('user_id')
         target_account = None
@@ -3754,6 +3778,10 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 return Response({'code': 409, 'msg': str(exc)}, status=409)
             if prior:
                 return replay_response(prior)
+            # 等待档位/钱包锁期间可能开始闭店；持久回执之后再次守住新写。
+            denied = recharge_closure_refusal()
+            if denied is not None:
+                return denied
             try:
                 bonus = recharge_quote(amount)
             except ValueError as exc:
@@ -4103,12 +4131,17 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
+        from wallet.settlement_clocks import ClockConflict, ClockUnavailable
         initial = self.get_object()
         if initial.order_id:
             try:
                 report = approve_order_report(
                     initial.pk, operator=request.legacy_user, operator_account=request.account,
                 )
+            except ClockUnavailable as exc:
+                return Response({'code': 503, 'msg': str(exc)}, status=503)
+            except ClockConflict as exc:
+                return Response({'code': 409, 'msg': str(exc)}, status=409)
             except (SettlementError, WalletAddressingError) as exc:
                 return Response({'code': 400, 'msg': str(exc)})
             return Response({'code': 0, 'data': self.get_serializer(report).data, 'msg': '凭证审核通过'})
@@ -4236,14 +4269,36 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 return Response({'code': 409, 'msg': '报单陪玩归属或账号周期已变化，请刷新后核对'}, status=409)
             if report.status != ProviderReport.Status.PENDING:
                 return Response({'code': 400, 'msg': '该报单已审核，无法重复操作'})
+            clock = None
+            review_subject_id = None
+            if initial.order_id:
+                from orders.service_settlement import (
+                    legacy_report_clock_chain_enabled, legacy_report_review_subject_id,
+                )
+                if legacy_report_clock_chain_enabled(report_order):
+                    from wallet.settlement_clocks import (
+                        ClockConflict, ClockUnavailable, require_clock,
+                    )
+                    try:
+                        clock = require_clock()
+                        review_subject_id = legacy_report_review_subject_id(
+                            report_order, report, clock, approved=False,
+                        )
+                    except ClockUnavailable as exc:
+                        return Response({'code': 503, 'msg': str(exc)}, status=503)
+                    except ClockConflict as exc:
+                        return Response({'code': 409, 'msg': str(exc)}, status=409)
             report.status = ProviderReport.Status.REJECTED
             report.audit_remark = audit_remark
             report.auditor = request.legacy_user
             report.auditor_account = request.account
-            report.audited_at = timezone.now()
+            report.audited_at = clock.at if clock is not None else timezone.now()
             report.save(update_fields=[
                 'status', 'audit_remark', 'auditor', 'auditor_account', 'audited_at',
             ])
+            if clock is not None:
+                from wallet.settlement_clocks import record
+                record(report_order, 'SUBMISSION', review_subject_id, 'REVIEW', clock)
             if report.order_id:
                 from engagement.confirmation import refresh_report_clock
                 refresh_report_clock(report.order)
@@ -5200,6 +5255,14 @@ class ServiceItemViewSet(CatalogMutationMixin, EnvelopeViewSetMixin, ModelViewSe
         'destroy': 'service:delete',
     }
 
+    def perform_create(self, serializer):
+        from .serializers import _record_content_field
+        instance = serializer.save()
+        compliance_fields = {'rules': 'SERVICE_RULES', 'details_html': 'SERVICE_DETAILS'}
+        for field, compliance_field in compliance_fields.items():
+            if field in serializer.validated_data:
+                _record_content_field(serializer, 'service_item', instance, compliance_field)
+
     def get_queryset(self):
         qs = (
             ServiceItem.objects
@@ -5885,10 +5948,17 @@ class AdminMembershipViewSet(EnvelopeViewSetMixin, ModelViewSet):
         return self._today_dispatch_metrics
 
     def create(self, request, *args, **kwargs):
+        from .closure_recharge_accounts import account_create_closure_refusal
+        denied = account_create_closure_refusal()
+        if denied is not None:
+            return denied
         serializer = AdminCreateMembershipSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         with transaction.atomic():
+            denied = account_create_closure_refusal()
+            if denied is not None:
+                return denied
             account = ClubAccount.objects.create_account(
                 username=data['username'],
                 password=data['password'],

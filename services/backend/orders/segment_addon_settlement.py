@@ -4,6 +4,8 @@ from django.conf import settings
 from .models import OrderSegmentAddonSettlement, OrderSegmentReport
 from .settlement import SettlementError
 from wallet.models import Transaction
+from wallet.settlement_clocks import (ClockConflict, receipt, record,
+                                      require_clock, verify)
 
 
 def _parts(manifest):
@@ -16,7 +18,8 @@ def enabled():
     return bool(getattr(settings, 'ADDON_SEGMENT_SETTLEMENT_INTERNAL_TESTING', False) and addon_enabled())
 
 
-def validate_records(order, manifest, people, known):
+def validate_records(order, manifest, people, known, *, clock=None):
+    clock = require_clock(clock)
     from .segment_settlement import _valid_tx
 
     parts = _parts(manifest)
@@ -34,6 +37,13 @@ def validate_records(order, manifest, people, known):
                 or row.amount != part['provider_income_units'] or row.settled_at != person.settled_at
                 or row.payment.settlements.filter(segment_id=row.segment_id).exists()):
             raise SettlementError('加购逐段结算记录待核对')
+        verify(order, 'PERSON', person.pk, 'PERSON', person.settled_at, clock)
+        verify(order, 'ADDON', row.pk, 'ADDON', row.settled_at, clock)
+        person_clock = receipt(order, 'PERSON', person.pk, 'PERSON')
+        addon_clock = receipt(order, 'ADDON', row.pk, 'ADDON')
+        if (not person_clock or not addon_clock
+                or person_clock.clock_evidence != addon_clock.clock_evidence):
+            raise ClockConflict('加购与主单逐段结算未使用同一时钟证据')
         if row.amount:
             if not _valid_tx(row.income_transaction, order=order, account_id=person.account_id,
                              amount=row.amount, kind=Transaction.TxType.INCOME):
@@ -51,6 +61,11 @@ def settle_person(order, manifest, person, profile, *, now, trace_id):
     from .services import _credit_wallet
     from wallet.income import hold_provider_income
 
+    clock = require_clock(now)
+    person_clock = receipt(order, 'PERSON', person.pk, 'PERSON')
+    if (not person_clock or person_clock.observed_at != clock.at
+            or person_clock.clock_evidence != clock.evidence):
+        raise ClockConflict('逐人结算时钟证据缺失或与加购结算不一致')
     parts = _parts(manifest)
     for part in parts:
         if part['provider_account_id'] != person.account_id:
@@ -65,5 +80,6 @@ def settle_person(order, manifest, person, profile, *, now, trace_id):
         if income:
             hold_provider_income(income, profile=profile, hold_hours=0, deposit_percent=order.service_deposit_percent,
                                  apply_without_hold=True)
-        OrderSegmentAddonSettlement.objects.create(payment_id=part['payment_id'], segment_id=part['segment_id'],
-            manifest=manifest, report=report, amount=amount, income_transaction=income, settled_at=now)
+        addon = OrderSegmentAddonSettlement.objects.create(payment_id=part['payment_id'], segment_id=part['segment_id'],
+            manifest=manifest, report=report, amount=amount, income_transaction=income, settled_at=clock.at)
+        record(order, 'ADDON', addon.pk, 'ADDON', clock)

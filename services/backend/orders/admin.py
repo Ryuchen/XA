@@ -8,7 +8,7 @@ from .models import Evaluation, KookDispatchRecord, WecomDispatchRecord, Order, 
 class ServiceItemAdmin(ModelAdmin):
     list_display = ['id', 'name', 'game_category', 'service_category', 'price', 'price_unit', 'purchase_mode', 'is_active', 'sort_order']
     list_filter = ['game_category', 'service_category', 'purchase_mode', 'is_active']
-    readonly_fields = ['catalog_key', 'catalog_source']
+    readonly_fields = ['catalog_key', 'catalog_source', 'rules', 'details_html']
     search_fields = ['name']
 
 

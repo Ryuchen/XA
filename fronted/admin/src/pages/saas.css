@@ -26,7 +26,7 @@
 .saas-preview-screen footer { padding: 16px 8px; text-align: center; border-top: 1px solid var(--border); font-size: 12px; }
 .saas-preview-screen[data-density="compact"] .saas-preview-welcome { padding: 24px; }
 .saas-preview-screen[data-density="compact"] .saas-preview-content { padding: 20px 24px; }
-.platform-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; min-width: 1366px; background: var(--background); color: var(--foreground); }
+.platform-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; min-width: 0; background: var(--background); color: var(--foreground); }
 .platform-sidebar { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 24px; padding: 24px 16px; border-right: 1px solid var(--border); background: var(--sidebar); }
 .platform-sidebar nav { display: grid; gap: 4px; }
 .platform-sidebar a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
@@ -36,3 +36,10 @@
 .platform-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
 .platform-order-filters { display: grid; grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(136px, .7fr)) auto; gap: 12px; align-items: end; }
 .platform-order-filters label { display: grid; gap: 8px; font-size: 13px; }
+.platform-orders-page { width: 100%; }
+.platform-orders-page .admin-filters label { display: grid; gap: 8px; min-width: 0; }
+.platform-orders-page .admin-filters .saas-select, .platform-orders-page .admin-filters input { min-width: 0; max-width: 100%; }
+.platform-orders-page [data-slot="table-container"] { max-width: 100%; }
+.platform-orders-page .admin-pagination { flex-wrap: wrap; gap: 12px; }
+.platform-orders-page .xa-role-scope { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .platform-shell { grid-template-columns: 1fr; } .platform-sidebar { position: static; height: auto; } }

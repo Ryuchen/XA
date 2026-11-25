@@ -12,12 +12,20 @@ ROLE_ACTIONS = {
         'platform_salary:view', 'platform_salary:configure', 'platform_salary:confirm', 'platform_ledger:view',
         'pass_refund_shortfall:view',
         'withdraw:view',
+        'orders:view',
+        'compliance:view', 'compliance:manage',
+        'guarantee:view', 'guarantee:configure', 'guarantee:record',
+        'closure:view', 'closure:manage',
     }),
+    PlatformRoleGrant.Role.ORDER_VIEWER: frozenset({'orders:view'}),
+    PlatformRoleGrant.Role.ORDER_OPERATOR: frozenset({'orders:view'}),
     PlatformRoleGrant.Role.FINANCE: frozenset({
         'withdraw:view', 'withdraw:final_review', 'withdraw:record_payment',
         'salary:view', 'salary:configure', 'salary:calculate',
         'platform_salary:view', 'platform_salary:configure', 'platform_salary:confirm', 'platform_ledger:view',
         'pass_refund_shortfall:view', 'pass_refund_repayment:register',
+        'guarantee:view', 'guarantee:record',
+        'closure:view',
     }),
 }
 GLOBAL_ACTIONS = frozenset({

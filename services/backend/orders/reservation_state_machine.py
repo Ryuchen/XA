@@ -18,7 +18,6 @@
 from typing import Callable, Dict, List, Optional, Tuple
 
 from stores.db import transaction
-from django.utils import timezone
 
 from .models import Reservation, ReservationStatusLog
 
@@ -80,6 +79,12 @@ def transition_reservation(
     pre_check: Optional[Callable[[Reservation], None]] = None,
     side_effect: Optional[Callable[[Reservation], None]] = None,
     update_fields: Optional[List[str]] = None,
+    now=None,
+    clock_action: Optional[str] = None,
+    clock_deadline=None,
+    clock_decision_key: Optional[str] = None,
+    clock_seat_number: Optional[int] = None,
+    clock_request_fingerprint: str = '',
 ) -> Reservation:
     """统一的预约状态切换入口：加锁 -> 校验 -> 副作用 -> 落库 -> 写审计。
 
@@ -113,6 +118,40 @@ def transition_reservation(
             f'非法状态转换: {from_status} -> {to_status}', current_status=from_status,
         )
 
+    clock_decision = None
+    if clock_action:
+        from .reservation_clock import (
+            prepare_decision, require_before, reservation_snapshot, validate_decision_key,
+        )
+        clock_decision = prepare_decision(
+            reservation=reservation,
+            action=clock_action,
+            deadline=clock_deadline,
+            actor_account=operator_account,
+            seat_number=clock_seat_number,
+            decision_key=validate_decision_key(clock_decision_key),
+            state_before=from_status,
+            before_snapshot={'reservation': reservation_snapshot(reservation)},
+            request_fingerprint=clock_request_fingerprint,
+        )
+        if clock_decision.replayed:
+            from .reservation_clock import ClockConflict
+            raise ClockConflict('原预约决策已回执，禁止重复执行状态切换')
+        # A lock wait may itself cross the cutoff.  Do not perform the business
+        # write on an AFTER/REVIEW receipt; the API layer will expire under a
+        # fresh locked observation after this transaction rolls back.
+        if clock_decision.state != 'PENDING':
+            require_before(clock_decision)
+        now = clock_decision.lower_sample.instant
+    if now is None:
+        from .reservation_clock import sample, same_connection
+        observed = sample()
+        if not same_connection(observed):
+            from .reservation_clock import ClockUnavailable
+            raise ClockUnavailable('预约状态切换前数据库连接发生变化')
+        now = observed.instant
+    reservation._reservation_clock_now = now
+
     if pre_check:
         pre_check(reservation)
 
@@ -120,7 +159,7 @@ def transition_reservation(
 
     timestamp_field = _STATUS_TIMESTAMP_FIELDS.get(to_status)
     if timestamp_field:
-        setattr(reservation, timestamp_field, timezone.now())
+        setattr(reservation, timestamp_field, now)
         fields_to_save.append(timestamp_field)
 
     reservation.status = to_status
@@ -175,6 +214,7 @@ def transition_reservation(
         status_notice_intent=notice_intent,
         notification_intents=notification_intents,
     )
+    ReservationStatusLog.objects.filter(pk=log.pk).update(created_at=now)
     if notice_intent:
         from site_messages.reservation_status import schedule
         schedule('status', log.pk)
@@ -182,6 +222,8 @@ def transition_reservation(
         from site_messages.reservation_event import schedule
         schedule(log.pk)
 
+    reservation._reservation_clock_decision = clock_decision
+    reservation._reservation_clock_now = now
     return reservation
 
 
@@ -192,9 +234,16 @@ def log_reservation_event(
     operator=None,
     operator_account=None,
     reason: str = '',
+    now=None,
 ) -> ReservationStatusLog:
     """记录不涉及状态变更的事件（如创建）。"""
-    return ReservationStatusLog.objects.create(
+    if now is None:
+        from .reservation_clock import sample, same_connection, ClockUnavailable
+        observed = sample()
+        if not same_connection(observed):
+            raise ClockUnavailable('预约事件记录前数据库连接发生变化')
+        now = observed.instant
+    log = ReservationStatusLog.objects.create(
         reservation=reservation,
         action=action,
         from_status=reservation.status,
@@ -203,3 +252,5 @@ def log_reservation_event(
         operator_account=operator_account,
         reason=reason,
     )
+    ReservationStatusLog.objects.filter(pk=log.pk).update(created_at=now)
+    return log

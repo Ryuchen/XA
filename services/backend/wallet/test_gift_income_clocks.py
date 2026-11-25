@@ -8,9 +8,15 @@ from club_accounts.services import get_or_create_account_for_legacy_user, link_l
 from club_accounts.tokens import issue_account_tokens
 from orders.models import AfterSale, Order
 from orders.tests.factories import make_console_user, make_provider, make_service, make_service_category, make_user
-from wallet.income import release_due_income
+from wallet.income import release_due_income as _release_due_income
 from wallet.models import IncomeHold, SystemConfig, Transaction
 from wallet.services import get_wallet
+from wallet.settlement_clocks import trusted_test_clock
+
+
+def release_due_income(*, now, limit=500):
+    """Test-only controlled sampling; production still rejects raw datetimes."""
+    return _release_due_income(now=trusted_test_clock(now), limit=limit)
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, LOGIN_OTP_REQUIRED=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)

@@ -64,12 +64,15 @@ class SingleAddonFirstStackedTest(APITestCase):
             second_account = get_or_create_account_for_legacy_user(second)
             self.accounts[second.pk] = second_account
             second.escort_profile.account = second_account
-            second.escort_profile.save(update_fields=['account'])
+            second.escort_profile.deposit_business_cycle = second_account.business_cycle
+            second.escort_profile.save(update_fields=['account', 'deposit_business_cycle'])
             self.service.billing_provider_count = 2
+            self.service.fulfillment_provider_count = 2
             second.escort_profile.service_items.add(self.service)
         if not allocated and not late_funding:
             self.service.commission_rate = 100 if wallet_case else 0
-        self.service.save(update_fields=['game_category', 'commission_rate', 'billing_provider_count'])
+        self.service.save(update_fields=['game_category', 'commission_rate', 'billing_provider_count',
+                                         'fulfillment_provider_count'])
         self.provider.escort_profile.service_items.add(self.service)
         addon = make_service(name='隔离加购', game_category=game, is_addon=True,
                              commission_rate=20 if allocated or late_funding else 0)
@@ -262,7 +265,9 @@ class SingleAddonFirstStackedTest(APITestCase):
                 run.save(update_fields=['required_amount', 'released_amount'])
                 run.releases.update(amount=run.released_amount)
                 from orders.addon_funding_release import verify_run
-                verify_run(run)  # The historical requirement itself must catch this self-consistent alteration.
+                from rest_framework.exceptions import ValidationError
+                with self.assertRaises(ValidationError):
+                    verify_run(run)  # The historical requirement itself must catch this self-consistent alteration.
                 self.assertNotEqual(self.client.post(execute, payload, format='json').status_code, 200)
                 transaction.set_rollback(True)
             with patch('orders.ordinary_refunded_addon_release.OrderAddonFundingRelease.objects.bulk_create',

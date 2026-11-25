@@ -176,6 +176,10 @@ class OpeningReadinessTests(TransactionTestCase):
                 notice.content = ''
                 notice.image_url = 'https://xa.esports.club/media/club-catalog/notice.png'
                 notice.save(update_fields=['content', 'image_url'])
+            self.assertEqual(materials()['order_notice'], 'READY')
+            with store_context(self.store):
+                notice.image_url = 'https://outside.esports.club/media/club-catalog/notice.png'
+                notice.save(update_fields=['image_url'])
             self.assertEqual(materials()['order_notice'], 'BLOCKED')
             with store_context(self.store):
                 notice.image_url = '/media/club-catalog/notice.png'

@@ -130,6 +130,7 @@ class ChatOutboxTest(TransactionTestCase):
             response = self.boss_client.post('/api/chat/send/', {'content': '已保存', 'client_message_id': 'legacy-chat-001'}, format='json')
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(ChatMessage.objects.count(), 1)
+        self.assertFalse(ChatMessage.objects.get().notification_intent)
         self.assertFalse(ChatNotificationOutbox.objects.exists())
 
 

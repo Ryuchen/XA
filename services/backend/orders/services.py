@@ -818,8 +818,24 @@ def _settle_order(order, *, operator=None, operator_account=None, trace_id=None)
     provider_ids = [row.provider_id for row in pending_rows] if provider_rows else [order.provider_id]
     profiles = {p.user_id: p for p in EscortProfile.objects.select_for_update().filter(user_id__in=[pk for pk in provider_ids if pk]).order_by('user_id')}
 
+    zero_service_clock = None
     if provider_rows:
-        now = timezone.now()
+        if order.service_clock_version is not None:
+            zero_profiles = [profiles.get(row.provider_id) for row in pending_rows if not row.provider_income]
+            zero_profiles = [profile for profile in zero_profiles if profile is not None]
+            if zero_profiles:
+                from wallet.refund_recovery_order import tracking_enabled
+                from wallet.models import RefundDepositRecoveryPermit
+                from .models import OrderAddonPayment
+                if (tracking_enabled()
+                        and not OrderAddonPayment.objects.filter(intent__order=order).exists()
+                        and RefundDepositRecoveryPermit.objects.filter(
+                            order=order, closed_at__isnull=True,
+                            profile_id__in=[profile.pk for profile in zero_profiles],
+                        ).exists()):
+                    from wallet.settlement_clocks import require_clock
+                    zero_service_clock = require_clock()
+        now = zero_service_clock.at if zero_service_clock is not None else timezone.now()
         for row in pending_rows:
             income_tx = _credit_wallet(
                 order=order,
@@ -838,7 +854,10 @@ def _settle_order(order, *, operator=None, operator_account=None, trace_id=None)
             row.save(update_fields=['settled_at'])
             if not row.provider_income:
                 from wallet.refund_recovery_order import close_for_zero_service
-                close_for_zero_service(profiles.get(row.provider_id), row)
+                if zero_service_clock is not None:
+                    close_for_zero_service(profiles.get(row.provider_id), row, now=zero_service_clock)
+                else:
+                    close_for_zero_service(profiles.get(row.provider_id), row)
             settled_provider_ids.append(row.provider_id)
             if row.provider_account_id:
                 settled_account_ids.append(row.provider_account_id)
@@ -908,7 +927,7 @@ def _settle_order(order, *, operator=None, operator_account=None, trace_id=None)
         operator_id=getattr(operator, 'pk', None),
         reason=f'providers={settled_provider_ids}',
     )
-    order.settled_at = timezone.now()
+    order.settled_at = zero_service_clock.at if zero_service_clock is not None else timezone.now()
     order.save(update_fields=['settled_at'])
     from engagement.services import award_order_points
     award_order_points(order)
@@ -1143,6 +1162,17 @@ def _approve_order_report(report_id, *, operator, operator_account, lifecycle=No
     own_share = order.providers.filter(provider_id=report.provider_id).first()
     if not own_share and order.provider_id != report.provider_id:
         raise SettlementError('报单人不属于该订单')
+    from .service_settlement import (
+        legacy_report_clock_chain_enabled, legacy_report_review_subject_id,
+    )
+    clock = None
+    review_subject_id = None
+    if legacy_report_clock_chain_enabled(order):
+        from wallet.settlement_clocks import require_clock
+        clock = require_clock()
+        review_subject_id = legacy_report_review_subject_id(
+            order, report, clock, approved=True,
+        )
     report.status = ProviderReport.Status.APPROVED
     report.commission_rate = snapshot.commission_rate if snapshot else own_share.commission_rate if own_share else order.commission_rate
     if points_order and order.refund_records.exists():
@@ -1155,8 +1185,11 @@ def _approve_order_report(report_id, *, operator, operator_account, lifecycle=No
         report.payout_amount = snapshot.income_at_entry if snapshot else own_share.provider_income if own_share else order.provider_income
     report.auditor = operator
     report.auditor_account = operator_account
-    report.audited_at = timezone.now()
+    report.audited_at = clock.at if clock is not None else timezone.now()
     report.save(update_fields=['status', 'commission_rate', 'payout_amount', 'auditor', 'auditor_account', 'audited_at'])
+    if clock is not None:
+        from wallet.settlement_clocks import record
+        record(order, 'SUBMISSION', review_subject_id, 'REVIEW', clock)
     # Direct payment has no trusted channel settlement integration yet. Keep
     # the verified report even when the normal settlement window has passed;
     # the isolated payment path must not credit wallets or promise payout.
@@ -1175,30 +1208,39 @@ def _approve_order_report(report_id, *, operator, operator_account, lifecycle=No
         partial = supports_partial_service_settlement(order)
         from .points_checkout_test import ordinary_refund_production_order
         negotiated_partial = bool(not points_order and partial and ordinary_refund_production_order(order))
+        def settle_reviewed_order():
+            if clock is not None:
+                from wallet.settlement_clocks import clock_scope
+                with clock_scope(clock):
+                    return settle_order(order, operator=operator, operator_account=operator_account)
+            return settle_order(order, operator=operator, operator_account=operator_account)
+
         if points_order:
             from .points_checkout_test import settlement_enabled
             if settlement_enabled():
                 try:
                     with transaction.atomic():
-                        settle_order(order, operator=operator, operator_account=operator_account)
+                        settle_reviewed_order()
                 except (SettlementError, WalletAddressingError, ValueError):
                     settlement_failed = True
                     order.refresh_from_db()
         if (not points_order and not is_direct_payment and order.customer_account_id
-                and ((aftersale_wait_elapsed(order) or negotiated_partial) if partial else settlement_ready(order))
-                and (partial or (provider_ids.issubset(approved_ids) and service_reports_mature(order)))):
+                and ((aftersale_wait_elapsed(order, clock=clock) or negotiated_partial) if partial
+                     else settlement_ready(order, clock=clock))
+                and (partial or (provider_ids.issubset(approved_ids)
+                                 and service_reports_mature(order, clock=clock)))):
             paid = []
             if partial:
                 try:
                     with transaction.atomic():
-                        paid = settle_order(order, operator=operator, operator_account=operator_account)
+                        paid = settle_reviewed_order()
                 except (SettlementError, WalletAddressingError):
                     # A bad or underfunded share must not erase the review of
                     # another participant. Reconcile before retrying settlement.
                     settlement_failed = True
                     order.refresh_from_db()
             else:
-                paid = settle_order(order, operator=operator, operator_account=operator_account)
+                paid = settle_reviewed_order()
             if (paid or order.settled_at) and previous_clock == (order.report_ready_at, order.consumption_ready_at):
                 notify_committed_order(order.pk)
     from wallet.settlement_display import legacy_customer_settlement_reason

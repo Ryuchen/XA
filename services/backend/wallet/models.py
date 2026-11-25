@@ -120,6 +120,9 @@ class Transaction(models.Model):
         SUBSIDY_EXPENSE = 'SUBSIDY_EXPENSE', '平台补贴支出'
         EARNINGS_FREEZE = 'EARNINGS_FREEZE', '订单收益冻结'
         EARNINGS_RELEASE = 'EARNINGS_RELEASE', '订单收益解冻'
+        CLOSURE_FREEZE = 'CLOSURE_FREEZE', '闭店本金返还冻结'
+        CLOSURE_PAYMENT = 'CLOSURE_PAYMENT', '闭店本金线下实付登记'
+        CLOSURE_RELEASE = 'CLOSURE_RELEASE', '闭店本金返还解冻'
 
     class Status(models.TextChoices):
         PENDING = 'PENDING', '处理中'
@@ -185,6 +188,7 @@ class Transaction(models.Model):
                         'PENALTY', 'DEPOSIT', 'DEPOSIT_INCOME', 'SHOP_INCOME',
                         'REFUND', 'PASS_PURCHASE', 'PASS_INCOME', 'WITHDRAW_TAX', 'ADJUST',
                         'EARNINGS_FREEZE', 'EARNINGS_RELEASE', 'SUBSIDY_EXPENSE',
+                        'CLOSURE_FREEZE', 'CLOSURE_PAYMENT', 'CLOSURE_RELEASE',
                     ]
                 ),
                 name='transaction_type_valid',
@@ -248,6 +252,251 @@ class IncomeAfterSaleClosureEvidence(models.Model):
             models.CheckConstraint(condition=(models.Q(case__isnull=False, case_opened_at__isnull=False, hold__isnull=True, barrier=False)
                 | models.Q(case__isnull=True, case_opened_at__isnull=True, hold__isnull=False, barrier=False)
                 | models.Q(case__isnull=True, case_opened_at__isnull=True, hold__isnull=True, barrier=True)), name='income_priority_event_kind')]
+
+
+class SettlementClockEvidence(models.Model):
+    """Append-only tenant-DB clock receipt for reports, settlement and holds.
+
+    The subject is deliberately explicit rather than a generic foreign key: the
+    unique constraint makes replay of one report version, manifest, person,
+    add-on settlement or income-hold operation impossible without altering an
+    existing receipt. Orderless historical holds use a NULL order; every other
+    subject remains bound to its order.
+    """
+
+    class Operation(models.TextChoices):
+        SUBMIT = 'SUBMIT', '报单提交'
+        REVIEW = 'REVIEW', '报单审核'
+        PLAN = 'PLAN', '结算计划'
+        PERSON = 'PERSON', '逐人结算'
+        ADDON = 'ADDON', '加购逐段结算'
+        FINALIZE = 'FINALIZE', '整单结算'
+        FREEZE = 'FREEZE', '收益冻结'
+        RELEASE = 'RELEASE', '收益解冻'
+
+    order = models.ForeignKey('orders.Order', on_delete=models.PROTECT, related_name='+',
+                              null=True, blank=True)
+    subject_type = models.CharField(max_length=16, choices=[
+        ('SUBMISSION', '报单版本'), ('MANIFEST', '结算清单'),
+        ('PERSON', '逐人结算'), ('ADDON', '加购逐段结算'),
+        ('HOLD', '冻结收益'),
+    ])
+    subject_id = models.PositiveBigIntegerField()
+    operation = models.CharField(max_length=16, choices=Operation.choices)
+    observed_at = models.DateTimeField()
+    deadline_at = models.DateTimeField(null=True, blank=True)
+    clock_evidence = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['subject_type', 'subject_id', 'operation'],
+                                    name='settlement_clock_receipt_unique'),
+            models.CheckConstraint(condition=models.Q(subject_id__gt=0),
+                                   name='settlement_clock_subject_positive'),
+            models.CheckConstraint(
+                condition=models.Q(subject_type='HOLD') | models.Q(order__isnull=False),
+                name='settlement_clock_order_scope'),
+            models.CheckConstraint(
+                condition=(models.Q(subject_type='HOLD', deadline_at__isnull=False)
+                           | models.Q(deadline_at__isnull=True)),
+                name='settlement_clock_deadline_scope'),
+        ]
+        indexes = [
+            models.Index(fields=['order', 'subject_type', 'subject_id'],
+                         name='settlement_clock_order_idx'),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('结算时钟回执不可修改')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError('结算时钟回执不可删除')
+
+
+class ClosureReturnCase(models.Model):
+    """One account-cycle principal freeze; a released case is never reused."""
+
+    class Status(models.TextChoices):
+        FROZEN = 'FROZEN', '本金已冻结'
+        PAID = 'PAID', '线下实付已登记'
+        RELEASED = 'RELEASED', '未实付冻结已解除'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                related_name='closure_return_cases')
+    business_cycle = models.PositiveIntegerField(editable=False)
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='closure_return_cases')
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.FROZEN)
+    # ACTIVE is unique per account-cycle and is retained only by FROZEN cases.
+    # PAID/RELEASED terminal cases use NULL, preserving history without blocking
+    # a later independently inventoried balance, on both SQLite and MySQL.
+    active_key = models.CharField(max_length=8, null=True, blank=True, default='ACTIVE', editable=False)
+    principal_units = models.PositiveIntegerField()
+    version = models.PositiveIntegerField(default=1)
+    freeze_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, related_name='closure_return_freeze')
+    payment_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                               related_name='closure_return_payment')
+    release_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                               related_name='closure_return_release')
+    paid_fen = models.PositiveBigIntegerField(null=True, blank=True)
+    proof_sha256 = models.CharField(max_length=64, blank=True, default='')
+    proof_ref = models.CharField(max_length=100, blank=True, default='')
+    external_reference_masked = models.CharField(max_length=140, blank=True, default='')
+    external_reference_sha256 = models.CharField(max_length=64, blank=True, default='')
+    offline_occurred_at = models.DateTimeField(null=True, blank=True)
+    prepared_by = models.UUIDField()
+    paid_by = models.UUIDField(null=True, blank=True)
+    released_by = models.UUIDField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    released_at = models.DateTimeField(null=True, blank=True)
+    release_reason = models.CharField(max_length=500, blank=True, default='')
+    migration_review_required = models.BooleanField(default=False, editable=False)
+    migration_review_reason = models.CharField(max_length=64, blank=True, default='', editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['account', 'business_cycle', 'status'],
+                                name='closure_return_account_idx')]
+        constraints = [
+            models.UniqueConstraint(fields=['account', 'business_cycle', 'active_key'],
+                                    name='closure_return_active_cycle'),
+            models.CheckConstraint(condition=models.Q(principal_units__gt=0),
+                                   name='closure_return_principal_positive'),
+            models.CheckConstraint(condition=models.Q(version__gte=1),
+                                   name='closure_return_version_positive'),
+            models.CheckConstraint(condition=(
+                models.Q(status='FROZEN', active_key='ACTIVE', payment_transaction__isnull=True,
+                         release_transaction__isnull=True, paid_fen__isnull=True, paid_at__isnull=True,
+                         released_at__isnull=True, paid_by__isnull=True, released_by__isnull=True,
+                         proof_sha256='', external_reference_sha256='', offline_occurred_at__isnull=True)
+                | models.Q(status='PAID', active_key__isnull=True, payment_transaction__isnull=False,
+                           release_transaction__isnull=True, paid_fen=models.F('principal_units'),
+                           paid_at__isnull=False, released_at__isnull=True, paid_by__isnull=False,
+                           released_by__isnull=True, offline_occurred_at__isnull=False)
+                | models.Q(status='RELEASED', active_key__isnull=True, payment_transaction__isnull=True,
+                           release_transaction__isnull=False, paid_fen__isnull=True, paid_at__isnull=True,
+                           released_at__isnull=False, paid_by__isnull=True, released_by__isnull=False,
+                           offline_occurred_at__isnull=True)
+            ), name='closure_return_state_facts'),
+        ]
+
+
+class ClosureReturnImmutableQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店返还历史事件和批次快照不可修改')
+
+    def delete(self):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店返还历史事件和批次快照不可删除')
+
+
+class ClosureReturnImmutableManager(models.Manager.from_queryset(ClosureReturnImmutableQuerySet)):
+    pass
+
+
+class ClosureReturnLot(models.Model):
+    """Original source identity and amount captured by one freeze."""
+
+    objects = ClosureReturnImmutableManager()
+    case = models.ForeignKey(ClosureReturnCase, on_delete=models.PROTECT, related_name='lots')
+    source_lot = models.ForeignKey('engagement.PointFundingLot', on_delete=models.PROTECT, related_name='+')
+    source_key = models.CharField(max_length=160)
+    source_kind = models.CharField(max_length=16)
+    remaining_units = models.PositiveIntegerField()
+    principal_units = models.PositiveIntegerField()
+    gift_units = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['case', 'source_lot'], name='closure_return_lot_once'),
+            models.CheckConstraint(condition=models.Q(remaining_units__gt=0, principal_units__gt=0,
+                                                       gift_units=0, principal_units=models.F('remaining_units')),
+                                   name='closure_return_lot_pure_principal'),
+        ]
+
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        if not self._state.adding:
+            raise ValidationError('闭店返还批次快照不可修改')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店返还批次快照不可删除')
+
+
+class ClosureReturnEvent(models.Model):
+    """Append-only tenant fact and durable idempotent response."""
+
+    class Kind(models.TextChoices):
+        PREPARED = 'PREPARED', '本金冻结'
+        PAYMENT_RECORDED = 'PAYMENT_RECORDED', '线下实付登记'
+        RELEASED = 'RELEASED', '冻结解除'
+
+    objects = ClosureReturnImmutableManager()
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    case = models.ForeignKey(ClosureReturnCase, on_delete=models.PROTECT, related_name='events')
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    client_request_id = models.CharField(max_length=64, unique=True)
+    request_fingerprint = models.CharField(max_length=64)
+    platform_actor_id = models.UUIDField()
+    from_status = models.CharField(max_length=20)
+    to_status = models.CharField(max_length=20)
+    detail = models.JSONField(default=dict)
+    response = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['case', 'kind'], name='closure_return_case_event_once'),
+            models.CheckConstraint(condition=models.Q(kind__in=['PREPARED', 'PAYMENT_RECORDED', 'RELEASED']),
+                                   name='closure_return_event_kind_valid'),
+        ]
+
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        if not self._state.adding:
+            raise ValidationError('闭店返还事件不可修改，请追加后续事实')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError('闭店返还事件不可删除')
+
+
+class ClosureReturnOutbox(models.Model):
+    """Mutable delivery state for an immutable control-audit intent."""
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', '待投递'
+        RECORDED = 'RECORDED', '审计已登记'
+        REVIEW = 'REVIEW', '待人工核对'
+
+    event = models.OneToOneField(ClosureReturnEvent, on_delete=models.PROTECT, related_name='outbox')
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    audit_id = models.PositiveBigIntegerField(null=True, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.CharField(max_length=200, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['status', 'id'], name='closure_return_outbox_idx')]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(status__in=['PENDING', 'RECORDED', 'REVIEW']),
+                                   name='closure_return_outbox_status_valid'),
+            models.CheckConstraint(condition=(
+                models.Q(status='RECORDED', audit_id__isnull=False)
+                | models.Q(status__in=['PENDING', 'REVIEW'], audit_id__isnull=True)
+            ), name='closure_return_outbox_audit_pair'),
+        ]
 
 
 class IdempotencyKey(models.Model):

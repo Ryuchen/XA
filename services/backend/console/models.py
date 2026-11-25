@@ -276,3 +276,27 @@ class WecomDispatchConfig(models.Model):
     webhook_ciphertext = models.TextField(blank=True, default='')
     revision = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class ContentComplianceReceipt(models.Model):
+    """Store-local evidence for a validated text field; never stores the content."""
+
+    content_type = models.CharField(max_length=32)
+    object_id = models.PositiveBigIntegerField()
+    field_name = models.CharField(max_length=40)
+    content_sha256 = models.CharField(max_length=64)
+    rule_version = models.PositiveIntegerField()
+    rule_set_sha256 = models.CharField(max_length=64)
+    matched_rule_codes = models.JSONField(default=list)
+    exempted_rule_codes = models.JSONField(default=list)
+    actor_account = models.ForeignKey(
+        'club_accounts.ClubAccount', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
+    actor_type = models.CharField(max_length=32, default='SYSTEM')
+    actor_id = models.CharField(max_length=100, blank=True, default='')
+    actor_label = models.CharField(max_length=150, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['content_type', 'object_id'])]

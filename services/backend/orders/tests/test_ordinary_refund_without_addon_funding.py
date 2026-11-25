@@ -542,10 +542,11 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
             second_account = get_or_create_account_for_legacy_user(second)
             self.accounts[second.pk] = second_account
             second.escort_profile.account = second_account
+            second.escort_profile.deposit_business_cycle = second_account.business_cycle
             if preallocated:
                 from orders.tests.factories import make_escort_level
                 second.escort_profile.level = make_escort_level(commission_rate=10 if increasing else 40)
-            second.escort_profile.save(update_fields=['account'])
+            second.escort_profile.save(update_fields=['account', 'deposit_business_cycle'])
             if preallocated:
                 second.escort_profile.save(update_fields=['level'])
             self.service.billing_provider_count = 2
@@ -813,18 +814,25 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
             self.ok(self.client.post(execute, {}, format='json'))
             addon_refund_row = OrderAddonRefund.objects.get(proposal_id=addon_proposal['id'])
             if addon_after_partial:
-                from stores.db import transaction
-                with transaction.atomic():
-                    repeated = self.ok(self.client.post(refund_url, {'request_id': 'second-addon-proposal',
-                        'amount_raw': 100, 'case_id': addon_case['id'], 'explanation': '禁止追加退款'}, format='json'))
-                    again = f'/api/orders/orders/{order_id}/addons/payments/{addon_payment}/refund-proposals/{repeated["id"]}/'
-                    for user in (self.boss, second):
-                        self.login(user)
-                        self.ok(self.client.post(again, {'accepted': True}, format='json'))
-                    self.login(self.admin)
-                    self.assertNotEqual(self.client.post(refund_url + f'{repeated["id"]}/execute/', {}, format='json').status_code, 200)
-                    transaction.set_rollback(True)
-                self.assertEqual(OrderAddonRefund.objects.filter(payment_id=addon_payment).count(), 1)
+                from django.db.models import Sum
+                buyer_before_second = get_wallet(user=self.boss, account=boss).balance
+                repeated = self.ok(self.client.post(refund_url, {'request_id': 'second-addon-proposal',
+                    'amount_raw': 100, 'case_id': addon_case['id'], 'explanation': '追加退款已开放'}, format='json'))
+                again = f'/api/orders/orders/{order_id}/addons/payments/{addon_payment}/refund-proposals/{repeated["id"]}/'
+                second_execute = refund_url + f'{repeated["id"]}/execute/'
+                self.assertNotEqual(self.client.post(second_execute, {}, format='json').status_code, 200)
+                for user in (self.boss, second):
+                    self.login(user)
+                    self.ok(self.client.post(again, {'accepted': True}, format='json'))
+                self.login(self.admin)
+                second_result = self.ok(self.client.post(second_execute, {}, format='json'))
+                self.assertEqual(self.ok(self.client.post(second_execute, {}, format='json')), second_result)
+                second_addon_refund_row = OrderAddonRefund.objects.get(proposal_id=repeated['id'])
+                self.assertEqual(second_addon_refund_row.amount, 100)
+                self.assertEqual(OrderAddonRefund.objects.filter(payment_id=addon_payment).count(), 2)
+                self.assertEqual(OrderAddonRefund.objects.filter(payment_id=addon_payment)
+                                 .aggregate(total=Sum('amount'))['total'], 600)
+                self.assertEqual(get_wallet(user=self.boss, account=boss).balance, buyer_before_second + 100)
             self.assertEqual((addon_refund_row.amount, addon_refund_row.addon_pending_deduction,
                               addon_refund_row.main_pending_deduction),
                              (500, 500, 0) if addon_after_partial else (500, 100, 400) if split_addon_refund else (1000, 600, 400))
@@ -833,10 +841,13 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
                 self.assertEqual(dict(Order.objects.get(pk=order_id).funding_allocations.values_list(
                     'kind', 'refunded_amount')), {'PREPAID': 1000, 'GIFT': 0})
                 self.assertEqual(dict(OrderAddonFundingAllocation.objects.filter(payment_id=addon_payment).values_list(
-                    'kind', 'refunded_amount')), {'GIFT': 500} if addon_after_partial_gift else {'PREPAID': 500, 'GIFT': 0 if addon_after_partial else 500})
+                    'kind', 'refunded_amount')), {'GIFT': 600} if addon_after_partial_gift else
+                    {'PREPAID': 500, 'GIFT': 100} if addon_after_partial else {'PREPAID': 500, 'GIFT': 500})
             addon_release = OrderAddonFundingReleaseRun.objects.filter(refund=addon_refund_row).first()
             if addon_after_partial and not addon_after_partial_gift:
-                self.assertIsNone(addon_release)
+                self.assertIsNotNone(addon_release)
+                self.assertEqual((addon_release.allocated_before, addon_release.required_amount,
+                                  addon_release.released_amount), (800, 800, 0))
             else:
                 self.assertEqual((addon_release.allocated_before, addon_release.required_amount,
                                   addon_release.released_amount), (1300, 800, 500) if addon_after_partial_gift else (800, 300, 500))
@@ -1182,7 +1193,7 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
                 return
             if refund_preallocated:
                 self.assertEqual((funding.required, funding.allocated, funding.remaining),
-                                 (0, 0, 0) if pending_other_addon_refund else (780, 780, 0) if handover_addon_refund else ((800, 800, 0) if addon_after_partial else (300, 300, 0)) if addon_after_main else (180, 180, 0) if mixed_addons else (60, 60, 0) if multiple_addons else (380, 380, 0) if handover else (600, 600, 0))
+                                 (0, 0, 0) if pending_other_addon_refund else (780, 780, 0) if handover_addon_refund else ((700, 700, 0) if addon_after_partial else (300, 300, 0)) if addon_after_main else (180, 180, 0) if mixed_addons else (60, 60, 0) if multiple_addons else (380, 380, 0) if handover else (600, 600, 0))
                 if handover:
                     from orders.addon_funding_release import verify_run
                     from stores.db import transaction
@@ -1200,7 +1211,7 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
                                      7000 if addon and not addon_on_affected else 7320 if pending_other_addon_refund else 7000 if addon_after_main else 8120 if mixed_addons else 7640 if multiple_addons else 7320 if handover else 7800)
                     if second:
                         self.assertEqual(get_wallet(user=second, account=second_account).balance,
-                                         (6100 if addon_after_partial else 5600) if addon_after_main else 8800 if addon and not addon_on_affected else 5960 if pending_other_addon_refund else 5760 if handover_addon_refund else 6360 if mixed_addons else 6720 if multiple_addons else 6360 if handover else 8000)
+                                         (6000 if addon_after_partial else 5600) if addon_after_main else 8800 if addon and not addon_on_affected else 5960 if pending_other_addon_refund else 5760 if handover_addon_refund else 6360 if mixed_addons else 6720 if multiple_addons else 6360 if handover else 8000)
                     self.assertEqual(get_wallet(user=inviter_user, account=inviter).balance, 1800 if not second else 5700 if handover or addon_after_main or pending_other_addon_refund else 3800)
                     if multiple_addons and not pending_other_addon_refund:
                         from orders.models import OrderAddonSettlement
@@ -1209,6 +1220,10 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
                         self.assertEqual(sorted(OrderAddonSettlement.objects.filter(payment_id=second_payment)
                                                 .values_list('amount', flat=True)), [800] if mixed_addons else [320, 360])
                     self.assertTrue(verify_order_funding(order_id, allow_finalized=True).fully_funded)
+                    if addon_after_partial:
+                        from orders.models import OrderAddonConsumption
+                        consumption = OrderAddonConsumption.objects.get(payment_id=addon_payment)
+                        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, 600))
                     if achievement_vip_disabled:
                         item = Order.objects.get(pk=order_id)
                         self.assertIsNotNone(item.funding_benefits_resolved_at)

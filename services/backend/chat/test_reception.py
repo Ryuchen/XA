@@ -57,13 +57,13 @@ class ReceptionTest(APITestCase):
         self.assertFalse(may_read(self.a, self.message))
         self.assertTrue(may_read(self.b, self.message))
         self.assertEqual(self.bc.get(self.path + 'messages/').status_code, 200)
-        self.assertEqual(self.change(self.sc, 'release', 2).status_code, 200)
+        self.assertEqual(self.change(self.sc, 'release', 2, reason='主管结束本次接待').status_code, 200)
         self.assertEqual(self.bc.get(self.path + 'messages/').status_code, 403)
         self.assertEqual(list(ChatAssignmentEvent.objects.values_list('action', flat=True)), ['CLAIM', 'TRANSFER', 'RELEASE'])
 
     def test_status_and_read_do_not_disclose_unclaimed_content(self):
         self.assertEqual(self.ac.post(self.path + 'reply/', {'content': '不可发送'}, format='json').status_code, 403)
-        self.assertEqual(self.ac.post(self.path + 'read/', {}, format='json').status_code, 403)
+        self.assertEqual(self.ac.post(self.path + 'read/', {'message_ids': [self.message.pk]}, format='json').status_code, 403)
         self.assertEqual(self.ac.get(self.path + 'message-status/', {'client_message_id': 'abcdefgh'}).status_code, 403)
         self.assertEqual(self.change(self.bc, 'transfer', 0, account_id=self.b.pk).status_code, 403)
         self.assertEqual(self.change(self.sc, 'transfer', 0, account_id=self.b.pk).status_code, 200)
@@ -72,7 +72,9 @@ class ReceptionTest(APITestCase):
     def test_live_delivery_is_redacted_and_rechecked_after_transfer(self):
         event = {'session_id': self.session.pk, 'message': {'id': self.message.pk}}
         self.assertIsNone(current_chat_payload.func(self.a, event, message=True))
-        self.assertEqual(current_chat_payload.func(self.a, event)['session']['last_message'], '')
+        session_event = current_chat_payload.func(self.a, event)['session']
+        self.assertNotIn('last_message', session_event)
+        self.assertNotIn('私密咨询', repr(session_event))
         self.assertEqual(self.change(self.ac, 'claim', 0).status_code, 200)
         self.assertEqual(current_chat_payload.func(self.a, event, message=True)['message']['content'], '私密咨询')
         self.assertIsNone(current_chat_payload.func(self.b, event, message=True))
@@ -100,7 +102,7 @@ class ReceptionTest(APITestCase):
         self.assertEqual(client.get(self.path + 'messages/').status_code, 200)
         self.assertEqual(client.post(self.path + 'reply/', {'content': '不可回复'}, format='json').status_code, 403)
         self.assertEqual(self.change(client, 'transfer', 0, account_id=self.a.pk).status_code, 200)
-        self.assertEqual(self.change(client, 'release', 1).status_code, 200)
+        self.assertEqual(self.change(client, 'release', 1, reason='主管撤回接待分配').status_code, 200)
 
     def test_supervisor_reassignment_history_is_complete_and_not_public_to_other_agents(self):
         history_url = self.path + 'assignment-history/'
@@ -150,7 +152,8 @@ class ReceptionTest(APITestCase):
         boss_messages = boss_client.get('/api/chat/session/').data['data']['messages']
         self.assertEqual([item['sender_name'] for item in boss_messages[-2:]], ['客服小浪', '主管小星'])
         self.assertNotIn('sender_account', boss_messages[-1])
-        event = {'session_id': self.session.pk, 'message': {'id': second.data['data']['id']}}
+        event = {'session_id': self.session.pk, 'message': {'id': second.data['data']['id']},
+                 'recipient_business_cycle': self.boss.business_cycle}
         boss_live = current_chat_payload.func(self.boss, event, message=True)['message']
         staff_live = current_chat_payload.func(self.a, event, message=True)['message']
         self.assertEqual(boss_live['sender_name'], '主管小星')

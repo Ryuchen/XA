@@ -15,9 +15,21 @@ class GameplaySerializer(EntityNumberModelSerializer):
     rules = serializers.CharField(max_length=5000, allow_blank=True, required=False)
     details_html = serializers.CharField(max_length=100000, allow_blank=True, required=False)
 
+    def _check(self, field, value):
+        from common.compliance import check_content
+        result = check_content(field, value)
+        if result is not None:
+            if not hasattr(self, '_compliance_results'):
+                self._compliance_results = {}
+            self._compliance_results[field] = result
+        return value
+
+    def validate_rules(self, value):
+        return self._check('GAMEPLAY_RULES', value)
+
     def validate_details_html(self, value):
         from common.rich_text import sanitize_catalog_html
-        return sanitize_catalog_html(value)
+        return self._check('GAMEPLAY_DETAILS', sanitize_catalog_html(value))
     service_count = serializers.IntegerField(source='services.count', read_only=True)
 
     class Meta:
@@ -42,6 +54,23 @@ class GameplayViewSet(CatalogMutationMixin, EnvelopeViewSetMixin, ModelViewSet):
     def get_queryset(self):
         archived = self.action == 'restore' or self.request.query_params.get('is_archived') == 'true'
         return Gameplay.objects.filter(is_archived=archived)
+
+    def perform_create(self, serializer):
+        from .serializers import _record_content_field
+        instance = serializer.save()
+        compliance_fields = {'rules': 'GAMEPLAY_RULES', 'details_html': 'GAMEPLAY_DETAILS'}
+        for field, compliance_field in compliance_fields.items():
+            if field in serializer.validated_data:
+                _record_content_field(serializer, 'gameplay', instance, compliance_field)
+
+    def perform_update(self, serializer):
+        from .serializers import _record_content_field
+        old_values = {field: getattr(serializer.instance, field) for field in ('rules', 'details_html')}
+        instance = serializer.save()
+        compliance_fields = {'rules': 'GAMEPLAY_RULES', 'details_html': 'GAMEPLAY_DETAILS'}
+        for field, compliance_field in compliance_fields.items():
+            if field in serializer.validated_data and serializer.validated_data[field] != old_values[field]:
+                _record_content_field(serializer, 'gameplay', instance, compliance_field)
 
     def perform_destroy(self, instance):
         # Historical dispatches retain their product and gameplay references.

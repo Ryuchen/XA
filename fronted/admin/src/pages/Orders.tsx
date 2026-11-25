@@ -6,6 +6,9 @@ import {
 import { coinText, coinUnit, OrderJourney, OrderSource, OrderSyncBar, orderLifecycle } from "@xa/shared"
 import { AdminPageSkeleton } from "@/components/AdminPageSkeleton"
 import PrivateImage from "@/components/PrivateImage"
+import RoomCompletionRequests from "@/components/RoomCompletionRequests"
+import AddonFirstProposal from "@/components/AddonFirstProposal"
+import OrderSettlementBreakdown from "@/components/OrderSettlementBreakdown"
 import { useEffect, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router"
 import { toast } from "sonner"
@@ -16,6 +19,7 @@ import {
   Images,
   UsersRound,
   ChevronRight,
+  ArrowDown,
   Copy,
   RefreshCw,
 } from "@/components/ui/icons"
@@ -48,6 +52,7 @@ import {
 } from "@/components/business"
 import { errorMessage, request, requestId } from "@/api/request"
 import { useAdminAuth } from "@/lib/auth"
+import { downloadOrderExport } from "@/lib/order-export"
 import {
   amountToXaCoin,
   formatDateTime,
@@ -90,6 +95,31 @@ export default function OrdersPage() {
   const filters = orderQuery(query)
   const list = useList("orders", filters)
   const auth = useAdminAuth()
+  const [exporting, setExporting] = useState(false)
+  const exportOrders = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const { blob, filename } = await downloadOrderExport(filters)
+      const href = URL.createObjectURL(blob)
+      try {
+        const link = document.createElement("a")
+        link.href = href
+        link.download = filename
+        link.hidden = true
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(href), 0)
+      }
+      toast.success("订单文件已生成，请查看浏览器下载")
+    } catch (error) {
+      toast.error(errorMessage(error))
+    } finally {
+      setExporting(false)
+    }
+  }
   const listScope = JSON.stringify([auth.revision, filters, list.page, list.pageSize])
   const previousScope = useRef(listScope)
   // useList clears its previous response in an effect. Hide it on the filter-change render too.
@@ -155,6 +185,19 @@ export default function OrdersPage() {
             description="客服代下单与老板 H5 下单统一追踪，按本店权限处理派单、履约和售后。"
           >
             <RefreshButton loading={result.loading} reload={result.reload} />
+            {auth.hasPerm("order:export") && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void exportOrders()}
+                disabled={exporting}
+                aria-busy={exporting}
+                title="按当前已提交的筛选条件导出"
+              >
+                <ArrowDown className="size-4" />
+                {exporting ? "正在导出" : "导出订单"}
+              </Button>
+            )}
             {capacity.data && <Button size="sm" variant="outline" onClick={() => setOperation({ kind: "capacity" })}>
               接单名额
             </Button>}
@@ -185,6 +228,7 @@ export default function OrdersPage() {
             )}
           </PageHeader>
           <div className="xa-role-scope"><strong>本店订单统一工作区</strong><span>客服代下单与老板 H5 下单共用订单状态 · 报名不等于接单</span></div>
+          {auth.hasPerm("order:view") && auth.hasPerm("support:edit") && <RoomCompletionRequests key={auth.revision} onReviewed={() => void result.reload()} />}
           <OrderSyncBar loading={result.loading} error={result.error} snapshot={result.data} reload={result.reload} />
           <Feedback message={result.error} retry={result.reload} />
           <DataTable snapshotAvailable={!!result.data}
@@ -741,6 +785,9 @@ function OrderDetail({
                       订单净额和店铺留存均不等于利润，退款后按实际追回与冲正流水核对。
                     </p>
                   </FormSection>{" "}
+                  {auth.hasPerm("order:view") && auth.hasPerm("report:view") && (
+                    <OrderSettlementBreakdown orderId={id} revision={row} />
+                  )}
                   {row.refund_summary && (
                     <FormSection
                       title="实际退款与追回"
@@ -977,12 +1024,12 @@ function OrderDetail({
                           <div className="mt-4 flex flex-wrap gap-2">
                             {ticket.status === "OPEN" ? (
                               <>
-                                {auth.hasPerm("support:edit") && (row.status === "IN_SERVICE" ||
+                                {ticket.addon_payment == null && auth.hasPerm("support:edit") && (row.status === "IN_SERVICE" ||
                                   (row.status === "COMPLETED" && (!!ticket.completed_followup_supported ||
                                    (!!ticket.created_at && !!row.completed_at &&
                                     Date.parse(ticket.created_at) <= Date.parse(row.completed_at))))) && !!ticket.affected_provider_account_ids?.length &&
                                   <NegotiationProposalEntry ticket={ticket} open={() => onOperation("negotiation-proposal", {...row, ticket})} />}
-                                {auth.hasPerm("order:refund") && !ticket.affected_provider_account_ids?.length && (
+                                {ticket.addon_payment == null && auth.hasPerm("order:refund") && !ticket.affected_provider_account_ids?.length && (
                                   <Button
                                     size="sm"
                                     variant="destructive"
@@ -1022,7 +1069,8 @@ function OrderDetail({
                                 </Button>
                               )
                             )}
-                            {!!ticket.affected_provider_account_ids?.length && auth.hasPerm("order:refund") &&
+                            {ticket.addon_payment != null && (auth.hasPerm("order:view") || auth.hasPerm("order:refund")) && <AddonFirstProposal key={`${auth.revision}:${row.id}:${ticket.id}:${ticket.client_request_id}`} orderId={row.id} ticket={ticket} />}
+                            {ticket.addon_payment == null && !!ticket.affected_provider_account_ids?.length && auth.hasPerm("order:refund") &&
                               <NegotiationExecutionEntry ticket={ticket} open={proposal => onOperation("negotiation-execution", {...row, ticket, proposal})} />}
                           </div>
                         </article>

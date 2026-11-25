@@ -16,9 +16,17 @@ def _data(row):
             'realtime_delivery': 'UNKNOWN', 'created_at': row.created_at}
 
 
-def _owner_event(row):
-    return next((event for event in ('submitted', 'owner_cancelled')
-                 if row.event_key == f'owner:{row.withdrawal_id}:{event}'), None)
+def _source(row):
+    if row.event_key.startswith('owner:'):
+        event = row.event_key.rsplit(':', 1)[-1]
+        valid = event in ('submitted', 'owner_cancelled') and row.event_key == f'owner:{row.withdrawal_id}:{event}'
+        return (event, None, None) if valid else None
+    if row.event_key.startswith('store:'):
+        event = row.event_key.rsplit(':', 1)[-1]
+        valid = event in ('store_approved', 'store_rejected') and row.event_key == f'store:{row.withdrawal_id}:{event}'
+        return (None, None, event) if valid else None
+    valid = row.platform_event_id and row.event_key == f'platform:{row.platform_event_id}'
+    return (None, row.platform_event_id, None) if valid else None
 
 
 def list_reviews(request):
@@ -27,17 +35,18 @@ def list_reviews(request):
         size = max(1, min(100, int(request.query_params.get('page_size', 20))))
     except (TypeError, ValueError):
         return Response({'code': 400, 'msg': '分页参数无效'}, status=400)
-    query = WithdrawalNoticeDelivery.objects.filter(skipped_reason=OWNER_REVIEW_REASON, message__isnull=True,
-        platform_event__isnull=True, event_key__startswith='owner:').select_related('withdrawal').order_by('-pk')
+    query = WithdrawalNoticeDelivery.objects.filter(
+        skipped_reason=OWNER_REVIEW_REASON, message__isnull=True
+    ).select_related('withdrawal', 'platform_event').order_by('-pk')
     total = query.count()
     rows = query[(page - 1) * size:page * size]
     return Response({'code': 0, 'data': {'kind': 'withdrawal', 'total': total, 'page': page,
-        'page_size': size, 'items': [_data(row) for row in rows if _owner_event(row)]}})
+        'page_size': size, 'items': [_data(row) for row in rows if _source(row)]}})
 
 
 def detail(notice_id):
-    row = WithdrawalNoticeDelivery.objects.select_related('withdrawal').filter(pk=notice_id, platform_event__isnull=True).first()
-    if not row or not _owner_event(row):
+    row = WithdrawalNoticeDelivery.objects.select_related('withdrawal', 'platform_event').filter(pk=notice_id).first()
+    if not row or not _source(row):
         return Response({'code': 404, 'msg': '提现通知不存在'}, status=404)
     return Response({'code': 0, 'data': _data(row)})
 
@@ -52,10 +61,10 @@ def act(request, notice_id):
     if action == 'recheck' and not getattr(settings, 'WITHDRAWAL_NOTICE_RECOVERY_ENABLED', False):
         return Response({'code': 409, 'msg': '提现通知恢复尚未启用'}, status=409)
     with transaction.atomic():
-        row = WithdrawalNoticeDelivery.objects.select_for_update().filter(
-            pk=notice_id, platform_event__isnull=True).first()
-        event = _owner_event(row) if row else None
-        if not row or not event:
+        row = WithdrawalNoticeDelivery.objects.select_related('withdrawal', 'platform_event').select_for_update().filter(
+            pk=notice_id).first()
+        source = _source(row) if row else None
+        if not row or not source:
             return Response({'code': 404, 'msg': '提现通知不存在'}, status=404)
         if row.message_id or row.skipped_reason != OWNER_REVIEW_REASON or expected != row.skipped_reason:
             return Response({'code': 409, 'msg': '通知状态已变化，请刷新后处理'}, status=409)
@@ -72,6 +81,8 @@ def act(request, notice_id):
         request._request._business_audit_recorded = True
         if action == 'recheck':
             from wallet.withdraw_notice_recovery import _project
-            transaction.on_commit(lambda pk=row.withdrawal_id, event=event: _project(pk, owner_event=event,
-                retry_owner_review=True), robust=True)
+            owner_event, platform_event_id, store_event = source
+            transaction.on_commit(lambda pk=row.withdrawal_id, owner=owner_event, platform=platform_event_id,
+                store=store_event: _project(pk, owner_event=owner, platform_event_id=platform,
+                    store_event=store, retry_source_review=True), robust=True)
     return Response({'code': 0, 'data': {'action': action}, 'msg': '已提交原来源重核' if action == 'recheck' else '已结束该提醒'})

@@ -555,7 +555,7 @@ class OrderDetailView(APIView):
             'customer', 'customer__boss_type', 'provider', 'service', 'source_order',
             'service__service_category', 'support_contact',
         ).prefetch_related('evaluations').filter(pk=order_id).first()
-        context = {'request': request, 'validate_application_readiness': True}
+        context = {'request': request, 'validate_application_readiness': True, 'verify_segment_report_detail': True}
         if order is None and account.account_type == ClubAccount.AccountType.PROVIDER:
             # Deep links must show exactly the same public facts as the pool;
             # never turn knowledge of an ID into access to an invisible order.
@@ -586,6 +586,12 @@ class CreateOrderView(APIView):
     @recover_fund_result('order.create')
     def post(self, request):
         from club_accounts.provider_lifecycle import ProviderLifecycleError
+        from stores.closure import closure_refusal_response
+        from stores.context import current_store
+        if request.account.account_type in (ClubAccount.AccountType.BOSS, ClubAccount.AccountType.STAFF):
+            denied = closure_refusal_response(current_store())
+            if denied is not None:
+                return denied
         # The ordinary route remains unchanged. A formal points attempt binds
         # this buyer and service across quote verification and the existing
         # atomic debit/receipt writer; downstream lifecycle gates still apply.
@@ -1431,6 +1437,12 @@ class TipOrderView(APIView):
         denied = self._admission_refusal()
         if denied is not None:
             return denied
+        if order_id is None and request.account.account_type == ClubAccount.AccountType.BOSS:
+            from stores.closure import closure_refusal_response
+            from stores.context import current_store
+            closure_denied = closure_refusal_response(current_store())
+            if closure_denied is not None:
+                return closure_denied
         if 'items' in request.data:
             from .gift_basket import send_basket
             return send_basket(self, request, order_id=order_id)
@@ -2074,9 +2086,10 @@ class CompleteOrderView(APIView):
             side_effect(order)
             complete_fulfillment(order, operator=request.legacy_user, operator_account=request.account)
 
+        from .segment_reports import enter_points_report_scope
         try:
             if room_order:
-                with transaction.atomic():
+                with transaction.atomic(), ExitStack() as scopes:
                     order = Order.objects.select_for_update().get(pk=order_id)
                     from .rooms import message_role
                     if (order.room_required_snapshot is not True or order.status != Order.Status.IN_SERVICE
@@ -2086,6 +2099,8 @@ class CompleteOrderView(APIView):
                             confirmation__status__in=['RUNNING', 'PAUSED']).exists():
                         raise IllegalTransitionError('结单申请已核实，凭证不能再修改')
                     pre_check(order)
+                    order = enter_points_report_scope(
+                        scopes, order, include_untransferred=order.payment_status == Order.PaymentStatus.PAID)
                     side_effect(order)
                     from .work_stints import personal_completion
                     personal_completion(order, request.account.pk)
@@ -2095,13 +2110,7 @@ class CompleteOrderView(APIView):
             with transaction.atomic(), ExitStack() as scopes:
                 def check_completion(order):
                     pre_check(order)
-                    if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True:
-                        from .models import OrderOriginalShareTransfer
-                        from .points_service_payment import needs_integrated_processing
-                        if needs_integrated_processing(order) and OrderOriginalShareTransfer.objects.filter(
-                                previous_segment__attribution__order=order).exists():
-                            from .points_transfer_refund_access import after_transfer
-                            scopes.enter_context(after_transfer(order.pk, phase='report'))
+                    enter_points_report_scope(scopes, order)
 
                 order = transition(
                     order_id,

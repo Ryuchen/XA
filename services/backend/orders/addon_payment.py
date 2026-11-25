@@ -23,7 +23,7 @@ from wallet.services import get_wallet
 from .addon_intents import _commission, _hash
 from .addon_offers import AddonSelectionError, validate_selection
 from .financial_lock import lock_order_money
-from .models import Order, OrderAddonFundingAllocation, OrderAddonIntent, OrderAddonPayment
+from .models import Order, OrderAddonFundingAllocation, OrderAddonIntent, OrderAddonPayment, OrderFinancialLock
 from .points_funding_plan import PointsFundingPlanError, plan_service_funding
 from .settlement import ProviderShare
 
@@ -497,6 +497,11 @@ def payment_available(intent, *, actor):
     try:
         if not (getattr(settings, 'ADDON_PAYMENT_INTERNAL_TESTING', False)
                 or ordinary_addon_eligible(order, allow_unpaid=True, payment_intent_id=intent.pk)):
+            return False
+        # This ordinary preview intentionally performs no order/money locking.
+        # A missing mutex is still unknown accounting state: fail closed with
+        # a read-only check instead of letting the payment writer recreate it.
+        if not OrderFinancialLock.objects.filter(pk=1).exists():
             return False
         _authorization(actor, intent)
         _verify_intent(intent, order)

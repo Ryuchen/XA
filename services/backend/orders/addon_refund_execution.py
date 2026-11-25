@@ -168,17 +168,36 @@ def _first_handover_after_refund(refund):
     return None
 
 
+def _main_posting_after_room_addon_refund(order, payment_id, proposal_id):
+    from .models import PointsNegotiationPosting
+    from .points_transfer_refund_access import room_direct_addon_refund
+
+    addon = room_direct_addon_refund(order)
+    if not addon or (addon.payment_id, addon.proposal_id) != (payment_id, proposal_id):
+        return None
+    main_ids = list(order.refund_records.values_list('pk', flat=True)[:2])
+    if len(main_ids) != 1:
+        return None
+    return PointsNegotiationPosting.objects.filter(points_refund__refund_id=main_ids[0],
+        points_refund__redemption__order=order, created_at__gt=addon.created_at,
+        termination_processed_at__isnull=False).first()
+
+
 def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
     recorded = OrderAddonRefund.objects.filter(order=order, payment_id=payment_id, proposal_id=proposal_id)
-    if order.room_required_snapshot or order.prestart_handoffs.exists():
+    room_order = order.room_required_snapshot is True
+    if order.prestart_handoffs.exists():
         return False
     if order.refund_records.exists():
+        if room_order:
+            return _main_posting_after_room_addon_refund(order, payment_id, proposal_id) is not None
         from .points_returned_addon_refund import before_first_main_refund
         returned = before_first_main_refund(order)
         return bool(returned and returned.payment_id == payment_id and recorded.exists())
     transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
-    refund = recorded.filter(
-            payment__handovers__status='ACCEPTED', payment__handovers__kind='STANDARD',
+    refund = None
+    if not room_order:
+        refund = recorded.filter(payment__handovers__status='ACCEPTED', payment__handovers__kind='STANDARD',
             payment__handovers__previous__isnull=True, payment__handovers__accepted_at__lt=F('created_at')).first()
     if not refund:
         if not order.settled_at or order.status != order.Status.COMPLETED:
@@ -191,7 +210,7 @@ def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
         if not prior.payment.handovers.exists():
             return transfers.filter(next_segment_id=prior.payment.intent.segment_id,
                 created_at__lt=prior.payment.buyer_transaction.created_at).exists()
-        return _first_handover_after_refund(prior) is not None
+        return not room_order and _first_handover_after_refund(prior) is not None
     payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
     if len(payments) > 1:
         from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
@@ -213,7 +232,7 @@ def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
 def _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator):
     from console.models import AdminAuditLog
     from .addon_funding_release import verify_run
-    from .points_transfer_refund_access import after_transfer
+    from .points_transfer_refund_access import after_transfer, verification_scope
     from .points_voluntary_paid_evidence import verify_standard_refund_current_read
 
     _require_refund_operator(operator)
@@ -223,6 +242,11 @@ def _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator):
             order=order, payment_id=payment_id, proposal_id=proposal_id).first()
         if not refund or not _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
             raise ValidationError('原加购退款状态已变化，请先核对')
+        if order.room_required_snapshot is True and order.refund_records.exists():
+            from .points_negotiation_termination import verify_termination_locked
+            posting = _main_posting_after_room_addon_refund(order, payment_id, proposal_id)
+            with verification_scope(order):
+                verify_termination_locked(posting)
         audits = list(AdminAuditLog.objects.filter(resource='addon-refund', object_id=str(refund.pk),
             method='POST', path=f'/api/admin/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/{proposal_id}/execute/',
             status_code=200))

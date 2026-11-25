@@ -40,6 +40,7 @@ def env_bool(name, default=False):
 # DJANGO_DEBUG=False，缺失的生产配置会在本模块末尾的 run_startup_checks() 里
 # 直接抛 ImproperlyConfigured，让进程起不来 —— 而不是带着开发密钥裸奔上线。
 DEBUG = env_bool('DJANGO_DEBUG', True)
+COMPLIANCE_ALLOW_BUILTIN_BOOTSTRAP = env_bool('XA_COMPLIANCE_ALLOW_BUILTIN_BOOTSTRAP', False)
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
     # 仅用于本地开发；生产由 run_startup_checks() 强制要求环境变量注入。

@@ -201,6 +201,7 @@ export const navigationDomains: DomainDefinition[] = [
           { path: "banners", title: "首页轮播", keywords: ["横幅", "首页图片", "轮播图"] },
           { path: "announcements", title: "公告管理", keywords: ["公告", "通知发布"] },
           operationFeature("content"),
+          { path: "h5-pages", title: "H5 内容发布", keywords: ["价目表", "下单须知", "门店介绍", "公开发布", "撤回", "历史版本"] },
         ],
       },
     ],

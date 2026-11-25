@@ -247,7 +247,7 @@ class OrderListSerializer(EntityNumberListSerializer):
                 prefetch_related_objects(cancellable, 'used_coupons')
         prepare_order_settlement_display(rows, points_prepared=points_prepared, order_list_only=True)
         from .team_progress import prepare_team_progress
-        prepare_team_progress(rows)
+        prepare_team_progress(rows, for_display=True)
         # Load public provider avatars once for the whole list, including the
         # current primary provider and active team members.
         from .models import OrderProvider
@@ -604,36 +604,43 @@ class OrderSerializer(EntityNumberModelSerializer):
         from common.private_media import private_media_url
         request = self.context.get('request')
         rows = self._my_participation(obj)
+        if not rows:
+            return []
         can_upload_completion = False
         account = getattr(request, 'account', None)
-        if account and any(row.started_at and row.released_at for row in rows):
+        released_to_report = any(row.started_at and row.released_at and row.attribution.status == 'ACTIVE' for row in rows)
+        if account and released_to_report:
             from wallet.models import ProviderReport
             from .services import report_edit_error
             report = ProviderReport.objects.filter(order=obj, provider_account=account).first()
             can_upload_completion = bool(report and not report_edit_error(report))
-        from .segment_reports import supports as segment_reports_support, report_data as segment_report_data
-        segment_reporting = bool(rows and segment_reports_support(obj))
-        if segment_reporting:
+        from . import segment_reports
+        if self.context.get('verify_segment_report_detail'):
+            segment_reporting, transfer_upload = segment_reports.detail_support(
+                obj, check_paid_transfer=released_to_report and not can_upload_completion)
+            can_upload_completion = can_upload_completion or transfer_upload
+        else:
+            segment_reporting = segment_reports.supports(obj)
+        if segment_reporting and not can_upload_completion:
             from .points_transfer_capture import enabled as points_transfer_enabled
             from .points_service_payment import needs_integrated_processing
             if points_transfer_enabled() and needs_integrated_processing(obj):
-                # The isolated transfer path records completion per segment;
-                # an unrelated legacy report must not hide that valid action.
+                # A transfer scope verifies completion per segment without a legacy report.
                 can_upload_completion = True
-        segment_reports = {row.pk: segment_report_data(row, request) for row in rows} if segment_reporting else {}
+        reports = {row.pk: segment_reports.report_data(row, request) for row in rows} if segment_reporting else {}
         from .participation_entry import negotiated_current_completion_allowed
         negotiated_current = {row.pk for row in rows if not row.released_at and negotiated_current_completion_allowed(obj, row)}
         return [{'id': row.pk, 'accepted_at': row.accepted_at, 'started_at': row.started_at,
                  'released_at': row.released_at, 'is_service_transfer': row.is_service_transfer,
                  'entry_image_url': private_media_url(request, row.entry_image) if row.entry_image else '',
                  'completion_image_url': private_media_url(request, row.completion_image) if row.completion_image else '',
-                 'can_upload_completion': bool((segment_reports[row.pk]['status'] in ('DRAFT','REJECTED')
-                                               if segment_reports.get(row.pk) else (can_upload_completion or row.pk in negotiated_current))
+                 'can_upload_completion': bool((reports[row.pk]['status'] in ('DRAFT','REJECTED')
+                                               if reports.get(row.pk) else (can_upload_completion or row.pk in negotiated_current))
                                                and row.started_at and (row.released_at or row.pk in negotiated_current)
                                                and row.attribution.status == 'ACTIVE'),
                  'segment_report_available': bool(segment_reporting and row.started_at and row.attribution.status == 'ACTIVE'
                                                   and (not row.released_at or row.original_share > 0)),
-                 'segment_report': segment_reports.get(row.pk)}
+                 'segment_report': reports.get(row.pk)}
                 for row in rows]
 
     def get_quantity_unit(self, obj):
@@ -689,7 +696,7 @@ class OrderSerializer(EntityNumberModelSerializer):
     def get_team_progress(self, obj):
         from .team_progress import team_progress
         from stores.display import provider_display_name
-        progress = team_progress(obj)
+        progress = team_progress(obj, for_display=True)
         if progress is None:
             return None
         avatars = self._provider_avatars(member['id'] for member in progress['members'])
@@ -709,7 +716,8 @@ class OrderSerializer(EntityNumberModelSerializer):
             legacy_user = getattr(request, 'legacy_user', None)
             if legacy_user:
                 owner |= Q(provider_account__isnull=True, provider=legacy_user)
-            assignment = obj.providers.filter(owner).only('released_at', 'settled_at', 'settlement_base', 'provider_income').first()
+            assignment = obj.providers.filter(owner).only('provider_id', 'provider_account_id',
+                'released_at', 'settled_at', 'settlement_base', 'provider_income').first()
         return assignment
 
     def get_my_assignment_released(self, obj):
@@ -777,7 +785,7 @@ class OrderSerializer(EntityNumberModelSerializer):
             'provider_gender',
             'remark',
             'support_contact',
-            'source_order', 'source_order_no', 'is_gift_snapshot',
+            'source_order', 'source_order_no', 'is_gift_snapshot', 'room_required_snapshot',
             'service',
             'customer',
             'provider',
@@ -862,6 +870,24 @@ class OrderSerializer(EntityNumberModelSerializer):
     def _points_fulfillment_available(self, obj, request):
         if not self._has_points_evidence(obj):
             return True
+        if obj.room_required_snapshot is True and obj.payment_status == Order.PaymentStatus.PAID:
+            from .team_progress import formal_transfer_display_enabled
+            if formal_transfer_display_enabled():
+                return self._paid_points_room_fulfillment_available(obj, request)
+        if (obj.status == Order.Status.IN_SERVICE and obj.payment_status == Order.PaymentStatus.PAID
+                and self._formal_paid_points_transfer(obj)):
+            return self._paid_transfer_completion_available(obj, request)
+        if obj.status == Order.Status.IN_SERVICE and obj.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED:
+            from .team_progress import team_progress
+            progress = team_progress(obj, for_display=True)
+            if hasattr(obj, '_formal_transfer_progress'):
+                # A released seat cannot use the retained seat's order action.
+                return bool(request.legacy_user and progress and any(
+                    member['id'] == request.account.pk
+                    and (obj.room_required_snapshot is not True or not member['submitted'])
+                    for member in progress['members']) and any(
+                    segment.started_at and not segment.released_at and segment.attribution.status == 'ACTIVE'
+                    for segment in self._my_participation(obj)))
         from .points_funding_plan import PointsFundingPlanError
         from .points_report_test import verified_report_snapshot
         try:
@@ -869,6 +895,57 @@ class OrderSerializer(EntityNumberModelSerializer):
         except PointsFundingPlanError:
             return False
         return True
+
+    def _formal_paid_points_transfer(self, obj):
+        from .team_progress import formal_transfer_display_enabled
+        if (not formal_transfer_display_enabled() or obj.source_order_id or obj.is_gift_snapshot
+                or obj.room_required_snapshot is True):
+            return False
+        if not hasattr(obj, '_provider_has_points_transfer'):
+            from .segment_financial_capture import covered_transfers
+            obj._provider_has_points_transfer = covered_transfers(obj.pk).filter(
+                previous_segment__attribution__financial_coverage__source='WALLET_POINTS').exists()
+        return obj._provider_has_points_transfer
+
+    def _current_points_participation(self, obj, request):
+        assignment = self._requester_assignment(obj)
+        user = request.legacy_user
+        if (not user or not assignment or assignment.released_at or assignment.provider_id != user.pk
+                or assignment.provider_account_id != request.account.pk):
+            return None
+        segments = [row for row in self._my_participation(obj) if row.released_at is None]
+        if len(segments) == 1 and segments[0].attribution.status == 'ACTIVE':
+            return segments[0]
+        return None
+
+    def _paid_points_room_fulfillment_available(self, obj, request):
+        from .points_service_payment import MARKER
+        if not isinstance(obj.funding_terms, dict) or MARKER not in obj.funding_terms:
+            return False
+        segment = self._current_points_participation(obj, request)
+        if not segment:
+            return False
+        if obj.status == Order.Status.GRABBED:
+            return segment.started_at is None
+        if not settings.ROOM_COMPLETION_REVIEW_ENABLED or segment.started_at is None:
+            return False
+        if obj.escort_mode == Order.EscortMode.DOUBLE and obj.requires_boss_selection:
+            from .team_progress import team_progress
+            progress = team_progress(obj, for_display=True)
+            return bool(progress and any(member['id'] == request.account.pk and not member['submitted']
+                                         for member in progress['members']))
+        return not segment.completion_image
+
+    def _paid_transfer_completion_available(self, obj, request):
+        segment = self._current_points_participation(obj, request)
+        if not segment or segment.started_at is None:
+            return False
+        if obj.escort_mode == Order.EscortMode.DOUBLE and obj.requires_boss_selection:
+            from .team_progress import team_progress
+            progress = team_progress(obj, for_display=True)
+            return bool(progress and any(member['id'] == request.account.pk for member in progress['members']))
+        from .ownership import owns_order_party
+        return owns_order_party(obj, request, 'provider')
 
     def get_report_entry(self, obj):
         account = getattr(self.context.get('request'), 'account', None)
@@ -990,10 +1067,21 @@ class OrderSerializer(EntityNumberModelSerializer):
                 from .team_fulfillment import team_evidence_submitted
                 if obj.escort_mode != 'DOUBLE' or not team_evidence_submitted(obj,account,'entry_image'):
                     actions.append('START')
-            if participant and obj.status == Order.Status.IN_SERVICE and self._points_fulfillment_available(obj, request):
-                from .team_fulfillment import team_evidence_submitted
-                pending = [segment for segment in self._my_participation(obj) if segment.attribution.status == 'ACTIVE'
+            if participant and obj.status == Order.Status.IN_SERVICE:
+                segments = self._my_participation(obj)
+                pending = [segment for segment in segments if segment.attribution.status == 'ACTIVE'
                            and segment.is_service_transfer and not segment.released_at and not segment.started_at]
+                if (points and obj.payment_status == Order.PaymentStatus.PAID and len(pending) == 1 and user
+                        and sum(segment.released_at is None for segment in segments) == 1):
+                    assignment = self._requester_assignment(obj)
+                    if (assignment and not assignment.released_at and assignment.provider_account_id == account.pk
+                            and assignment.provider_id == user.pk):
+                        # The transfer has recorded the incoming seat. Its entry
+                        # action does not use the legacy report snapshot.
+                        return ['START_PARTICIPATION']
+                if not self._points_fulfillment_available(obj, request):
+                    return actions
+                from .team_fulfillment import team_evidence_submitted
                 pending_work = self.get_my_pending_work_stint(obj)
                 if len(pending) == 1 or pending_work:
                     actions.append('START_PARTICIPATION')

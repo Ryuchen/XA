@@ -113,7 +113,7 @@ def validate_reservation_window(start_time, end_time, *, now=None, rules=None) -
     Args:
         start_time: 预约开始时间（aware datetime）。
         end_time: 预约结束时间（aware datetime）。
-        now: 当前时间，便于测试注入；默认 ``timezone.now()``。
+        now: 当前时间，便于测试注入；默认读取当前店库的可信时钟。
 
     Returns:
         int: 预约时长（分钟）。
@@ -139,7 +139,12 @@ def validate_reservation_window(start_time, end_time, *, now=None, rules=None) -
                 f'预约{label}时间必须对齐到 {slot_minutes} 分钟刻度'
             )
 
-    now = now or timezone.now()
+    if now is None:
+        from .reservation_clock import sample, same_connection, ClockUnavailable
+        observed = sample()
+        if not same_connection(observed):
+            raise ClockUnavailable('预约时间窗校验期间数据库连接发生变化')
+        now = observed.instant
     if start_time <= now:
         raise ReservationWindowError('预约开始时间必须晚于当前时间')
 
@@ -165,6 +170,7 @@ def find_conflicting_reservations(
     end_time,
     *,
     exclude_id: Optional[int] = None,
+    now=None,
 ) -> QuerySet:
     """返回与给定时间窗重叠的预约或尚未结束的预约订单。
 
@@ -178,7 +184,9 @@ def find_conflicting_reservations(
     Returns:
         QuerySet[Reservation]: 冲突的预约集合，按开始时间升序。
     """
-    now = timezone.now()
+    if now is None:
+        from .reservation_clock import sample
+        now = sample().instant
     qs = Reservation.objects.filter(
         start_time__lt=end_time,
         end_time__gt=start_time,
@@ -262,7 +270,7 @@ def validate_reservation_schedule(profile, start_time, end_time):
         raise ReservationError('陪玩设置的接单档期未覆盖预约时段')
 
 
-def lock_team_conflicts(provider_account, start_time, end_time, *, exclude_id=None):
+def lock_team_conflicts(provider_account, start_time, end_time, *, exclude_id=None, now=None):
     """Current locking read after the provider's shared schedule lock.
 
     This prevents a pre-existing repeatable-read snapshot from missing a team
@@ -275,7 +283,9 @@ def lock_team_conflicts(provider_account, start_time, end_time, *, exclude_id=No
     ).select_related('reservation').order_by('reservation_id', 'number')
     if exclude_id is not None:
         query = query.exclude(reservation_id=exclude_id)
-    now = timezone.now()
+    if now is None:
+        from .reservation_clock import sample
+        now = sample().instant
     for seat in query:
         booking = seat.reservation
         if (booking.status == Reservation.Status.PENDING and
@@ -315,6 +325,7 @@ def create_reservation(
     remark: str = '',
     operator=None,
     operator_account=None,
+    decision_key: Optional[str] = None,
 ) -> Reservation:
     """创建一条待确认预约。**冲突检测与插入在同一把档期锁内完成。**
 
@@ -336,10 +347,31 @@ def create_reservation(
         ReservationConflictError: 该时间段已被占用。
         ReservationError: 陪玩不可预约。
     """
+    actor_account = operator_account or customer_account
+    rounds = max(int(game_rounds or 1), 1)
+    from .reservation_clock import fingerprint_request
+    request_hash = fingerprint_request({
+        'customer_account_id': getattr(customer_account, 'pk', None),
+        'customer_id': getattr(customer, 'pk', None),
+        'provider_account_ids': [getattr(provider_account, 'pk', None)],
+        'service_id': service.pk,
+        'start_time': start_time, 'end_time': end_time, 'game_rounds': rounds,
+        'game_region': game_region, 'game_nickname': game_nickname,
+        'game_uid': game_uid, 'remark': remark,
+    })
+    if decision_key:
+        from .reservation_clock import assert_replay, get_receipt, validate_decision_key
+        receipt = get_receipt(validate_decision_key(decision_key))
+        if receipt is not None:
+            original = receipt.reservation
+            assert_replay(receipt, reservation=original, action='CREATE',
+                          actor_account=actor_account, deadline=original.confirmation_deadline,
+                          request_fingerprint=request_hash)
+            original._decision_replayed = True
+            return original
     if service.fulfillment_provider_count == 2:
         raise ReservationError('该双陪套餐需联系客服安排两名打手')
     duration_minutes = int((end_time - start_time).total_seconds() // 60)
-    rounds = max(int(game_rounds or 1), 1)
     # Reservations must not occupy a slot for a product the normal order
     # flow cannot sell. Reuse its catalog rules without reserving funds.
     if service.service_category_id and service.service_category.is_gift:
@@ -402,16 +434,20 @@ def create_reservation(
         # This is a current locking read after the provider lock. A plain
         # conflict query can otherwise see an older MySQL repeatable-read
         # snapshot while an earlier reservation has just been confirmed.
+        from .reservation_clock import sample, same_connection, ClockUnavailable
+        observed = sample()
+        if not same_connection(observed):
+            raise ClockUnavailable('预约创建锁内数据库连接发生变化')
+        now = observed.instant
         from .reservation_deadlines import due
-        lock_team_conflicts(provider_account, start_time, end_time)
+        lock_team_conflicts(provider_account, start_time, end_time, now=now)
         active = Reservation.objects.select_for_update().filter(
             required_provider_count=1, provider_account=provider_account, status__in=ACTIVE_STATUS_LIST,
             start_time__lt=end_time, end_time__gt=start_time).order_by('pk')
-        now = timezone.now()
         if any(not due(existing, now=now) for existing in active):
             raise ReservationConflictError('该时间段大神已有预约，请另选时间')
         conflicting = find_conflicting_reservations(
-            provider_account, start_time, end_time,
+            provider_account, start_time, end_time, now=now,
         ).first()
         if conflicting is not None:
             raise ReservationConflictError(
@@ -421,8 +457,8 @@ def create_reservation(
         from .reservation_deadlines import required_rules, confirmation_snapshot
         try:
             rules = required_rules(lock=True)
-            duration_minutes = validate_reservation_window(start_time, end_time, rules=rules)
-            confirmation_deadline = confirmation_snapshot(start_time, timezone.now(), rules)
+            duration_minutes = validate_reservation_window(start_time, end_time, now=now, rules=rules)
+            confirmation_deadline = confirmation_snapshot(start_time, now, rules)
         except ValueError as exc:
             raise ReservationError(str(exc)) from exc
 
@@ -453,6 +489,12 @@ def create_reservation(
             confirmation_timeout_minutes=rules['confirmation_minutes'],
             confirmation_config_version=rules['version'],
         )
+        from .reservation_clock import prepare_decision
+        clock_decision = prepare_decision(
+            reservation=reservation, action='CREATE',
+            deadline=confirmation_deadline, actor_account=actor_account,
+            decision_key=decision_key, state_before='', request_fingerprint=request_hash,
+        )
         if (getattr(settings, 'RESERVATION_NOTICE_RECOVERY_ENABLED', False)
                 and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)):
             reservation.invitation_notice_intent = {
@@ -471,7 +513,10 @@ def create_reservation(
                 operator_account if operator_account is not None else customer_account
             ),
             reason='发起预约',
+            now=now,
         )
+    from .reservation_clock import finalize_decision
+    finalize_decision(clock_decision, state_after=Reservation.Status.PENDING)
     return reservation
 
 
@@ -491,6 +536,8 @@ class _CustomerContext:
 def reservation_order_pricing(reservation, discount_selection_token=None, gift_balance_amount=0, compensation_balance_amount=0,
                               user_coupon_id=None):
     """Use the same current service and buyer rules for quote and conversion."""
+    from .reservation_clock import assert_clock_clear
+    assert_clock_clear(reservation)
     if discount_selection_token and user_coupon_id is not None:
         raise ReservationError('请通过优惠组合或优惠券编号选择，不可同时提交')
     from .serializers import CreateOrderSerializer
@@ -560,6 +607,7 @@ def convert_reservation_to_order(
     discount_selection_token: Optional[str] = None,
     points_checkout_test_token: Optional[str] = None,
     user_coupon_id: Optional[int] = None,
+    decision_key: Optional[str] = None,
 ) -> Tuple[int, str, Optional[Tuple[Order, Response]]]:
     """把已确认的预约转成正式订单：预约链路上**唯一动钱**的一步。
 
@@ -580,6 +628,27 @@ def convert_reservation_to_order(
         ``(业务码, 提示, (订单, 成功响应) | None)``。
     """
     trace_id = new_trace_id()
+    clock_decision_key = decision_key or client_request_id
+    from .reservation_clock import fingerprint_request
+    request_hash = fingerprint_request({
+        'reservation_id': reservation_id, 'expected_amount': expected_amount,
+        'expected_service': expected_service, 'gift_balance_amount': gift_balance_amount,
+        'compensation_balance_amount': compensation_balance_amount,
+        'boss_confirmation': boss_confirmation, 'game_fields': game_fields or {},
+        'discount_selection_token': discount_selection_token,
+        'points_checkout_test_token': points_checkout_test_token,
+        'user_coupon_id': user_coupon_id,
+        'support_contact_id': request.data.get('support_contact_id'),
+    })
+    if clock_decision_key:
+        from .reservation_clock import get_receipt, assert_replay, validate_decision_key, ClockConflict
+        receipt = get_receipt(validate_decision_key(clock_decision_key))
+        if receipt is not None:
+            if receipt.reservation_id != reservation_id:
+                raise ClockConflict('原 decision_key 对应的预约决策内容不同')
+            assert_replay(receipt, reservation=receipt.reservation,
+                          action='CONVERT_CHECK', actor_account=request.account,
+                          deadline=receipt.deadline, request_fingerprint=request_hash)
 
     # 只读探测重放：首次转单成功后预约已是 CONVERTED，重放会先撞
     # 「仅已确认的预约可转订单」，把真实原因（上一次已经转成功了）盖掉。
@@ -849,10 +918,36 @@ def convert_reservation_to_order(
                 data['pricing']) != safe_box_subsidy_basis:
             raise serializers.ValidationError('安全箱券或补贴条件已变化，请重新报价')
 
+        # Validate all price/lock work first, then bracket the debit decision
+        # with two DB-clock observations on the same locked connection.
+        from .reservation_clock import (
+            ClockConflict, ClockUnavailable, record_probe,
+        )
+        from .reservation_deadlines import saved_deadline
+        try:
+            clock_probe = record_probe(
+                reservation=reservation, action='CONVERT_CHECK',
+                deadline=saved_deadline(reservation), actor_account=request.account,
+                decision_key=clock_decision_key, request_fingerprint=request_hash,
+                state_before=Reservation.Status.CONFIRMED,
+            )
+        except ClockUnavailable as exc:
+            return 503, str(exc.detail), None
+        except ClockConflict as exc:
+            return 409, str(exc.detail), None
+        if clock_probe.state != 'BEFORE':
+            if clock_probe.state == 'AFTER':
+                transition_reservation(
+                    reservation.id, Reservation.Status.EXPIRED,
+                    operator_account=request.account, reason='预约付款截止时间已到',
+                    now=clock_probe.receipt.upper_at or clock_probe.receipt.lower_at,
+                )
+                return 409, '预约已过期，请重新预约', None
+            return 409, '预约扣款时钟证据需核对', None
+        clock_now = clock_probe.receipt.upper_at or clock_probe.receipt.lower_at
+
         # 校验全过、即将扣款，此刻才占幂等键：校验失败不占键，用户补足余额后
         # 可以拿同一个键重试。
-        if expire_locked_reservation(reservation):
-            return 409, '预约已过期，请重新预约', None
         claim_savepoint = transaction.savepoint()
         allowed, reason = claim_fund_write(
             account=request.account,
@@ -880,12 +975,34 @@ def convert_reservation_to_order(
             )
             return 409, reason, None
 
-        # Locks and pricing can take time; never debit after the booked end.
-        from .reservation_deadlines import due
-        if due(reservation, now=timezone.now()):
+        # Claiming the idempotency row and adjacent locks may wait. Recheck the
+        # locked DB clock immediately before the irreversible debit; on failure
+        # roll back only the claim and leave no wallet mutation or order.
+        from .reservation_clock import ClockUnavailable, record_after, sample, same_connection
+        try:
+            final_observed = sample()
+        except ClockUnavailable as exc:
             transaction.savepoint_rollback(claim_savepoint)
-            expire_locked_reservation(reservation)
+            return 503, str(exc.detail), None
+        if not same_connection(final_observed):
+            transaction.savepoint_rollback(claim_savepoint)
+            return 503, '预约扣款前数据库连接发生变化', None
+        if final_observed.instant >= saved_deadline(reservation):
+            transaction.savepoint_rollback(claim_savepoint)
+            final_key = f'{(clock_decision_key or clock_probe.receipt.decision_key)[:48]}-final'
+            record_after(
+                reservation=reservation, action='CONVERT_FINAL',
+                deadline=saved_deadline(reservation), actor_account=request.account,
+                decision_key=final_key, state_before=Reservation.Status.CONFIRMED,
+                observed=final_observed, request_fingerprint=request_hash,
+            )
+            transition_reservation(
+                reservation.id, Reservation.Status.EXPIRED,
+                operator_account=request.account, reason='预约付款截止时间已到',
+                now=final_observed.instant,
+            )
             return 409, '预约已过期，请重新预约', None
+        clock_now = final_observed.instant
         transaction.savepoint_commit(claim_savepoint)
         balance_before = wallet.balance
 
@@ -943,7 +1060,7 @@ def convert_reservation_to_order(
         record_paid_benefits(order, locked_coupon)
         if boss_confirmation:
             order.funding_confirmation = {'actor_account_id': request.account.pk,
-                'confirmation': boss_confirmation, 'recorded_at': timezone.now().isoformat()}
+                'confirmation': boss_confirmation, 'recorded_at': clock_now.isoformat()}
             order.save(update_fields=['funding_confirmation'])
         from engagement.service_funding_route import use_order_funding_allocation
         funding_allocated = use_order_funding_allocation(amount=amount,
@@ -1050,6 +1167,7 @@ def convert_reservation_to_order(
             reason=f'转为订单：{order.order_no}',
             side_effect=bind_order,
             update_fields=['order'],
+            now=clock_now,
         )
         message = '预约转单成功'
         response = record_paid(order, converted, message)

@@ -1,16 +1,46 @@
 import os
+from types import SimpleNamespace
+from unittest.mock import patch
 from django.test import override_settings
 from rest_framework.test import APITransactionTestCase
 from django.conf import settings
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from unittest import skipUnless
 
 from common.private_media import may_read
-from orders.models import OrderParticipationSegment
+from orders.models import Order, OrderParticipationSegment
+from orders.serializers import OrderSerializer
 from orders.tests import test_prestart_handoff as fixture
 from orders.tests import test_release_flow as flow
 from orders.tests import test_staff_team_dispatch as team_fixture
 from wallet.models import ProviderReport, Transaction
+
+
+class TransferEntryActionTest(SimpleTestCase):
+    def test_paid_points_transfer_entry_does_not_require_a_report_snapshot(self):
+        account = SimpleNamespace(pk=7, account_type='PROVIDER')
+        request = SimpleNamespace(account=account, legacy_user=SimpleNamespace(pk=8))
+        serializer = OrderSerializer(context={'request': request})
+        order = SimpleNamespace(status=Order.Status.IN_SERVICE, provider_account_id=account.pk,
+                                payment_status=Order.PaymentStatus.PAID)
+        segment = SimpleNamespace(attribution=SimpleNamespace(status='ACTIVE'), is_service_transfer=True,
+                                  released_at=None, started_at=None)
+        assignment = SimpleNamespace(provider_id=8, provider_account_id=account.pk, released_at=None)
+        with (patch.object(serializer, '_has_points_evidence', return_value=True),
+              patch('orders.points_checkout_test.assignment_enabled', return_value=False),
+              patch.object(serializer, '_my_participation', return_value=[segment]) as participation,
+              patch.object(serializer, '_requester_assignment', return_value=assignment),
+              patch.object(serializer, '_points_fulfillment_available', return_value=False)):
+            self.assertEqual(serializer.get_allowed_actions(order), ['START_PARTICIPATION'])
+            participation.return_value.append(SimpleNamespace(attribution=segment.attribution,
+                is_service_transfer=False, released_at=None, started_at=object()))
+            self.assertEqual(serializer.get_allowed_actions(order), [])
+            participation.return_value.pop()
+            assignment.provider_id = 10
+            self.assertEqual(serializer.get_allowed_actions(order), [])
+            assignment.provider_id = 8
+            order.payment_status = Order.PaymentStatus.PARTIALLY_REFUNDED
+            self.assertEqual(serializer.get_allowed_actions(order), [])
 
 
 @override_settings(ORIGINAL_ATTRIBUTION_ENABLED=True, PRESTART_HANDOFF_ENABLED=True,

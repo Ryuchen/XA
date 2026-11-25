@@ -67,8 +67,9 @@ class RoomObjectionTests(APITestCase):
         self.assertFalse(Transaction.objects.filter(order=self.order).exists())
         self.assertFalse(self.order.aftersales.exists())
 
+    @override_settings(ROOM_OBJECTION_NOTICE_RECOVERY_ENABLED=False)
     def test_failures_roll_back_objection_notification_or_resolution(self):
-        with patch('site_messages.models.Message.objects.bulk_create', side_effect=RuntimeError('message unavailable')):
+        with patch('site_messages.utils.create_cycle_message', side_effect=RuntimeError('message unavailable')):
             with self.assertRaises(RuntimeError):
                 self.boss_client.post(self.url, self.payload, format='json')
         self.assertFalse(OrderRoomObjection.objects.exists())
@@ -79,7 +80,7 @@ class RoomObjectionTests(APITestCase):
             with self.assertRaises(RuntimeError):
                 self.staff.post(path, {'resolution': '核实', 'client_request_id': 'resolve-fail'}, format='json')
         self.assertEqual(OrderRoomObjection.objects.get(pk=row['id']).status, 'OPEN')
-        with patch('site_messages.models.Message.objects.create', side_effect=RuntimeError('message unavailable')):
+        with patch('site_messages.utils.create_cycle_message', side_effect=RuntimeError('message unavailable')):
             with self.assertRaises(RuntimeError):
                 self.staff.post(path, {'resolution': '核实', 'client_request_id': 'resolve-fail'}, format='json')
         self.assertEqual(OrderRoomObjection.objects.get(pk=row['id']).status, 'OPEN')

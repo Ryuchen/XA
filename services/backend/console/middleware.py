@@ -1,8 +1,9 @@
 """后台操作审计中间件：自动记录管理员对后台的写操作。
 
 采集范围：路径以 API_ADMIN_PREFIX 开头、方法为写操作(POST/PUT/PATCH/DELETE)、
-且响应状态 < 400 的请求。请求体中的敏感字段会被脱敏后落库。
+且响应状态 < 400 的请求。请求体中的敏感字段会被脱敏，合规正文只保留内容摘要后落库。
 """
+import hashlib
 import json
 
 from .models import AdminAuditLog
@@ -13,13 +14,27 @@ API_ADMIN_PREFIX = '/api/admin/'
 STORE_ADMIN_PREFIX = '/api/stores/manage/'
 SENSITIVE_KEYS = {'license_code', 'licensecode', 'id_number', 'id_number_ciphertext', 'id_number_hash', 'id_front', 'id_back', 'deposit_proof', 'password', 'admin_password', 'adminpassword', 'old_password', 'new_password', 'token', 'refresh', 'secret',
                   'bot_token', 'bot_token_ciphertext', 'kook_bot_token', 'webhook', 'webhook_ciphertext','otpcode','otpchallenge','otpsecret','otpuri','otpqr','recoverycodes','otprecoverycodes'}
+CONTENT_KEYS = {
+    'name', 'display_name', 'introduction', 'rules', 'details_html',
+}
 MAX_BODY_CHARS = 4000
+
+
+def _content_sha256(value):
+    content = value if isinstance(value, str) else json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(',', ':'),
+    )
+    return hashlib.sha256(content.encode('utf-8')).hexdigest()
 
 
 def _mask(value):
     if isinstance(value, dict):
         return {
-            k: ('***' if k.lower() in SENSITIVE_KEYS else _mask(v))
+            k: (
+                '***' if k.lower() in SENSITIVE_KEYS
+                else {'sha256': _content_sha256(v)} if k.lower() in CONTENT_KEYS
+                else _mask(v)
+            )
             for k, v in value.items()
         }
     if isinstance(value, list):

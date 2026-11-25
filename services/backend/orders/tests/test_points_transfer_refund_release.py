@@ -3,12 +3,142 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase, override_settings
+from rest_framework.exceptions import ValidationError
 
 from orders import points_transfer_refund_release as releases
 from orders.points_negotiation_preview import funding_after_refund
 
 
 class PointsTransferRefundReleaseTests(SimpleTestCase):
+    def test_refunded_transfer_funding_reuses_verified_closure_release(self):
+        from orders import points_transfer_refunded_funding as refunded_funding
+        from orders.models import Order, OrderPointsFundingReleaseEvidence
+
+        order = SimpleNamespace(pk=7, status=Order.Status.IN_SERVICE, source_order_id=None,
+                                settled_at=None, refund_records=Mock())
+        order.refund_records.count.return_value = 1
+        posting = SimpleNamespace(pk=8, participants={})
+        calculation = object()
+        orders = Mock()
+        orders.select_for_update.return_value.filter.return_value.first.return_value = order
+        orders.filter.return_value.exists.return_value = False
+        with (patch.object(refunded_funding.transaction, 'get_connection', return_value=SimpleNamespace(in_atomic_block=True)),
+              patch('orders.points_transfer_refund_access.require_refund_or_isolated'),
+              patch('orders.points_transfer_refund_access.permits', return_value=True),
+              patch.object(Order, 'objects', orders),
+              patch('orders.models.PointsPostRefundTransferRevision.objects.filter') as versions,
+              patch('orders.points_transfer_refund_continuation.verify_locked') as closure,
+              patch.object(OrderPointsFundingReleaseEvidence.objects, 'filter') as releases,
+              patch('orders.points_transfer_addon_events.later_runs', return_value=[]) as later_runs):
+            versions.return_value.order_by.return_value = []
+            closure.side_effect = lambda _order, *, include_release=False: (
+                (posting, object(), calculation) if include_release else posting)
+            releases.side_effect = AssertionError('结案已经核对过首退到账释放')
+            self.assertIs(refunded_funding._plan_refunded_transfer(order.pk), calculation)
+            closure.assert_called_once_with(order, include_release=True)
+            closure.reset_mock()
+            self.assertEqual(refunded_funding._plan_refunded_transfer(order.pk, include_basis=True),
+                             refunded_funding.VerifiedTransferRefundBasis(calculation, posting, None, ()))
+            closure.assert_called_once_with(order, include_release=True)
+
+            # Older postings can have list participants if the refund preceded the first transfer.
+            posting.participants = []
+            expected = funding_after_refund(principal_units=280, gift_units=0, compensation_units=0,
+                returned_prepaid_units=120, returned_gift_units=0, returned_compensation_units=0,
+                provider_income_units=160, pending_deduction_units=0, provider_external_units=0,
+                inviter_rate=0, allocated_units=0)
+            version = SimpleNamespace(pk=9, created_at=2)
+            earlier = SimpleNamespace(payment_id=2, payment=SimpleNamespace(buyer_transaction=SimpleNamespace(created_at=0)),
+                created_at=1, refunded_main_snapshot={'transfer_origin_posting_id': posting.pk})
+            event = SimpleNamespace(payment_id=1, payment=SimpleNamespace(buyer_transaction=SimpleNamespace(created_at=3)),
+                created_at=4, refunded_main_snapshot={'transfer_revision_id': version.pk, 'funding': asdict(expected)})
+            versions.return_value.order_by.return_value = [version]
+            later_runs.return_value = [earlier, event]
+            later_runs.reset_mock()
+            closure.reset_mock()
+            with (patch('orders.points_post_refund_transfer.verify_locked') as verify_version,
+                  patch('orders.points_post_refund_transfer.unresolved_pending_locked', return_value=[])):
+                basis = refunded_funding._plan_refunded_transfer(order.pk, include_basis=True)
+                self.assertEqual(basis, refunded_funding.VerifiedTransferRefundBasis(
+                    expected, posting, version, (earlier, event)))
+                self.assertIs(basis.latest_addon_run, event)
+            closure.assert_called_once_with(order)
+            verify_version.assert_called_once_with(version)
+            later_runs.assert_called_once_with(order, posting)
+
+    def test_refunded_points_report_detail_uses_read_only_scope(self):
+        from contextlib import nullcontext
+        from orders import segment_reports
+        from orders.models import Order, OrderOriginalShareTransfer
+
+        order = SimpleNamespace(pk=7, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
+        locked = SimpleNamespace(pk=order.pk)
+        with (patch.object(segment_reports, 'enabled', return_value=True),
+              patch.object(segment_reports, 'supports', return_value=True) as supports,
+              patch.object(segment_reports.transaction, 'atomic', return_value=nullcontext()),
+              patch('orders.points_business_access.formal_service_read_candidate', return_value=True),
+              patch.object(OrderOriginalShareTransfer.objects, 'filter') as transfers,
+              patch('orders.points_transfer_refund_access.after_transfer',
+                    return_value=nullcontext(locked)) as scoped):
+            transfers.return_value.exists.return_value = True
+            self.assertTrue(segment_reports.supports_detail(order))
+            scoped.assert_called_once_with(order.pk, phase='report', read_only=True)
+            supports.assert_called_once_with(locked)
+            self.assertEqual(segment_reports.detail_support(order), (True, True))
+
+            scoped.side_effect = ValidationError('退款凭证待核对')
+            supports.reset_mock()
+            self.assertEqual(segment_reports.detail_support(order), (False, False))
+            supports.assert_not_called()
+
+            order.payment_status = Order.PaymentStatus.PAID
+            scoped.reset_mock()
+            self.assertEqual(segment_reports.detail_support(order), (True, False))
+            scoped.assert_not_called()
+            self.assertEqual(segment_reports.detail_support(order, check_paid_transfer=True), (True, False))
+            scoped.assert_called_once_with(order.pk, phase='report', read_only=True)
+            scoped.side_effect = None
+            self.assertEqual(segment_reports.detail_support(order, check_paid_transfer=True), (True, True))
+
+    def test_report_support_reuses_verified_refund_range(self):
+        from orders import segment_reports
+        from orders.models import Order
+
+        order = Mock(status=Order.Status.COMPLETED, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
+        with (patch.object(segment_reports, 'enabled', return_value=True),
+              patch('orders.ordinary_transfer_capability.enabled', return_value=False),
+              patch('orders.points_transfer_refund_access.permits', return_value=True),
+              patch.object(segment_reports.transaction, 'atomic') as atomic):
+            for refunds, supported in ((0, False), (1, True), (2, True), (3, False)):
+                with self.subTest(refunds=refunds):
+                    order.refund_records.count.return_value = refunds
+                    self.assertEqual(segment_reports.supports(order), supported)
+            atomic.assert_not_called()
+
+    def test_continuation_can_require_release_without_existing_allocations(self):
+        from orders import points_transfer_refund_continuation as continuation
+        from orders.models import Order
+
+        order = SimpleNamespace(status=Order.Status.IN_SERVICE, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
+        posting = SimpleNamespace(participants={})
+        transfers = Mock()
+        transfers.filter.return_value.exists.return_value = True
+        postings = Mock()
+        postings.select_for_update.return_value.filter.return_value.order_by.return_value = [posting]
+        with (patch('orders.points_transfer_refund_access.permits', side_effect=lambda _order, *, phase: phase == 'refund'),
+              patch('orders.points_transfer_refund_access.require_refund_or_isolated'),
+              patch.object(continuation.transaction, 'get_connection', return_value=SimpleNamespace(in_atomic_block=True)),
+              patch.object(continuation.OrderOriginalShareTransfer, 'objects', transfers),
+              patch.object(continuation.PointsNegotiationPosting, 'objects', postings),
+              patch('orders.financial_lock.lock_order_money'),
+              patch('orders.points_negotiation_termination.verify_termination_locked') as verify):
+            continuation.verify_locked(order, include_release=True)
+            posting.participants = []
+            with self.assertRaisesMessage(ValidationError, '转单退款补资释放凭证类型异常'):
+                continuation.verify_locked(order, include_release=True)
+
+        verify.assert_called_once_with(posting, include_release=True)
+
     @override_settings(SERVICE_POINTS_TRANSFER_REFUND_RECEIPT_USAGE_TESTING=True)
     def test_records_both_receipt_events_before_rechecking_original_allocations(self):
         order = SimpleNamespace(pk=116)

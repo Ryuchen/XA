@@ -4,8 +4,9 @@ import { useEffect, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MutationDialog } from "@/components/business"
-import { PlatformRequestError, platformRequest } from "@/lib/platform-session"
+import { PlatformRequestError, platformRequest, type PlatformProfile } from "@/lib/platform-session"
 import { PlatformStoreSetup } from "@/components/PlatformStoreSetup"
+import PlatformGuaranteeClosure from "@/components/PlatformGuaranteeClosure"
 
 type Store = { id: number; slug: string; name: string; provider_name_prefix: string; currency_name: string; database_alias: string; status: string; initialized_at: string | null; updated_at: string; boss_url: string; provider_url: string; admin_url: string }
 type Directory = { results: Store[]; available_database_aliases: string[] }
@@ -13,7 +14,7 @@ type Draft = { slug: string; name: string; entity_prefix: string; provider_name_
   boss_url: string; provider_url: string; admin_url: string; admin_username: string; admin_password: string; admin_phone: string; admin_nickname: string }
 const empty: Draft = { slug: "", name: "", entity_prefix: "", provider_name_prefix: "", currency_name: "", database_alias: "", boss_url: "", provider_url: "", admin_url: "", admin_username: "", admin_password: "", admin_phone: "", admin_nickname: "" }
 
-export function PlatformStoreManagement({ revision, canSetup, canEditClocks, canEditDeposit, canEditWithdraw, onChanged }: { revision: number; canSetup: boolean; canEditClocks: boolean; canEditDeposit: boolean; canEditWithdraw: boolean; onChanged: () => void }) {
+export function PlatformStoreManagement({ revision, profile, canSetup, canEditClocks, canEditDeposit, canEditWithdraw, onChanged }: { revision: number; profile: PlatformProfile; canSetup: boolean; canEditClocks: boolean; canEditDeposit: boolean; canEditWithdraw: boolean; onChanged: () => void }) {
   const [data, setData] = useState<Directory | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
@@ -24,6 +25,7 @@ export function PlatformStoreManagement({ revision, canSetup, canEditClocks, can
   const [target, setTarget] = useState<Store | null>(null)
   const [changing, setChanging] = useState<Store | null>(null)
   const [setup, setSetup] = useState<Store | null>(null)
+  const [guaranteeStore, setGuaranteeStore] = useState<Store | null>(null)
   const [statusUncertain, setStatusUncertain] = useState(false)
   const [existingAdmin, setExistingAdmin] = useState(false)
   const [form, setForm] = useState<Draft>(empty)
@@ -73,7 +75,7 @@ export function PlatformStoreManagement({ revision, canSetup, canEditClocks, can
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {loading && <p className="text-sm text-muted-foreground">正在读取门店…</p>}
     {data && error && <p className="text-sm text-muted-foreground">刷新失败，保留上次读取的门店列表。<Button type="button" variant="outline" size="sm" onClick={() => setReadVersion(value => value + 1)}>重试读取</Button></p>}
-    <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="p-2">门店</th><th>业务库</th><th>店币</th><th>状态</th><th scope="col" data-table-action className="text-center">操作</th></tr></thead><tbody>{(data?.results || []).map(store => <tr key={store.id} className="border-b last:border-0"><td className="p-2">{store.name} <span className="text-muted-foreground">{store.slug} · 陪玩简称 {store.provider_name_prefix || "待配置"}</span></td><td>{store.database_alias}</td><td>{store.currency_name}</td><td><PlatformStoreStatus value={store.status} /></td><td data-table-action><div className="admin-table-actions ml-auto flex flex-wrap items-center justify-end gap-1"><Button actionTone="edit" size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => start("edit", store)}>编辑</Button>{canSetup && !!store.initialized_at && ["CONFIGURING", "ACTIVE", "DISABLED"].includes(store.status) && <Button actionTone="read" size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => setSetup(store)}>配置核对</Button>}{store.status === "PROVISIONING" && !store.initialized_at && <Button actionTone="edit" size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => start("resume", store)}>继续初始化</Button>}{["ACTIVE", "DISABLED"].includes(store.status) && store.database_alias !== "default" && <Button actionTone={store.status === "ACTIVE" ? "reject" : "approve"} size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => { setStatusUncertain(false); setChanging(store) }}>{store.status === "ACTIVE" ? "停用" : "启用"}</Button>}</div></td></tr>)}{!data?.results.length && <tr><td colSpan={5} className="p-3"><DataRegion label="门店列表" loading={loading} hasSnapshot={!!data} error={error} retry={() => setReadVersion(value => value + 1)}><span>暂无门店</span></DataRegion></td></tr>}</tbody></table></div>
+    <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="p-2">门店</th><th>业务库</th><th>店币</th><th>状态</th><th scope="col" data-table-action className="text-center">操作</th></tr></thead><tbody>{(data?.results || []).map(store => <tr key={store.id} className="border-b last:border-0"><td className="p-2">{store.name} <span className="text-muted-foreground">{store.slug} · 陪玩简称 {store.provider_name_prefix || "待配置"}</span></td><td>{store.database_alias}</td><td>{store.currency_name}</td><td><PlatformStoreStatus value={store.status} /></td><td data-table-action><div className="admin-table-actions ml-auto flex flex-wrap items-center justify-end gap-1"><Button actionTone="edit" size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => start("edit", store)}>编辑</Button><Button actionTone="read" size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => setGuaranteeStore(store)}>保证金与闭店</Button>{canSetup && !!store.initialized_at && ["CONFIGURING", "ACTIVE", "DISABLED"].includes(store.status) && <Button actionTone="read" size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => setSetup(store)}>配置核对</Button>}{store.status === "PROVISIONING" && !store.initialized_at && <Button actionTone="edit" size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => start("resume", store)}>继续初始化</Button>}{["ACTIVE", "DISABLED"].includes(store.status) && store.database_alias !== "default" && <Button actionTone={store.status === "ACTIVE" ? "reject" : "approve"} size="sm" variant="outline" disabled={!!editor || loading || !!error} onClick={() => { setStatusUncertain(false); setChanging(store) }}>{store.status === "ACTIVE" ? "停用" : "启用"}</Button>}</div></td></tr>)}{!data?.results.length && <tr><td colSpan={5} className="p-3"><DataRegion label="门店列表" loading={loading} hasSnapshot={!!data} error={error} retry={() => setReadVersion(value => value + 1)}><span>暂无门店</span></DataRegion></td></tr>}</tbody></table></div>
     {editor && <form onSubmit={submit} className="grid max-w-4xl grid-cols-2 gap-4 rounded-lg border p-4">
       <h3 className="col-span-2 font-medium">{editor === "create" ? "新增门店" : editor === "edit" ? `编辑门店：${target?.name}` : `继续初始化：${target?.name}`}</h3>
       {editor === "create" && <>
@@ -93,6 +95,7 @@ export function PlatformStoreManagement({ revision, canSetup, canEditClocks, can
       try { await platformRequest(`store-management/${changing.id}`, { method: "PATCH", data: { status: changing.status === "ACTIVE" ? "DISABLED" : "ACTIVE", expected_updated_at: changing.updated_at } }); onChanged() }
       catch (error) { setStatusUncertain(true); throw error }
     }}>{statusUncertain && <p className="text-sm text-muted-foreground">请关闭后刷新列表，核对门店状态。</p>}</MutationDialog>}
+    {guaranteeStore && <PlatformGuaranteeClosure store={guaranteeStore} profile={profile} revision={revision} onClose={() => setGuaranteeStore(null)} />}
     {setup && <PlatformStoreSetup store={setup} canEditClocks={canEditClocks} canEditDeposit={canEditDeposit} canEditWithdraw={canEditWithdraw} onClose={() => setSetup(null)} />}
   </section>
 }

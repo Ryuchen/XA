@@ -171,12 +171,13 @@ class ProviderChatRealtimeTest(APITransactionTestCase):
         staff.admin_membership.account = accounts[1]
         staff.admin_membership.save(update_fields=['account'])
         tokens = [issue_account_tokens(account)[0] for account in accounts]
-        clients = [APIClient(), APIClient()]
+        clients = [APIClient(HTTP_HOST='sl.esports.club'), APIClient(HTTP_HOST='admin.esports.club')]
         for client, token in zip(clients, tokens):
             client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}',
+                headers=[(b'host', host.encode())]) for token, host in zip(tokens, ('sl.esports.club', 'admin.esports.club'))]
             try:
                 for socket in sockets:
                     self.assertTrue((await socket.connect())[0])
@@ -185,17 +186,30 @@ class ProviderChatRealtimeTest(APITransactionTestCase):
                 self.assertEqual(sent.data['code'], 0, sent.data)
                 events = [await socket.receive_json_from(timeout=3) for socket in sockets]
                 self.assertEqual([event['type'] for event in events], ['chat_message', 'chat_session_update'])
-                self.assertEqual(events[1]['data']['session']['last_message'], '')
                 session_id = events[0]['data']['session_id']
+                self.assertEqual(events[1]['data']['session_id'], session_id)
+                if 'session' in events[1]['data']:
+                    self.assertNotIn('last_message', events[1]['data']['session'])
+                self.assertNotIn('message', events[1]['data'])
                 claim = await database_sync_to_async(clients[1].post)(
                     f'/api/admin/chat-sessions/{session_id}/claim/', {'expected_version': 0}, format='json')
                 self.assertEqual(claim.data['code'], 0, claim.data)
                 self.assertEqual((await sockets[1].receive_json_from(timeout=3))['type'], 'chat_session_update')
+                self.assertEqual((await sockets[0].receive_json_from(timeout=3))['type'], 'chat_session_update')
                 reply = await database_sync_to_async(clients[1].post)(
                     f'/api/admin/chat-sessions/{session_id}/reply/', {'content': '客服已收到'}, format='json')
                 self.assertEqual(reply.data['code'], 0, reply.data)
-                events = [await socket.receive_json_from(timeout=3) for socket in sockets]
-                self.assertTrue(all(event['data']['message']['content'] == '客服已收到' for event in events))
+                received = []
+                for socket in sockets:
+                    rows = [await socket.receive_json_from(timeout=3)]
+                    if rows[0]['type'] != 'chat_message':
+                        rows.append(await socket.receive_json_from(timeout=3))
+                    for event in rows:
+                        if event['type'] == 'chat_session_update':
+                            self.assertEqual(event['data']['session_id'], session_id)
+                            self.assertNotIn('message', event['data'])
+                    received.append(next(event for event in rows if event['type'] == 'chat_message'))
+                self.assertTrue(all(event['data']['message']['content'] == '客服已收到' for event in received), received)
             finally:
                 for socket in sockets:
                     await socket.disconnect()

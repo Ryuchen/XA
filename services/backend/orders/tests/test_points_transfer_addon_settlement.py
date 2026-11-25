@@ -30,6 +30,51 @@ _requires_formal_aftersale = skipUnless(_formal_mysql, 'requires MySQL for the v
 
 
 class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
+    def test_first_transfer_refund_settlement_uses_verified_net_allocations(self):
+        from orders.points_funding_evidence import VerifiedOrderFunding, VerifiedTransferredRefundFunding
+        from orders.points_negotiation_preview import funding_after_refund
+        from orders.points_transfer_refunded_funding import VerifiedTransferRefundBasis
+        from orders.segment_settlement import _points_transfer_terms_verified
+        from orders.segment_settlement_plan import PersonAmount, SegmentSettlementPlan
+        from orders.settlement import SettlementError
+
+        order = SimpleNamespace(pk=12, refund_records=Mock())
+        order.refund_records.count.return_value = 1
+        funding = funding_after_refund(principal_units=100, gift_units=0, compensation_units=0,
+            returned_prepaid_units=10, returned_gift_units=0, returned_compensation_units=0,
+            provider_income_units=120, pending_deduction_units=0, provider_external_units=0,
+            inviter_rate=0, allocated_units=30)
+        plan = SegmentSettlementPlan(150, (), (PersonAmount(7, (8,), 120, None, ()),), 0, 0, 0)
+        posting = SimpleNamespace(pk=11, created_at=timezone.now(), funding_release_evidence=None)
+        basis = VerifiedTransferRefundBasis(funding, posting, None, ())
+        with (patch('orders.points_transfer_refunded_plan.build_refunded_plan', return_value=(plan, funding)) as build,
+              patch('orders.points_transfer_addon_events.later_runs') as reload_events,
+              patch('orders.points_funding_evidence.verify_order_funding') as verify,
+              patch('orders.points_funding_evidence.verified_order_allocations_locked') as reload_allocations,
+              patch('orders.points_transfer_refund_evidence.verify_transfer_revisions_after_refund_locked') as reload_transfers,
+              patch('orders.addon_funding_release.addon_release_totals') as reload_addons):
+            reload_allocations.side_effect = AssertionError('已核验的逐笔补资无需再读原分配')
+            verify.return_value = VerifiedTransferredRefundFunding(30, 30, 0, True, ((5, 9, 0), (6, 10, 30)), basis)
+            self.assertEqual(_points_transfer_terms_verified(order)[1]['allocations'],
+                             [{'id': 5, 'receipt_id': 9, 'amount': 0}, {'id': 6, 'receipt_id': 10, 'amount': 30}])
+            verify.assert_called_once_with(order.pk, allow_finalized=True, include_net_allocations=True)
+            build.assert_called_once_with(order, basis=basis)
+
+            verify.return_value = VerifiedTransferredRefundFunding(30, 29, 1, False, ((6, 10, 29),), basis)
+            self.assertEqual(_points_transfer_terms_verified(order), (plan, None))
+
+            verify.return_value = VerifiedOrderFunding(30, 30, 0, True)
+            with self.assertRaisesMessage(SettlementError, '转单退款后的逐笔补资凭证缺失'):
+                _points_transfer_terms_verified(order)
+
+            verify.return_value = VerifiedTransferredRefundFunding(30, 30, 0, True, ((6, 10, 29),), basis)
+            with self.assertRaisesMessage(SettlementError, '转单退款后的补资与收益不守恒'):
+                _points_transfer_terms_verified(order)
+            reload_allocations.assert_not_called()
+            reload_transfers.assert_not_called()
+            reload_addons.assert_not_called()
+            reload_events.assert_not_called()
+
     def test_full_refund_allows_empty_addon_earnings_in_verified_transfer_manifest(self):
         from engagement.confirmation import _fully_refunded_points_transfer_addons
 
@@ -56,7 +101,7 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
     def test_transfer_addon_refund_readback_uses_the_income_from_its_verified_snapshot(self):
         from orders.addon_refund_execution import _replay_transfer_addon_refund
 
-        order = SimpleNamespace(pk=12, refund_records=Mock())
+        order = SimpleNamespace(pk=12, refund_records=Mock(), room_required_snapshot=False)
         order.refund_records.exists.return_value = False
         original = {'order_id': order.pk, 'payment_id': 7, 'proposal_id': 8, 'amount': 100}
         run = SimpleNamespace(points_addon_hash='digest')

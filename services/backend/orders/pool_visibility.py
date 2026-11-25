@@ -47,7 +47,11 @@ def with_provider_list_evidence(orders, account_id):
     from .models import (OrderOriginalAttribution, OrderParticipationSegment,
                          OrderSegmentSettlementManifest, OrderWorkStint)
     from .segment_financial_capture import covered_transfers
+    from .team_progress import formal_transfer_display_enabled
     order_id = OuterRef('pk')
+    if formal_transfer_display_enabled():
+        orders = orders.annotate(_provider_has_points_transfer=Exists(covered_transfers(order_id).filter(
+            previous_segment__attribution__financial_coverage__source='WALLET_POINTS')))
     return orders.annotate(
         _provider_display_account_id=Value(account_id),
         _provider_has_manifest=Exists(OrderSegmentSettlementManifest.objects.filter(order_id=order_id)),

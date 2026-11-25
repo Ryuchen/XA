@@ -129,11 +129,11 @@ def _points_handover_scope(method):
             payment_id = args[0] if args else kwargs.get('payment_id')
             handover_id = args[1] if len(args) > 1 else kwargs.get('handover_id')
             creation = len(args) < 2 and kwargs.get('handover_id') is None
-            if handover_id is not None:
-                # Another final decision can commit while this request waits.
-                order = Order.objects.select_for_update().filter(pk=order_id).first()
-                if not order:
-                    raise ValidationError('订单不存在')
+            # Classify retries after locking the same order used to accept a
+            # handover and confirm the room.
+            order = Order.objects.select_for_update().filter(pk=order_id).first()
+            if not order:
+                raise ValidationError('订单不存在')
             if (creation and payment_id and order.refund_records.count() == 2
                     and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
                 replay = _replay_followup_create(request, order_id, payment_id)
@@ -175,6 +175,14 @@ def _points_handover_scope(method):
                     replay = handover_id and OrderAddonHandover.objects.filter(pk=handover_id, payment_id=payment_id,
                         payment__intent__order=order, kind='STANDARD', status='ACCEPTED',
                         decisions__account=request.account, decisions__accepted=True).exists()
+                    if creation and isinstance(request.data, Mapping):
+                        request_id = request.data.get('request_id')
+                        if isinstance(request_id, str):
+                            replay = OrderAddonHandover.objects.filter(payment_id=payment_id,
+                                payment__intent__order=order, request_id=request_id.strip(),
+                                kind='STANDARD', status='ACCEPTED').exists()
+                            if replay and 'order:dispatch' not in get_account_permissions(request.account):
+                                return Response({'code': 403, 'msg': '无权安排加购负责人'}, status=403)
                     if replay:
                         request._points_transferred_handover_replay = True
                         scope = after_transfer(order.pk, phase='report', pending_payment_id=payment_id, read_only=True)
@@ -905,12 +913,18 @@ class StaffAddonHandoverView(APIView):
                 or not isinstance(remaining, str) or not 2 <= len(remaining.strip()) <= 500
                 or (retained and len(completed.strip()) < 2)):
             raise ValidationError('请填写有效的分配金额和实际履约内容')
-        order, payment = _payment_locked(order_id, payment_id, funding_first=True)
+        replay_only = getattr(request, '_points_transferred_handover_replay', False)
+        order, payment = _payment_locked(order_id, payment_id, funding_first=not replay_only)
         body_hash = _fingerprint(dict(body))
         previous_request = payment.handovers.filter(request_id=request_id.strip()).first()
+        if replay_only and (not previous_request or previous_request.status != 'ACCEPTED'
+                or previous_request.kind != 'STANDARD' or order.refund_records.exists()):
+            raise ValidationError('原加购接替方案已变化，请先核对')
         if previous_request:
             if previous_request.created_by_id != request.account.pk or previous_request.request_hash != body_hash:
                 raise ValidationError('请求编号已用于其他换人方案')
+            if replay_only:
+                verify_transferred_handover_funding(order, payment, previous_request)
             return Response({'code': 0, 'data': _data(previous_request, account=request.account)})
         from .ordinary_transfer_capability import permits as transferred_permits
         from .ordinary_refunded_team_handover import permits as ordinary_team_permits

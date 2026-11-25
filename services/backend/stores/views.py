@@ -23,6 +23,21 @@ def managed_store(store):
             'initialization_required': store.initialized_at is None}
 
 
+def _record_store_text_receipts(store, serializer, request, fields):
+    from common.compliance import record_store_receipt, store_actor_from_request
+    if not transaction.get_connection('default').in_atomic_block:
+        raise RuntimeError('门店内容回执必须在门店目录事务内写入')
+    actor_type, actor_id, actor_label = store_actor_from_request(request)
+    results = getattr(serializer, '_compliance_results', {})
+    compliance_fields = {'name': 'STORE_NAME', 'introduction': 'STORE_INTRODUCTION'}
+    for field in fields:
+        compliance_field = compliance_fields.get(field, field)
+        result = results.get(compliance_field)
+        if result is not None:
+            record_store_receipt(store, compliance_field, result, actor_type=actor_type,
+                                 actor_id=actor_id, actor_label=actor_label)
+
+
 def _already_initialized(store, *, status=200):
     return Response({'code': 0, 'msg': '门店已完成初始化，请核对现有账号',
                      'data': managed_store(store)}, status=status)
@@ -104,6 +119,9 @@ class StoreManageView(APIView):
                 admin = {field: serializer.validated_data.pop(field, None) for field in
                          ('admin_username', 'admin_password', 'admin_phone', 'admin_nickname')}
                 store = serializer.save(status=Store.Status.PROVISIONING)
+                _record_store_text_receipts(store, serializer, request,
+                                            tuple(field for field in ('name', 'introduction')
+                                                  if field in serializer.validated_data))
                 if admin['admin_username']:
                     from .provision_claim import reserve_claim
                     reserve_claim(store, admin_username=admin['admin_username'])
@@ -161,7 +179,13 @@ class StoreDetailView(APIView):
                     return Response({'code': 409, 'errorCode': 'STORE_CHANGED', 'msg': '门店信息已变化，请刷新后核对'}, status=409)
                 serializer = StoreUpdateSerializer(store, data=data, partial=True, context={'request': request})
                 serializer.is_valid(raise_exception=True)
+                changed_text = tuple(
+                    field for field in ('name', 'introduction')
+                    if field in serializer.validated_data
+                    and getattr(store, field) != serializer.validated_data[field]
+                )
                 store = serializer.save()
+                _record_store_text_receipts(store, serializer, request, changed_text)
                 from django.conf import settings
                 if getattr(settings, 'ISOLATED_CONTROL_PLANE', False) and store.initialized_at:
                     from .models import StoreRoutingRevision

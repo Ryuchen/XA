@@ -69,11 +69,12 @@ class SafeBoxSegmentSettlementTest(TestCase):
     def test_whole_funding_then_independent_report_clocks_and_exactly_once(self):
         from orders.models import OrderSegmentPersonSettlement
         order, players, staff, clients, segments = self.finished()
-        self.report(order, staff, clients[0], segments[0]); self.report(order, staff, clients[1], segments[1])
+        self.report(order, staff, clients[0], segments[0])
         first = OrderSegmentReportSubmission.objects.get(report__segment=segments[0])
-        second = OrderSegmentReportSubmission.objects.get(report__segment=segments[1])
         later = first.submitted_at + timedelta(hours=10)
-        OrderSegmentReportSubmission.objects.filter(pk=second.pk).update(submitted_at=later, reviewed_at=later)
+        with patch('django.utils.timezone.now', return_value=later):
+            self.report(order, staff, clients[1], segments[1])
+        second = OrderSegmentReportSubmission.objects.get(report__segment=segments[1])
         boundary = max(order.completed_at, first.submitted_at) + timedelta(hours=72, minutes=1)
         platform = get_platform_wallet(); platform.balance=7999; platform.save(update_fields=['balance'])
         self.assertEqual(self.settle(order, boundary), [])
@@ -102,9 +103,10 @@ class SafeBoxSegmentSettlementTest(TestCase):
         from orders.models import OrderSegmentPersonSettlement
         from orders.settlement import SettlementError
         order, players, staff, clients, segments = self.finished()
-        self.report(order, staff, clients[0], segments[0]); self.report(order, staff, clients[1], segments[1])
+        self.report(order, staff, clients[0], segments[0])
         later = timezone.now()+timedelta(hours=10)
-        OrderSegmentReportSubmission.objects.filter(report__segment=segments[1]).update(submitted_at=later, reviewed_at=later)
+        with patch('django.utils.timezone.now', return_value=later):
+            self.report(order, staff, clients[1], segments[1])
         now = timezone.now()+timedelta(hours=73)
         platform = get_platform_wallet(); platform.balance=8000; platform.save(update_fields=['balance'])
         self.assertEqual(self.settle(order, now), [players[0].legacy_mapping.legacy_user_id])
@@ -272,9 +274,9 @@ class SafeBoxSegmentSettlementTest(TestCase):
             {'completion_image':screenshot()}, format='multipart'))
         order = Order.objects.get(pk=order_id)
         self.report(order, staff, first, old); self.report(order, staff, second, middle)
-        self.report(order, staff, first, returned)
         last = timezone.now()+timedelta(hours=10)
-        OrderSegmentReportSubmission.objects.filter(report__segment=returned).update(submitted_at=last, reviewed_at=last)
+        with patch('django.utils.timezone.now', return_value=last):
+            self.report(order, staff, first, returned)
         platform = get_platform_wallet(); platform.balance=8000; platform.save(update_fields=['balance'])
         self.assertEqual(self.settle(order, timezone.now()+timedelta(hours=73)), [players[1].legacy_mapping.legacy_user_id])
         self.assertEqual((get_wallet(account=players[0]).balance, get_wallet(account=players[1]).balance), (0, 1600))
